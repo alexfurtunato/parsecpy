@@ -1,14 +1,13 @@
 #!/bin/bash
+## cluster, test, service
+#SBATCH -p cluster
+#SBATCH --job-name=FLUIDANIMATE2
+#SBATCH --time=0-6:00
+#SBATCH --output=/home/afdafurtunato/superpc_out/fluidanimate-slurm-%j.out
+#SBATCH --error=/home/afdafurtunato/superpc_out/fluidanimate-slurm-%j.err
+#SBATCH --nodes=1
+#SBATCH --exclusive
+#SBATCH --mail-user=alexfurtunato@gmail.com
+#SBATCH --mail-type=ALL
 
-echo "Running fluidanimate sbatch"
-sleep 1
-sbatch run_fluidanimate_1
-echo "Running fluidanimate 2 core"
-sleep 1
-sbatch run_fluidanimate_2
-echo "Running fluidanimate 4 core"
-sleep 1
-sbatch run_fluidanimate_4
-echo "Running fluidanimate 8 core"
-sleep 1
-sbatch run_fluidanimate_8
+python3 ../runparsecprocess.py -p fluidanimate -c gcc-hooks -i native_01:10 -r 10 1,2,4,8,16,32,64

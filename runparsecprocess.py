@@ -72,7 +72,7 @@ def argsparsevalidation():
     helpinputtxt = 'Input name to be used on run. (Default: %(default)s). '
     helpinputtxt += 'Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10'
     parser = argparse.ArgumentParser(description='Script to split a input parsec file')
-    parser.add_argument('c', type=argsparseintlist,help='List of cores numbers to be used')
+    parser.add_argument('c', type=argsparseintlist,help='List of cores numbers to be used. Ex: 1,2,4')
     parser.add_argument('-p','--package', help='Package Name to run', required=True)
     parser.add_argument('-c','--compiler', help='Compiler name to be used on run. (Default: %(default)s).', choices=choicebuilds, default='gcc-hooks')
     parser.add_argument('-i','--input', type=argsparseinputlist, help=helpinputtxt, default='native')
