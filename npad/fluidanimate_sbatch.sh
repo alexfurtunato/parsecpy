@@ -1,7 +1,7 @@
 #!/bin/bash
 ## cluster, test, service
 #SBATCH -p cluster
-#SBATCH --job-name=FLUIDANIMATE2
+#SBATCH --job-name=FLUIDANIMATE
 #SBATCH --time=0-6:00
 #SBATCH --output=/home/afdafurtunato/superpc_out/fluidanimate-slurm-%j.out
 #SBATCH --error=/home/afdafurtunato/superpc_out/fluidanimate-slurm-%j.err
