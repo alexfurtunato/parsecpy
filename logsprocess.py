@@ -331,11 +331,11 @@ def freqmine_inputfilesplitequal(tfile, n, ms):
     lfile = []
     for line,linetxt in enumerate(f):
         if line == 0:
-            newfilename = fm.name.split('.')[0] + '_' + str(partscount) + '.' + fm.name.split('.')[1]
+            newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) + '.' + fm.name.split('.')[1]
             fd = open(newfilename,'w')
         elif line%splitlen == 0 and line<splitlen*n:
             fd.close()
-            newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + str(partscount) + '.tar')
+            newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
             print(partscount,newtarfilename)
             tar2 = tarfile.open(newtarfilename,'w')
             tar2.add(newfilename)
@@ -346,7 +346,7 @@ def freqmine_inputfilesplitequal(tfile, n, ms):
             newfilename = fm.name.split('.')[0] + '_' + str(partscount) + '.' + fm.name.split('.')[1]
             fd = open(newfilename,'w')
         fd.write(linetxt.decode())
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + str(partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     tar2 = tarfile.open(newtarfilename, 'w')
     tar2.add(newfilename)
@@ -406,11 +406,11 @@ def freqmine_inputfilesplitprogressive(tfile, n, ms):
         f = tar.extractfile(fm)
         for line,linetxt in enumerate(f):
             if line == 0:
-                newfilename = fm.name.split('.')[0] + '_' + str(partscount) + '.' + fm.name.split('.')[1]
+                newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) + '.' + fm.name.split('.')[1]
                 fd = open(newfilename,'w')
             elif line%splitlen == 0 and line<=splitlenbase*(n-1):
                 fd.close()
-                newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + str(partscount) + '.tar')
+                newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
                 print(partscount,newtarfilename)
                 print(" line: ", line," splitlen: ",splitlen)
                 tar2 = tarfile.open(newtarfilename,'w')
@@ -426,7 +426,7 @@ def freqmine_inputfilesplitprogressive(tfile, n, ms):
         if line >= numberoflines-1:
             fd.close()
             eof = True
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + str(partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     print(" line: ", line, " splitlen: ", splitlen)
     tar2 = tarfile.open(newtarfilename, 'w')
