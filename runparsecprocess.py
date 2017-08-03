@@ -47,8 +47,8 @@ def argsparseinputlist(txt):
                 iinit += iname.pop()
             if len(iinit):
                 iname = ''.join(iname)
-                iinit = int(iinit)
-                inputsets = [iname + str(i) for i in range(iinit, ifinal + 1)]
+                iinit = int(iinit[::-1])
+                inputsets = [iname + ('%02d' % i) for i in range(iinit, ifinal + 1)]
             else:
                 msg = "Wrong compost inputset name syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native_1:10"
                 raise argparse.ArgumentTypeError(msg)
@@ -99,7 +99,7 @@ def main():
                 print("*** Execution ",r+1)
                 try:
                     cmd = shlex.split(command % (args.package, args.compiler,i, c))
-                    res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT);
+                    res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
                         attrs = logsprocess.contentextract(output.decode())
