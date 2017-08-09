@@ -96,7 +96,7 @@ def main():
         for c in args.c:
             print("- Inputset: ", i, "with %s cores" % c)
             for r in range(args.repititions):
-                print("*** Execution ",r+1)
+                print("\n*** Execution ",r+1)
                 try:
                     cmd = shlex.split(command % (args.package, args.compiler,i, c))
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -107,20 +107,25 @@ def main():
                     if error:
                         print("Error: Execution return error code = ",res.returncode)
                         print("Error Message: ", error.strip())
+                    print("\n### Saida ###")
+                    print(output.decode())
                 except OSError as e:
                     print("Error: Error from OS. Return Code = ",e.errno)
                     print("Error Message: ", e.strerror)
                 except:
-                    print("Error: Error on System Execution : ", sys.exc_info()[0])
+                    print("Error: Error on System Execution : ", sys.exc_info())
 
     dataname = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     dataf = logsprocess.dataframebuild(datadict)
     dataf.to_json('timedatafile_'+dataname+'.dat')
-    print(" Resume Dataframe: ")
+
+    print("\n Time Data Dictionary: ")
+    print(datadict)
+
+    print("\n Resume Dataframe: ")
     print(dataf)
 
-
-    print("Resume Speedups Dataframe:")
+    print("\n Resume Speedups Dataframe: ")
     dfs = logsprocess.speedupframebuild(dataf)
     dfs.to_json('speeddatafile_'+dataname+'.dat')
     print(dfs)
