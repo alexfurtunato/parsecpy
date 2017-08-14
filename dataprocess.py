@@ -6,12 +6,10 @@
   As executabled script, its process a folder with log run files.
 """
 
-import sys
 import os
 import shutil
 import argparse
 import numpy as np
-import pandas as pd
 from pandas import DataFrame, Series
 
 import matplotlib.pyplot as plt
@@ -20,7 +18,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 import tarfile
-
+import json
 
 # Template with 2 arguments: filename.runconf, input name
 template_parsecconf = '''#!/bin/bash
