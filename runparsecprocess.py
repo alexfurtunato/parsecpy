@@ -92,7 +92,7 @@ def main():
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
-    datadict['config'] = {'pkg': args.package, 'command': command % (args.package, args.compiler,i, c)}
+    datadict['config'] = {'pkg': args.package, 'command': command % (args.package, args.compiler,args.input, args.c)}
     datadict['data'] = {}
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
