@@ -122,71 +122,6 @@ def fileprocess(fn):
     dictattrs['cores'] = cores
     return dictattrs
 
-def datadictbuild(rdict, attrs, ncores=None):
-    """
-    Resume all tests, grouped by size, on a dictionary.
-      - Dictionary format: {'testname': {'coresnumber': ['timevalue', ... ], ...}, ...}
-
-    :param rdict: Dictionary to store the data attributes.
-    :param attrs: Attributes to insert into dictionary.
-    :param ncores: Number of cores used on executed process.
-    :return: dictionary with inserted values.
-    """
-
-    if not ncores:
-        ncores = attrs['cores']
-
-    if attrs['roitime']:
-        ttime = attrs['roitime']
-    else:
-        ttime = attrs['realtime']
-
-    if attrs['input'] in rdict.keys():
-        if ncores in rdict[attrs['input']].keys():
-            rdict[attrs['input']][ncores].append(ttime)
-        else:
-            rdict[attrs['input']][ncores] = [ttime]
-    else:
-        rdict[attrs['input']] = {ncores: [ttime]}
-    return rdict
-
-def dataframebuild(data):
-    """
-    Resume all tests, grouped by size, on DataFrame.
-     - Dataframe format: index=<cores>, columns=<inputsize>, values=<median of times>.
-
-    :param data: Dictionary with values of calculated median of times.
-    :return: dataframe with data.
-    """
-
-    df = DataFrame()
-    inputs = list(data.keys())
-    inputs.sort(reverse=True)
-    for i in inputs:
-        df[i] = Series([np.median(i) for i in data[i].values()], index=data[i].keys())
-    df = df.sort_index()
-    return df
-
-def speedupframebuild(data):
-    """
-    Resume speedups test grouped by size on a DataFrame.
-     - Dataframe format: index=<cores>, columns=<inputsize>, values=<speedups>.
-
-    :param data: Dataframe with values of calculated speedups.
-    :return: dataframe with data.
-    """
-
-    ds = DataFrame()
-    if 1 not in data.index or len(data.index) < 2:
-        print("Error: Do not possible calcule the speedup without single core run")
-        return
-    for input in data.columns:
-        idx = data.index[1:]
-        darr = data.loc[1, input] / data[input][data.index != 1]
-        ds[input] = Series(darr, index=idx)
-    ds = ds.sort_index()
-    return ds
-
 def runlogfilesprocess(fn, fl):
     """
     Process parsec log files within a folder.
@@ -217,6 +152,95 @@ def runlogfilesfilter(fn):
     if len(rfiles) == 0:
         return []
     return rfiles
+
+
+def datadictbuild(rdict, attrs, ncores=None):
+    """
+    Resume all tests, grouped by size, on a dictionary.
+      - Dictionary format: {'testname': {'coresnumber': ['timevalue', ... ], ...}, ...}
+
+    :param rdict: Dictionary to store the data attributes.
+    :param attrs: Attributes to insert into dictionary.
+    :param ncores: Number of cores used on executed process.
+    :return: dictionary with inserted values.
+    """
+
+    if not ncores:
+        ncores = attrs['cores']
+
+    if attrs['roitime']:
+        ttime = attrs['roitime']
+    else:
+        ttime = attrs['realtime']
+
+    if attrs['input'] in rdict.keys():
+        if ncores in rdict[attrs['input']].keys():
+            rdict[attrs['input']][ncores].append(ttime)
+        else:
+            rdict[attrs['input']][ncores] = [ttime]
+    else:
+        rdict[attrs['input']] = {ncores: [ttime]}
+    return rdict
+
+
+def dataframebuild(data):
+    """
+    Resume all tests, grouped by size, on DataFrame.
+     - Dataframe format: index=<cores>, columns=<inputsize>, values=<median of times>.
+
+    :param data: Dictionary with values of calculated median of times.
+    :return: dataframe with data.
+    """
+
+    df = DataFrame()
+    inputs = list(data.keys())
+    inputs.sort(reverse=True)
+    for i in inputs:
+        df[i] = Series([np.median(i) for i in data[i].values()], index=data[i].keys())
+    df = df.sort_index()
+    return df
+
+
+def speedupframebuild(data):
+    """
+    Resume speedups test grouped by size on a DataFrame.
+     - Dataframe format: index=<cores>, columns=<inputsize>, values=<speedups>.
+
+    :param data: Dataframe with values of calculated speedups.
+    :return: dataframe with data.
+    """
+
+    ds = DataFrame()
+    if 1 not in data.index or len(data.index) < 2:
+        print("Error: Do not possible calcule the speedup without single core run")
+        return
+    for input in data.columns:
+        idx = data.index[1:]
+        darr = data.loc[1, input] / data[input][data.index != 1]
+        ds[input] = Series(darr, index=idx)
+    ds = ds.sort_index()
+    return ds
+
+
+def datadictread(filename, type='s'):
+    """
+    Read de dictionary data stored on file and return a Dataframe of times or speedups, depends on type parameter.
+     - Dataframe format: index=<cores>, columns=<inputsize>, values=<speedups> or <time>.
+
+    :param data: Filename with data dictionary of execution times.
+    :param type: Type of dataframe return: Times or Speedups.
+    :return: dataframe with data.
+    """
+    with open(filename) as f:
+        datadict = json.load(f)
+    dataftime = dataframebuild(datadict['data'])
+    if type == 't':
+        return dataftime
+    elif type == 's':
+        datafspeedup = speedupframebuild(dataftime)
+        return datafspeedup
+    else:
+        print('Error: The type of output must be \'t\'=times  \'s\'=speedups')
 
 def plot2Dspeedup(data):
     """

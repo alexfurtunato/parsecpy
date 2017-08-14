@@ -3,10 +3,11 @@
 
 import sys
 import subprocess
-import logsprocess
+import dataprocess
 import shlex
 from datetime import datetime
 import argparse
+import json
 
 
 def argsparseintlist(txt):
@@ -91,6 +92,8 @@ def main():
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
+    datadict['config'] = {'pkg': args.package, 'command': command % (args.package, args.compiler,i, c)}
+    datadict['data'] = {}
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
         for c in args.c:
@@ -102,8 +105,8 @@ def main():
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
-                        attrs = logsprocess.contentextract(output.decode())
-                        datadict = logsprocess.datadictbuild(datadict, attrs, c)
+                        attrs = dataprocess.contentextract(output.decode())
+                        datadict['data'] = dataprocess.datadictbuild(datadict['data'], attrs, c)
                     if error:
                         print("Error: Execution return error code = ",res.returncode)
                         print("Error Message: ", error.strip())
@@ -116,19 +119,22 @@ def main():
                     print("Error: Error on System Execution : ", sys.exc_info())
 
     dataname = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    dataf = logsprocess.dataframebuild(datadict)
-    dataf.to_json('timedatafile_'+dataname+'.dat')
+    with open(args.package + '_datafile_' + dataname + '.dat', 'w') as f:
+        json.dump(datadict,f,ensure_ascii=False)
 
-    print("\n Time Data Dictionary: ")
+#    dataf = dataprocess.dataframebuild(datadict)
+#    dataf.to_json('timedatafile_'+dataname+'.dat')
+
+    print("\n Data Dictionary: ")
     print(datadict)
 
-    print("\n Resume Dataframe: ")
-    print(dataf)
+#    print("\n Resume Dataframe: ")
+#    print(dataf)
 
-    print("\n Resume Speedups Dataframe: ")
-    dfs = logsprocess.speedupframebuild(dataf)
-    dfs.to_json('speeddatafile_'+dataname+'.dat')
-    print(dfs)
+#    print("\n Resume Speedups Dataframe: ")
+#    dfs = dataprocess.speedupframebuild(dataf)
+#    dfs.to_json('speeddatafile_'+dataname+'.dat')
+#    print(dfs)
 
 if __name__ == '__main__':
     main()
