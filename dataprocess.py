@@ -194,7 +194,7 @@ def dataframebuild(data):
     inputs = list(data.keys())
     inputs.sort(reverse=True)
     for i in inputs:
-        df[i] = Series([np.median(i) for i in data[i].values()], index=data[i].keys())
+        df[i] = Series([np.median(i) for i in data[i].values()], index=[int(j) for j in data[i].keys()])
     df = df.sort_index()
     return df
 
