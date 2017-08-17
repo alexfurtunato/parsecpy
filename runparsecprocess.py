@@ -118,23 +118,14 @@ def main():
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
 
-    dataname = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    with open(args.package + '_datafile_' + dataname + '.dat', 'w') as f:
+    dataexec = datetime.now()
+    datadict['config']['dataexec'] = dataexec
+    fdataname = dataexec.strftime("%Y-%m-%d_%H:%M:%S")
+    with open(args.package + '_datafile_' + fdataname + '.dat', 'w') as f:
         json.dump(datadict,f,ensure_ascii=False)
-
-#    dataf = dataprocess.dataframebuild(datadict)
-#    dataf.to_json('timedatafile_'+dataname+'.dat')
 
     print("\n Data Dictionary: ")
     print(datadict)
-
-#    print("\n Resume Dataframe: ")
-#    print(dataf)
-
-#    print("\n Resume Speedups Dataframe: ")
-#    dfs = dataprocess.speedupframebuild(dataf)
-#    dfs.to_json('speeddatafile_'+dataname+'.dat')
-#    print(dfs)
 
 if __name__ == '__main__':
     main()
