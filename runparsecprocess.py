@@ -119,7 +119,7 @@ def main():
                     print("Error: Error on System Execution : ", sys.exc_info())
 
     dataexec = datetime.now()
-    datadict['config']['dataexec'] = dataexec
+    datadict['config']['dataexec'] = dataexec.strftime("%d-%m-%Y_%H:%M:%S")
     fdataname = dataexec.strftime("%Y-%m-%d_%H:%M:%S")
     with open(args.package + '_datafile_' + fdataname + '.dat', 'w') as f:
         json.dump(datadict,f,ensure_ascii=False)

@@ -10,4 +10,4 @@
 #SBATCH --mail-user=alexfurtunato@gmail.com
 #SBATCH --mail-type=ALL
 
-python3 ../runparsecprocess.py -p fluidanimate -c gcc-hooks -i native_01:10 -r 10 1,2,8,16,32
+python3 ../runparsecprocess.py -p fluidanimate -c gcc-hooks -i native_01:10 -r 10 1,2,4,8,16,32
