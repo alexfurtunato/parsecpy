@@ -7,6 +7,7 @@
 
 import os
 from datetime import datetime
+import json
 import numpy as np
 from pandas import DataFrame
 from pandas import Series
@@ -86,6 +87,20 @@ class ParsecData:
                 print('Warning: No data loaded')
         else:
             print('Error: File not found')
+        return
+
+    def savedata(self):
+        """
+        Write to file the measures information
+
+        :return:
+        """
+
+        filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
+        with open(self.config['pkg'] + '_datafile_' + filedatename \
+                          + '.dat', 'w') as f:
+            dictsave = {'config': self.config, 'data': self.measures}
+            json.dump(dictsave, f, ensure_ascii=False)
         return
 
     def measurebuild(self, attrs, numberofcores=None):
@@ -253,6 +268,20 @@ class ParsecLogsData(ParsecData):
                                          + self.foldername
         else:
             print('Error: Folder name not found.')
+        return
+
+    def savedata(self):
+        """
+        Write to file the measures information
+
+        :return:
+        """
+
+        filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
+        with open('logs_' + self.foldername + '_datafile_' + filedatename
+                          + '.dat', 'w') as f:
+            dictsave = {'config': self.config, 'data': self.measures}
+            json.dump(dictsave, f, ensure_ascii=False)
         return
 
     def contentextract(self, txt):
