@@ -241,7 +241,7 @@ class ParsecLogsData(ParsecData):
 
         """
 
-        super().__init__()
+        ParsecData.__init__(self)
         if foldername:
             self.loaddata()
         return
