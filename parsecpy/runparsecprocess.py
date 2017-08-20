@@ -14,7 +14,8 @@ import subprocess
 import sys
 from datetime import datetime
 
-from logsprocess import contentextract,datadictbuild
+from logsprocess import contentextract
+from logsprocess import datadictbuild
 
 
 def argsparseintlist(txt):
