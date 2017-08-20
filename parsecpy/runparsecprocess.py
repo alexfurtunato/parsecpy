@@ -8,15 +8,12 @@
 
 """
 import argparse
-import json
 import shlex
 import subprocess
 import sys
 from datetime import datetime
 
-from logsprocess import contentextract
-from logsprocess import datadictbuild
-
+from dataprocess import Parsecdata
 
 def argsparseintlist(txt):
     """
@@ -100,8 +97,9 @@ def main():
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
-    datadict['config'] = {'pkg': args.package, 'command': command % (args.package, args.compiler,args.input, args.c)}
-    datadict['data'] = {}
+    execdate = datetime.now()
+    data = Parsecdata()
+    data.config = {'pkg': args.package, 'execdate': execdate, 'command': command % (args.package, args.compiler,args.input, args.c)}
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
         for c in args.c:
@@ -113,8 +111,8 @@ def main():
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
-                        attrs = contentextract(output.decode())
-                        datadict['data'] = datadictbuild(datadict['data'], attrs, c)
+                        attrs = data.contentextract(output.decode())
+                        data.measurebuild(attrs, c)
                     if error:
                         print("Error: Execution return error code = ",res.returncode)
                         print("Error Message: ", error.strip())
@@ -125,15 +123,10 @@ def main():
                     print("Error Message: ", e.strerror)
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
-
-    execdate = datetime.now()
-    datadict['config']['execdate'] = execdate.strftime("%d-%m-%Y_%H:%M:%S")
-    fdatename = execdate.strftime("%Y-%m-%d_%H:%M:%S")
-    with open(args.package + '_datafile_' + fdatename + '.dat', 'w') as f:
-        json.dump(datadict,f,ensure_ascii=False)
-
-    print("\n Data Dictionary: ")
-    print(datadict)
+    data.savedata()
+    print("\n Resume: ")
+    print(data)
+    print(data.times())
 
 if __name__ == '__main__':
     main()

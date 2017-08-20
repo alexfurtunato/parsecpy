@@ -106,6 +106,52 @@ class ParsecData:
             json.dump(dictsave, f, ensure_ascii=False)
         return
 
+    def contentextract(self, txt):
+        """
+        Extract times values from a parsec log output.
+
+        :param txt: Content text from a parsec output run.
+        :return: dict with extracted values.
+        """
+
+        for l in txt.split('\n'):
+            if l.strip().startswith("[PARSEC] Benchmarks to run:"):
+                benchmark = l.strip().split(':')[1]
+                benchmark = benchmark.strip().split('.')[1]
+            elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
+                input = l.strip().split("'")[1]
+            if l.strip().startswith("[HOOKS] Total time spent in ROI"):
+                roitime = l.strip().split(':')[-1]
+            elif l.strip().startswith("real"):
+                realtime = l.strip().split('\t')[-1]
+            elif l.strip().startswith("user"):
+                usertime = l.strip().split('\t')[-1]
+            elif l.strip().startswith("sys"):
+                systime = l.strip().split('\t')[-1]
+        if roitime:
+            roitime = float(roitime.strip()[:-1])
+        else:
+            roitime = None
+        if realtime:
+            realtime = 60 * float(realtime.strip().split('m')[0]) \
+                       + float(realtime.strip().split('m')[1][:-1])
+        else:
+            realtime = None
+        if usertime:
+            usertime = 60 * float(usertime.strip().split('m')[0]) \
+                       + float(usertime.strip().split('m')[1][:-1])
+        else:
+            usertime = None
+        if systime:
+            systime = 60 * float(systime.strip().split('m')[0]) \
+                      + float(systime.strip().split('m')[1][:-1])
+        else:
+            systime = None
+
+        return {'benchmark': benchmark, 'input': input, 'roitime': roitime,
+                'realtime': realtime, 'usertime': usertime, 'systime': systime}
+
+
     def measurebuild(self, attrs, numberofcores=None):
         """
         Resume all tests, grouped by size, on a dictionary.
@@ -118,7 +164,6 @@ class ParsecData:
 
         if not numberofcores:
             numberofcores = attrs['cores']
-
         if attrs['roitime']:
             ttime = attrs['roitime']
         else:
@@ -301,51 +346,6 @@ class ParsecLogsData(ParsecData):
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return
-
-    def contentextract(self, txt):
-        """
-        Extract times values from a parsec log output.
-
-        :param txt: Content text from a parsec output run.
-        :return: dict with extracted values.
-        """
-
-        for l in txt.split('\n'):
-            if l.strip().startswith("[PARSEC] Benchmarks to run:"):
-                benchmark = l.strip().split(':')[1]
-                benchmark = benchmark.strip().split('.')[1]
-            elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
-                input = l.strip().split("'")[1]
-            if l.strip().startswith("[HOOKS] Total time spent in ROI"):
-                roitime = l.strip().split(':')[-1]
-            elif l.strip().startswith("real"):
-                realtime = l.strip().split('\t')[-1]
-            elif l.strip().startswith("user"):
-                usertime = l.strip().split('\t')[-1]
-            elif l.strip().startswith("sys"):
-                systime = l.strip().split('\t')[-1]
-        if roitime:
-            roitime = float(roitime.strip()[:-1])
-        else:
-            roitime = None
-        if realtime:
-            realtime = 60 * float(realtime.strip().split('m')[0]) \
-                       + float(realtime.strip().split('m')[1][:-1])
-        else:
-            realtime = None
-        if usertime:
-            usertime = 60 * float(usertime.strip().split('m')[0]) \
-                       + float(usertime.strip().split('m')[1][:-1])
-        else:
-            usertime = None
-        if systime:
-            systime = 60 * float(systime.strip().split('m')[0]) \
-                      + float(systime.strip().split('m')[1][:-1])
-        else:
-            systime = None
-
-        return {'benchmark': benchmark, 'input': input, 'roitime': roitime,
-                'realtime': realtime, 'usertime': usertime, 'systime': systime}
 
     def fileprocess(self, filename):
         """
