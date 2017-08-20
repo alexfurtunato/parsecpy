@@ -13,7 +13,7 @@ import subprocess
 import sys
 from datetime import datetime
 
-from dataprocess import Parsecdata
+from dataprocess import ParsecData
 
 def argsparseintlist(txt):
     """
