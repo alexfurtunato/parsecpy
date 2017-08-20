@@ -14,7 +14,7 @@ import subprocess
 import sys
 from datetime import datetime
 
-from . import logsprocess
+from .logsprocess import contentextract, datadictbuild
 
 
 def argsparseintlist(txt):
@@ -112,8 +112,8 @@ def main():
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
-                        attrs = logsprocess.contentextract(output.decode())
-                        datadict['data'] = logsprocess.datadictbuild(datadict['data'], attrs, c)
+                        attrs = contentextract(output.decode())
+                        datadict['data'] = datadictbuild(datadict['data'], attrs, c)
                     if error:
                         print("Error: Execution return error code = ",res.returncode)
                         print("Error Message: ", error.strip())
