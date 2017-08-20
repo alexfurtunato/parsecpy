@@ -55,10 +55,11 @@ class ParsecData:
 
         :return: specific formated string
         """
+
         if not self.config:
             return 'No data'
         pkg = 'Package: '+self.config['pkg']
-        dt = 'Date: '+self.config['execdate']
+        dt = 'Date: '+self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
         command = 'Command: '+self.config['command']
         return pkg+'\n'+dt+'\n'+command
 
@@ -246,8 +247,21 @@ class ParsecLogsData(ParsecData):
         return
 
     def __str__(self):
-        return 'Folder: ' + self.foldername + '\nProcessed Files: \n ' \
+        """
+        Default string output informations of object
+
+        :return: specific formated string
+        """
+
+        if not self.config:
+            return 'No data'
+        folder = 'Folder: ' + self.foldername
+        files = 'Processed Files: \n ' \
                 + '\n '.join(self.runfiles)
+        pkg = 'Package: '+self.config['pkg']
+        dt = 'Date: '+self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+        command = 'Command: '+self.config['command']
+        return folder + '\n' + files + '\n' + pkg+'\n' + dt + '\n' + command
 
     def loaddata(self,foldername):
         """
