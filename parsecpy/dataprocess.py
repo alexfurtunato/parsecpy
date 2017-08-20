@@ -63,9 +63,9 @@ class ParsecData:
 
         if not self.config:
             return 'No data'
-        pkg = 'Package: '+self.config['pkg']
+        pkg = 'Package: '+ self.config['pkg']
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
-        command = 'Command: '+self.config['command']
+        command = 'Command: '+ self.config['command']
         return pkg+'\n'+dt+'\n'+command
 
     def loaddata(self,filename):
@@ -105,7 +105,7 @@ class ParsecData:
         filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
         with open(self.config['pkg'] + '_datafile_' + filedatename \
                           + '.dat', 'w') as f:
-            conftxt = self.config
+            conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
@@ -311,9 +311,9 @@ class ParsecLogsData(ParsecData):
         folder = 'Folder: ' + self.foldername
         files = 'Processed Files: \n ' \
                 + '\n '.join(self.runfiles)
-        pkg = 'Package: '+self.config['pkg']
-        dt = 'Date: '+self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
-        command = 'Command: '+self.config['command']
+        pkg = 'Package: ' + self.config['pkg']
+        dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+        command = 'Command: '+ self.config['command']
         return folder + '\n' + files + '\n' + pkg+'\n' + dt + '\n' + command
 
     def loaddata(self,foldername):
@@ -349,7 +349,7 @@ class ParsecLogsData(ParsecData):
         filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
         with open('logs_' + self.foldername + '_datafile_' + filedatename
                           + '.dat', 'w') as f:
-            conftxt = self.config
+            conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
