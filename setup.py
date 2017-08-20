@@ -12,4 +12,6 @@ setup(name='parseecpy',
             'pandas',
             'matplotlib',
       ],
+      scripts=['bin/parsecpy_runprocess', 'bin/parsecpy_processlogsfolder',
+               'bin/parsecpy_createinputsizes'],
       zip_safe=False)

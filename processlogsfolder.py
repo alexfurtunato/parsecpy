@@ -8,7 +8,7 @@
 import os
 import argparse
 
-from dataprocess import ParsecLogsData
+from parsecpy.dataprocess import ParsecLogsData
 
 def argsparsevalidation():
     """
