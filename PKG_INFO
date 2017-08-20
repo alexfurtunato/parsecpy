@@ -1,0 +1,15 @@
+Metadata-Version: 0.1
+Name: parsecpy
+Version: 0.1
+Summary: An tool to interface with Parsec Benchmark.
+Home-page: https://github.com/alexfurtunatoifrn/parsecpy
+Author: Alex Furtunato
+Author-email: alexfurtunato@gmail.com
+License: MIT
+Description: Description...
+
+Keywords: example documentation tutorial
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Topic :: Utilities
+Classifier: License :: MIT License

@@ -6,20 +6,32 @@ python package to interface with PARSEC Benchmark
  - Run parsec application with repetitions e multiple input sizes and output data to file
  - Process a group of Parsec logs files generates from a shell direct execution of parsec
  - Manipulation of data resulting for logs process or execution obtained by package run script
+
+## Install
+
+ - Using pip
  
+    `$ pip3 install parsecpy`
+
+ - Using the source
+
+    `$ git clone git@github.com:alexfurtunatoifrn/parsecpy.git`
+    `$ cd parsecpy`
+    `$ pip3 install -U .`
+
 ## Usage
 
 ### Class ParsecData
 
     >>> from parsecpy import ParsecData
-    >>>  d = ParsecData('path_to_datafile')
+    >>> d = ParsecData('path_to_datafile')
     >>> d.times()       # Show a Dataframe with mesures times
     >>> d.speedups()    # Show a Dataframe with speedups
     >>> d.plot3D()      # plot a 3D Plot : speedups x number of cores x input sizes
 
 ### Run Parsec
 
-    runparsecprocess.py [-h] -p PACKAGE
+    parsecpy_runprocess [-h] -p PACKAGE
                            [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
                            [-i INPUT] [-r REPITITIONS]
                            c
@@ -44,7 +56,7 @@ python package to interface with PARSEC Benchmark
     
 ### Logs process
 
-    logsprocess.py [-h] foldername outputfilename
+    parsecpy_processlogs [-h] foldername outputfilename
     
     Script to parse a folder with parsec log files and save measures an output
     file
@@ -59,7 +71,7 @@ python package to interface with PARSEC Benchmark
 
 ### Create split parts
 
-    createinputsizes.py [-h] -p {freqmine,fluidanimate} -n NUMBEROFPARTS
+    parsecpy_createinputs [-h] -p {freqmine,fluidanimate} -n NUMBEROFPARTS
                                [-t {equal,diff}] -x EXTRAARG
                                inputfilename
     
