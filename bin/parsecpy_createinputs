@@ -71,7 +71,8 @@ def fluidanimate_splitdiff(tfile, n, frmax):
     print('Replicating input file %s on %s files' % (tfile,n))
     lfrm = [int(frmax - (n-1-i)*frmax/n) for i in range(n)]
     for i,frm in enumerate(lfrm):
-        newtarfilename = os.path.join(prefixfolder, tarfilename + '_' + '%02d' % (i+1) + '.tar')
+        newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
+                                      + '%02d' % (i+1) + '.tar')
         print(i+1,newtarfilename)
         try:
             shutil.copy(tfile,newtarfilename)
@@ -125,11 +126,13 @@ def freqmine_splitequal(tfile, n, ms):
     lfile = []
     for line,linetxt in enumerate(f):
         if line == 0:
-            newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) + '.' + fm.name.split('.')[1]
+            newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) \
+                          + '.' + fm.name.split('.')[1]
             fd = open(newfilename,'w')
         elif line%splitlen == 0 and line<splitlen*n:
             fd.close()
-            newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
+            newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+                                          + ('%02d' % partscount) + '.tar')
             print(partscount,newtarfilename)
             tar2 = tarfile.open(newtarfilename,'w')
             tar2.add(newfilename)
@@ -137,10 +140,12 @@ def freqmine_splitequal(tfile, n, ms):
             os.remove(newfilename)
             lfile.append((newtarfilename,newfilename))
             partscount += 1
-            newfilename = fm.name.split('.')[0] + '_' + str(partscount) + '.' + fm.name.split('.')[1]
+            newfilename = fm.name.split('.')[0] + '_' + str(partscount) \
+                          + '.' + fm.name.split('.')[1]
             fd = open(newfilename,'w')
         fd.write(linetxt.decode())
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+                                  + ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     tar2 = tarfile.open(newtarfilename, 'w')
     tar2.add(newfilename)
@@ -164,8 +169,9 @@ def freqmine_splitequal(tfile, n, ms):
 
 def freqmine_splitdiff(tfile, n, ms):
     """
-    Split Freqmine Benchmark input tar file within 'n' aritmetic progressive size
-    parts of new tar files with names like originalname_1 ... originalname_n.
+    Split Freqmine Benchmark input tar file within 'n' aritmetic progressive
+    size parts of new tar files with names like originalname_1 ...
+    originalname_n.
 
     :param tfile: Freqmine input tar file name to split.
     :param n: Count of aritmetic progressive size split parts.
@@ -200,11 +206,14 @@ def freqmine_splitdiff(tfile, n, ms):
         f = tar.extractfile(fm)
         for line,linetxt in enumerate(f):
             if line == 0:
-                newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) + '.' + fm.name.split('.')[1]
+                newfilename = fm.name.split('.')[0] + '_' \
+                              + ('%02d' % partscount) + '.' \
+                              + fm.name.split('.')[1]
                 fd = open(newfilename,'w')
             elif line%splitlen == 0 and line<=splitlenbase*(n-1):
                 fd.close()
-                newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
+                newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+                                              + ('%02d' % partscount) + '.tar')
                 print(partscount,newtarfilename)
                 print(" line: ", line," splitlen: ",splitlen)
                 tar2 = tarfile.open(newtarfilename,'w')
@@ -220,7 +229,8 @@ def freqmine_splitdiff(tfile, n, ms):
         if line >= numberoflines-1:
             fd.close()
             eof = True
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_' + ('%02d' % partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+                                  + ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     print(" line: ", line, " splitlen: ", splitlen)
     tar2 = tarfile.open(newtarfilename, 'w')
@@ -252,12 +262,23 @@ def argsparsevalidation():
 
     packagechoice = ['freqmine', 'fluidanimate']
     splitchoice = ['equal', 'diff']
-    parser = argparse.ArgumentParser(description='Script to split a parsec input file on specific parts')
-    parser.add_argument('-p','--package', help='Package name to be used on split.', choices=packagechoice, required=True)
-    parser.add_argument('-n','--numberofparts', help='Number of split parts', type=int, required=True)
-    parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent size partes parts', choices=splitchoice, default='diff')
-    parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine=minimum support (11000), Fluidanimate=Max number of frames', type=int, required=True)
-    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.')
+    parser = argparse.ArgumentParser(description='Script to split a parsec '
+                                                 'input file on specific parts')
+    parser.add_argument('-p','--package', help='Package name to be '
+                                               'used on split.',
+                        choices=packagechoice, required=True)
+    parser.add_argument('-n','--numberofparts', help='Number of split parts',
+                        type=int, required=True)
+    parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent '
+                                                   'size partes parts',
+                        choices=splitchoice, default='diff')
+    parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine='
+                                                 'minimum support (11000), '
+                                                 'Fluidanimate=Max number of '
+                                                 'frames',
+                        type=int, required=True)
+    parser.add_argument('inputfilename', help='Input filename from Parsec '
+                                              'specificated package.')
     args = parser.parse_args()
     return args
 
@@ -274,14 +295,18 @@ def main():
     if os.path.isfile(args.inputfilename):
         if args.package == 'freqmine':
             if args.typeofsplit == 'diff':
-                freqmine_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+                freqmine_splitdiff(args.inputfilename,
+                                   args.numberofparts,args.extraarg)
             else:
-                freqmine_splitequal(args.inputfilename,args.numberofparts,args.extraarg)
+                freqmine_splitequal(args.inputfilename,
+                                    args.numberofparts,args.extraarg)
         elif args.package == 'fluidanimate':
             if args.typeofsplit == 'diff':
-                fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+                fluidanimate_splitdiff(args.inputfilename,
+                                       args.numberofparts,args.extraarg)
             else:
-                fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+                fluidanimate_splitdiff(args.inputfilename,
+                                       args.numberofparts,args.extraarg)
     else:
         print("Error: File name not found.")
         exit(1)
