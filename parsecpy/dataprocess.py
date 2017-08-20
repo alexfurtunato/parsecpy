@@ -327,7 +327,7 @@ class ParsecLogsData(ParsecData):
         for filename in self.runfiles:
             filepath = os.path.join(self.foldername, filename)
             fattrs = self.fileprocess(filepath)
-            self.measurebuild(self.measures, fattrs)
+            self.measurebuild(fattrs)
             benchmarksset.add(fattrs['benchmark'])
         self.benchmarks = list(benchmarksset)
         return
