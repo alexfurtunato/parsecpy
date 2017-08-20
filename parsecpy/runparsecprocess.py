@@ -14,7 +14,7 @@ import subprocess
 import sys
 from datetime import datetime
 
-from parsecpy import logsprocess
+from . import logsprocess
 
 
 def argsparseintlist(txt):

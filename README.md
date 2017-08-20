@@ -12,4 +12,8 @@ python package to interface with PARSEC Benchmark
 ### Run Parsec
 
     $ runparsecprocess
+    
+### Logs process
+
+    $ logsprocess.py foldername outputfilename
 
