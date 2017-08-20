@@ -257,7 +257,7 @@ def argsparsevalidation():
     parser.add_argument('-n','--numberofparts', help='Number of split parts', type=int, required=True)
     parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent size partes parts', choices=splitchoice, default='diff')
     parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine=minimum support (11000), Fluidanimate=Max number of frames', required=True)
-    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.',type=argparse.FileType(), required=True)
+    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.',type=argparse.FileType())
     args = parser.parse_args()
     return args
 

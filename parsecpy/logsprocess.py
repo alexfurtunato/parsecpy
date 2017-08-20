@@ -167,9 +167,9 @@ def main():
         execdate = datetime.now()
         outputdict['config']['pkg'] = ', '.join(resultdata['benchmarks'])
         outputdict['config']['execdate'] = execdate.strftime("%d-%m-%Y_%H:%M:%S")
-        outputdict['config']['command'] = 'logsprocess folder: '+ args.foldername
+        outputdict['config']['command'] = 'logsprocess folder => '+ args.foldername
         fdatename = execdate.strftime("%Y-%m-%d_%H:%M:%S")
-        with open('logs_processed_'+fdatename + args.outputfilename, 'w') as f:
+        with open('logs_processed_'+fdatename + '_' + args.outputfilename, 'w') as f:
             json.dump(outputdict, f, ensure_ascii=False)
         print(outputdict)
     else:

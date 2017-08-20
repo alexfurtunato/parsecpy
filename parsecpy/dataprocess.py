@@ -102,13 +102,16 @@ class ParsecData:
         """
 
         data = self.speedups()
-        fig, ax = plt.subplots()
-        for test in data.columns:
-            xs = data.index
-            ys = data[test]
-            line, = ax.plot(xs, ys, '-', linewidth=2,label='Speedup for %s' % (test))
-        ax.legend(loc='lower right')
-        plt.show()
+        if data:
+            fig, ax = plt.subplots()
+            for test in data.columns:
+                xs = data.index
+                ys = data[test]
+                line, = ax.plot(xs, ys, '-', linewidth=2,label='Speedup for %s' % (test))
+            ax.legend(loc='lower right')
+            plt.show()
+        else:
+            print('Error: Do not possible plot data without speedups information')
 
     def plot3D(self):
         """
@@ -118,17 +121,20 @@ class ParsecData:
         """
 
         data = self.speedups()
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        tests = data.columns.sort_values()
-        yc = [i+1 for (i,j) in enumerate(tests)]
-        xc = data.index
-        X, Y = np.meshgrid(xc, yc)
-        lz = []
-        for i in tests:
-            lz.append(data[i])
-        Z = np.array(lz)
-        surf = ax.plot_surface(Y, X, Z, cmap=cm.coolwarm, linewidth = 0, antialiased = False)
-        plt.show()
+        if data:
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            tests = data.columns.sort_values()
+            yc = [i+1 for (i,j) in enumerate(tests)]
+            xc = data.index
+            X, Y = np.meshgrid(xc, yc)
+            lz = []
+            for i in tests:
+                lz.append(data[i])
+            Z = np.array(lz)
+            surf = ax.plot_surface(Y, X, Z, cmap=cm.coolwarm, linewidth = 0, antialiased = False)
+            plt.show()
+        else:
+            print('Error: Do not possible plot data without speedups information')
 
 
