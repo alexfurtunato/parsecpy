@@ -150,11 +150,10 @@ def main():
                     print("Error Message: ", e.strerror)
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
-    print(datarun)
+    datarun.savedata()
     print("\n Resume: ")
     print(datarun)
     print(datarun.times())
-    datarun.savedata()
 
 if __name__ == '__main__':
     main()
