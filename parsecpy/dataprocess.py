@@ -99,7 +99,9 @@ class ParsecData:
         filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
         with open(self.config['pkg'] + '_datafile_' + filedatename \
                           + '.dat', 'w') as f:
-            dictsave = {'config': self.config, 'data': self.measures}
+            conftxt = self.config
+            conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return
 
@@ -280,7 +282,9 @@ class ParsecLogsData(ParsecData):
         filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
         with open('logs_' + self.foldername + '_datafile_' + filedatename
                           + '.dat', 'w') as f:
-            dictsave = {'config': self.config, 'data': self.measures}
+            conftxt = self.config
+            conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return
 
