@@ -11,7 +11,7 @@ setup(name='parseecpy',
       install_requires=[
             'pandas',
             'matplotlib',
-      ],
+            ],
       scripts=['bin/parsecpy_runprocess', 'bin/parsecpy_processlogs',
                'bin/parsecpy_createinputs'],
       zip_safe=False)

@@ -13,10 +13,15 @@ from pandas import DataFrame
 from pandas import Series
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 from matplotlib.ticker import FormatStrFormatter
+
+support3d = True
+try:
+    from mpl_toolkits.mplot3d import Axes3D
+except:
+    support3d = False
 
 import json
 
@@ -247,6 +252,9 @@ class ParsecData:
 
         """
 
+        if not support3d:
+            print('Warning: No 3D plot support. Please install matplotlib with Axes3D toolkit')
+            return
         data = self.speedups()
         if data:
             fig = plt.figure()
