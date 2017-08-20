@@ -77,7 +77,7 @@ class ParsecData:
                 self.config['pkg'] = datadict['config']['pkg']
                 self.config['execdate'] = datetime.strptime(
                                           datadict['config']['execdate'],
-                                          "%Y-%m-%d_%H:%M:%S")
+                                          "%d-%m-%Y_%H:%M:%S")
                 self.config['command'] = datadict['config']['command']
             else:
                 print('Warning: The config data not must read')
