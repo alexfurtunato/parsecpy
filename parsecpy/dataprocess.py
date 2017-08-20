@@ -3,6 +3,7 @@
     Class to manipulate parsec execution results.
 
     Use: Import the module on external scripts
+
 """
 
 import numpy as np

@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/python3
 #  -*- coding: utf-8 -*-
 """
   Module to process parsec output informations.
