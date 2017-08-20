@@ -243,7 +243,7 @@ class ParsecLogsData(ParsecData):
 
         ParsecData.__init__(self)
         if foldername:
-            self.loaddata()
+            self.loaddata(foldername)
         return
 
     def __str__(self):
