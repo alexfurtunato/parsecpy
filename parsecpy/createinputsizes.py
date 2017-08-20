@@ -257,7 +257,7 @@ def argsparsevalidation():
     parser.add_argument('-n','--numberofparts', help='Number of split parts', type=int, required=True)
     parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent size partes parts', choices=splitchoice, default='diff')
     parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine=minimum support (11000), Fluidanimate=Max number of frames', required=True)
-    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.',type=argparse.FileType())
+    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.')
     args = parser.parse_args()
     return args
 
@@ -271,16 +271,20 @@ def main():
     """
 
     args = argsparsevalidation()
-    if args.package == 'freqmine':
-        if args.typeofsplit == 'diff':
-            freqmine_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
-        else:
-            freqmine_splitequal(args.inputfilename,args.numberofparts,args.extraarg)
-    elif args.package == 'fluidanimate':
-        if args.typeofsplit == 'diff':
-            fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
-        else:
-            fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+    if os.path.isfile(args.inputfilename):
+        if args.package == 'freqmine':
+            if args.typeofsplit == 'diff':
+                freqmine_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+            else:
+                freqmine_splitequal(args.inputfilename,args.numberofparts,args.extraarg)
+        elif args.package == 'fluidanimate':
+            if args.typeofsplit == 'diff':
+                fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+            else:
+                fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+    else:
+        print("Error: File name not found.")
+        exit(1)
 
 if __name__ == '__main__':
     main()
