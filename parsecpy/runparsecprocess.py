@@ -1,13 +1,20 @@
-#!/usr/local/bin/python3
+#!python3
 # -*- coding: utf-8 -*-
+"""
+  Module to run a parsec application.
 
-import sys
-import subprocess
-import dataprocess
-import shlex
-from datetime import datetime
+  Its possible run on loop to repeat the same sigle parsec execution on specific number of times;
+  And, also, its possiblme refer to multiples input sizes on the same execution.
+
+"""
 import argparse
 import json
+import shlex
+import subprocess
+import sys
+from datetime import datetime
+
+from parsecpy import logsprocess
 
 
 def argsparseintlist(txt):
@@ -69,13 +76,13 @@ def argsparsevalidation():
     :return: argparse object with validated arguments.
     """
 
-    choicebuilds=['gcc','gcc-serial','gcc-hooks','gcc-openmp','gcc-pthreads', 'gcc-tbb']
+    compilerchoicebuilds=['gcc','gcc-serial','gcc-hooks','gcc-openmp','gcc-pthreads', 'gcc-tbb']
     helpinputtxt = 'Input name to be used on run. (Default: %(default)s). '
     helpinputtxt += 'Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10'
-    parser = argparse.ArgumentParser(description='Script to split a input parsec file')
+    parser = argparse.ArgumentParser(description='Script to run parsec app with repetitions and multiples inputs sizes')
     parser.add_argument('c', type=argsparseintlist,help='List of cores numbers to be used. Ex: 1,2,4')
     parser.add_argument('-p','--package', help='Package Name to run', required=True)
-    parser.add_argument('-c','--compiler', help='Compiler name to be used on run. (Default: %(default)s).', choices=choicebuilds, default='gcc-hooks')
+    parser.add_argument('-c','--compiler', help='Compiler name to be used on run. (Default: %(default)s).', choices=compilerchoicebuilds, default='gcc-hooks')
     parser.add_argument('-i','--input', type=argsparseinputlist, help=helpinputtxt, default='native')
     parser.add_argument('-r','--repititions', type=int, help='Number of repititions for a specific run. (Default: %(default)s)', default=1)
     args = parser.parse_args()
@@ -84,7 +91,7 @@ def argsparsevalidation():
 def main():
     """
     Main function executed from the linux shell script run.
-    Trigger a sequence of parsecmgmt programm runs and save the Dataframes of data within files.
+    Trigger a sequence of parsecmgmt program runs and save the Dataframes of data within files.
 
     """
 
@@ -105,8 +112,8 @@ def main():
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
-                        attrs = dataprocess.contentextract(output.decode())
-                        datadict['data'] = dataprocess.datadictbuild(datadict['data'], attrs, c)
+                        attrs = logsprocess.contentextract(output.decode())
+                        datadict['data'] = logsprocess.datadictbuild(datadict['data'], attrs, c)
                     if error:
                         print("Error: Execution return error code = ",res.returncode)
                         print("Error Message: ", error.strip())
@@ -118,10 +125,10 @@ def main():
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
 
-    dataexec = datetime.now()
-    datadict['config']['dataexec'] = dataexec.strftime("%d-%m-%Y_%H:%M:%S")
-    fdataname = dataexec.strftime("%Y-%m-%d_%H:%M:%S")
-    with open(args.package + '_datafile_' + fdataname + '.dat', 'w') as f:
+    execdate = datetime.now()
+    datadict['config']['execdate'] = execdate.strftime("%d-%m-%Y_%H:%M:%S")
+    fdatename = execdate.strftime("%Y-%m-%d_%H:%M:%S")
+    with open(args.package + '_datafile_' + fdatename + '.dat', 'w') as f:
         json.dump(datadict,f,ensure_ascii=False)
 
     print("\n Data Dictionary: ")

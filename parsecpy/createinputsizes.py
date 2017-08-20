@@ -1,24 +1,15 @@
-#!/usr/local/bin/python3
-# -*- coding: utf-8 -*-
+#!python3
+#  -*- coding: utf-8 -*-
 """
-  Module to process parsec output informations.
-  The module can be used on others modules and as a executabled script.
-  As executabled script, its process a folder with log run files.
+  Module to create new input sizes on parsec packages.
+
 """
 
 import os
 import shutil
 import argparse
-import numpy as np
-from pandas import DataFrame, Series
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 import tarfile
-import json
 
 # Template with 2 arguments: filename.runconf, input name
 template_parsecconf = '''#!/bin/bash
@@ -60,226 +51,7 @@ run_exec="bin/fluidanimate"
 run_args="${NTHREADS} %s in_500K.fluid out.fluid"
 '''
 
-def contentextract(txt):
-    """
-    Extract times values from a parsec log output.
-
-    :param txt: Content text from a parsec output run.
-    :return: dict with extracted values.
-    """
-
-    for l in txt.split('\n'):
-        if l.strip().startswith("[PARSEC] Benchmarks to run:"):
-            benchmark = l.strip().split(':')[1]
-            benchmark = benchmark.strip().split('.')[1]
-        elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
-            input = l.strip().split("'")[1]
-        if l.strip().startswith("[HOOKS] Total time spent in ROI"):
-            roitime = l.strip().split(':')[-1]
-        elif l.strip().startswith("real"):
-            realtime = l.strip().split('\t')[-1]
-        elif l.strip().startswith("user"):
-            usertime = l.strip().split('\t')[-1]
-        elif l.strip().startswith("sys"):
-            systime = l.strip().split('\t')[-1]
-    if roitime:
-        roitime = float(roitime.strip()[:-1])
-    else:
-        roitime = None
-    if realtime:
-        realtime = 60*float(realtime.strip().split('m')[0]) + float(realtime.strip().split('m')[1][:-1])
-    else:
-        realtime = None
-    if usertime:
-        usertime = 60 * float(usertime.strip().split('m')[0]) + float(usertime.strip().split('m')[1][:-1])
-    else:
-        usertime = None
-    if systime:
-        systime = 60 * float(systime.strip().split('m')[0]) + float(systime.strip().split('m')[1][:-1])
-    else:
-        systime = None
-
-    return {'benchmark': benchmark, 'input': input, 'roitime':roitime, 'realtime': realtime, 'usertime': usertime, 'systime': systime}
-
-def fileprocess(fn):
-    """
-    Process a parsec log file and return a dictionary with data.
-
-    :param fn: File name to extract the contents data.
-    :return: dictionary with extracted values.
-    """
-
-    f = open(fn)
-    content = f.read()
-    bn = os.path.basename(fn)
-    parts = bn.split("_")
-    cores = int(parts[1])
-    dictattrs = contentextract(content)
-    f.close()
-    dictattrs['filename'] = bn
-    dictattrs['cores'] = cores
-    return dictattrs
-
-def runlogfilesprocess(fn, fl):
-    """
-    Process parsec log files within a folder.
-
-    :param fn: Folder name.
-    :param fl: Filename list of parsec log files.
-    :return: dataframe with extracted data.
-    """
-
-    datadict = {}
-    for filename in fl:
-        fpath = os.path.join(fn, filename)
-        fattrs = fileprocess(fpath)
-        datadict = datadictbuild(datadict, fattrs)
-    d = dataframebuild(datadict)
-    return d
-
-def runlogfilesfilter(fn):
-    """
-    Return a list of files into a folder. The filenames pattern search start with 'run_'.
-
-    :param fn: Folder name.
-    :return: list of founded files.
-    """
-
-    for root, dirs, files in os.walk(fn):
-        rfiles = [name for name in files if name.startswith('run_')]
-    if len(rfiles) == 0:
-        return []
-    return rfiles
-
-
-def datadictbuild(rdict, attrs, ncores=None):
-    """
-    Resume all tests, grouped by size, on a dictionary.
-      - Dictionary format: {'testname': {'coresnumber': ['timevalue', ... ], ...}, ...}
-
-    :param rdict: Dictionary to store the data attributes.
-    :param attrs: Attributes to insert into dictionary.
-    :param ncores: Number of cores used on executed process.
-    :return: dictionary with inserted values.
-    """
-
-    if not ncores:
-        ncores = attrs['cores']
-
-    if attrs['roitime']:
-        ttime = attrs['roitime']
-    else:
-        ttime = attrs['realtime']
-
-    if attrs['input'] in rdict.keys():
-        if ncores in rdict[attrs['input']].keys():
-            rdict[attrs['input']][ncores].append(ttime)
-        else:
-            rdict[attrs['input']][ncores] = [ttime]
-    else:
-        rdict[attrs['input']] = {ncores: [ttime]}
-    return rdict
-
-
-def dataframebuild(data):
-    """
-    Resume all tests, grouped by size, on DataFrame.
-     - Dataframe format: index=<cores>, columns=<inputsize>, values=<median of times>.
-
-    :param data: Dictionary with values of calculated median of times.
-    :return: dataframe with data.
-    """
-
-    df = DataFrame()
-    inputs = list(data.keys())
-    inputs.sort(reverse=True)
-    for i in inputs:
-        df[i] = Series([np.median(i) for i in data[i].values()], index=[int(j) for j in data[i].keys()])
-    df = df.sort_index()
-    return df
-
-
-def speedupframebuild(data):
-    """
-    Resume speedups test grouped by size on a DataFrame.
-     - Dataframe format: index=<cores>, columns=<inputsize>, values=<speedups>.
-
-    :param data: Dataframe with values of calculated speedups.
-    :return: dataframe with data.
-    """
-
-    ds = DataFrame()
-    if 1 not in data.index or len(data.index) < 2:
-        print("Error: Do not possible calcule the speedup without single core run")
-        return
-    for input in data.columns:
-        idx = data.index[1:]
-        darr = data.loc[1, input] / data[input][data.index != 1]
-        ds[input] = Series(darr, index=idx)
-    ds = ds.sort_index()
-    return ds
-
-
-def datadictread(filename, type='s'):
-    """
-    Read de dictionary data stored on file and return a Dataframe of times or speedups, depends on type parameter.
-     - Dataframe format: index=<cores>, columns=<inputsize>, values=<speedups> or <time>.
-
-    :param data: Filename with data dictionary of execution times.
-    :param type: Type of dataframe return: Times or Speedups.
-    :return: dataframe with data.
-    """
-    with open(filename) as f:
-        datadict = json.load(f)
-    dataftime = dataframebuild(datadict['data'])
-    if type == 't':
-        return dataftime
-    elif type == 's':
-        datafspeedup = speedupframebuild(dataftime)
-        return datafspeedup
-    else:
-        print('Error: The type of output must be \'t\'=times  \'s\'=speedups')
-
-def plot2Dspeedup(data):
-    """
-    Plot the 2D (Speedup x Cores) linear graph.
-
-    :param data: Dataframe with speedups data.
-    """
-
-    print("Plotting 2D Speedup Graph... ")
-    data.plot()
-'''    fig, ax = plt.subplots()
-    for test in data.columns:
-        xs = data.index
-        ys = data[test]
-        line, = ax.plot(xs, ys, '-', linewidth=2,label='Speedup for %s' % (test))
-    ax.legend(loc='lower right')
-    plt.show()
-'''
-
-def plot3Dspeedup(data):
-    """
-    Plot the 3D (Speedup x cores x size) graph.
-
-    :param data: Dataframe with speedups data.
-    """
-
-    print("Plotting 3D Speedup Graph... ")
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    tests = data.columns.sort_values()
-    yc = [i+1 for (i,j) in enumerate(tests)]
-    xc = data.index
-    X, Y = np.meshgrid(xc, yc)
-    lz = []
-    for i in tests:
-        lz.append(data[i])
-    Z = np.array(lz)
-    surf = ax.plot_surface(Y, X, Z, cmap=cm.coolwarm, linewidth = 0, antialiased = False)
-    plt.show()
-
-def fluidanimate_inputfilesplitequal(tfile, n, frmax):
+def fluidanimate_splitdiff(tfile, n, frmax):
     """
     Generate Fluidanimate Benchmark inputs tar file with sames equal sizes,
     but, with different number of frames: 50, 100, 150, ... 500.
@@ -318,7 +90,7 @@ def fluidanimate_inputfilesplitequal(tfile, n, frmax):
     print('Sucessful finished split operation. Total parts = ',i+1)
 
 
-def freqmine_inputfilesplitequal(tfile, n, ms):
+def freqmine_splitequal(tfile, n, ms):
     """
     Split Freqmine Benchmark input tar file within 'n' equal size
     parts of new tar files with names like originalname_1 ... originalname_n.
@@ -390,7 +162,7 @@ def freqmine_inputfilesplitequal(tfile, n, ms):
         fconf2.close()
     print('Sucessful finished split operation. Total parts = ',partscount)
 
-def freqmine_inputfilesplitprogressive(tfile, n, ms):
+def freqmine_splitdiff(tfile, n, ms):
     """
     Split Freqmine Benchmark input tar file within 'n' aritmetic progressive size
     parts of new tar files with names like originalname_1 ... originalname_n.
@@ -478,42 +250,37 @@ def argsparsevalidation():
     :return: argparse object with validated arguments.
     """
 
-    parser = argparse.ArgumentParser(description='Script to parse a folder with parsec log files')
-    parser.add_argument('foldername', help='Foldername with parsec log files.')
+    packagechoice = ['freqmine', 'fluidanimate']
+    splitchoice = ['equal', 'diff']
+    parser = argparse.ArgumentParser(description='Script to split a parsec input file on specific parts')
+    parser.add_argument('-p','--package', help='Package name to be used on split.', choices=packagechoice, required=True)
+    parser.add_argument('-n','--numberofparts', help='Number of split parts', type=int, required=True)
+    parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent size partes parts', choices=splitchoice, default='diff')
+    parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine=minimum support (11000), Fluidanimate=Max number of frames', required=True)
+    parser.add_argument('inputfilename', help='Input filename from Parsec specificated package.',type=argparse.FileType(), required=True)
     args = parser.parse_args()
     return args
 
 def main():
     """
     Main function executed from the linux shell script run.
-    Process a folder with parsec log files and return Dataframes and data plot.
+    Process a specificated package parsec input file.
+
+    Packages: freqmine, fluidanimate
 
     """
 
-    runfiles = []
-
     args = argsparsevalidation()
-
-    if os.path.isdir(args.foldername):
-        runfiles = runlogfilesfilter(args.foldername)
-        print("\nProcessing folder: ", args.foldername)
-        print(len(runfiles),"files")
-    else:
-        print("Error: Folder name not found.")
-        exit(1)
-
-    if(runfiles):
-        print("\nTimes: \n")
-        data = runlogfilesprocess(args.foldername,runfiles)
-        print(data)
-        print("\nSpeedups: \n")
-        spdata = speedupframebuild(data)
-        print(spdata)
-        plot2Dspeedup(spdata)
-        plot3Dspeedup(spdata)
-    else:
-        print("Warning: Folder is empty")
-        exit(1)
+    if args.package == 'freqmine':
+        if args.typeofsplit == 'diff':
+            freqmine_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+        else:
+            freqmine_splitequal(args.inputfilename,args.numberofparts,args.extraarg)
+    elif args.package == 'fluidanimate':
+        if args.typeofsplit == 'diff':
+            fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
+        else:
+            fluidanimate_splitdiff(args.inputfilename,args.numberofparts,args.extraarg)
 
 if __name__ == '__main__':
     main()
