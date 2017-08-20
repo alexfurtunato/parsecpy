@@ -119,9 +119,9 @@ def main():
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
-    execdate = datetime.now()
-    data = ParsecData()
-    data.config = {'pkg': args.package, 'execdate': execdate,
+    rundate = datetime.now()
+    datarun = ParsecData()
+    datarun.config = {'pkg': args.package, 'execdate': rundate,
                    'command': command % (args.package, args.compiler,
                                          args.input, args.c)}
     print("Processing %s Repetitions: " % (args.repititions))
@@ -137,8 +137,8 @@ def main():
                                            stderr=subprocess.STDOUT)
                     output, error = res.communicate()
                     if output:
-                        attrs = data.contentextract(output.decode())
-                        data.measurebuild(attrs, c)
+                        attrs = datarun.contentextract(output.decode())
+                        datarun.measurebuild(attrs, c)
                     if error:
                         print("Error: Execution return error code = ",
                               res.returncode)
@@ -150,10 +150,11 @@ def main():
                     print("Error Message: ", e.strerror)
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
-    data.savedata()
+    print(datarun)
     print("\n Resume: ")
-    print(data)
-    print(data.times())
+    print(datarun)
+    print(datarun.times())
+    datarun.savedata()
 
 if __name__ == '__main__':
     main()
