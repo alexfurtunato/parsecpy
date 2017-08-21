@@ -6,7 +6,7 @@ def read(fname):
 
 setup(name='parseecpy',
       version='0.1',
-      description='Parsec tool interface',
+      description='Parsec Benchmark tool',
       url='https://github.com/alexfurtunatoifrn/parsecpy',
       author='Alex Furtunato',
       author_email='alexfurtunato@gmail.com',
@@ -21,7 +21,11 @@ setup(name='parseecpy',
       long_description=read('README.md'),
       classifiers=[
           "Development Status :: 3 - Alpha",
-          "Topic :: Utilities",
-          "License :: MIT License",
+          "Topic :: Software Development :: Build Tools",
+          "Topic :: Software Development :: Libraries :: Python Modules",
+          "Topic :: Scientific/Engineering",
+          "License :: OSI Approved :: MIT License",
+          "Programming Language :: Python :: 3",
       ],
+      keywords='parsec benchmark tool',
       zip_safe=False)
