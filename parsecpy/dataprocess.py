@@ -248,7 +248,7 @@ class ParsecData:
         """
 
         data = self.speedups()
-        if data:
+        if not data.empty:
             fig, ax = plt.subplots()
             for test in data.columns:
                 xs = data.index
@@ -271,7 +271,7 @@ class ParsecData:
             print('Warning: No 3D plot support. Please install matplotlib with Axes3D toolkit')
             return
         data = self.speedups()
-        if data:
+        if not data.empty:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             tests = data.columns.sort_values()
