@@ -4,7 +4,7 @@ from setuptools import setup
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-setup(name='parseecpy',
+setup(name='parsecpy',
       version='0.1',
       description='Parsec Benchmark tool',
       url='https://github.com/alexfurtunatoifrn/parsecpy',

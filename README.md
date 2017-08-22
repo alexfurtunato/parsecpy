@@ -1,11 +1,13 @@
 # parsecpy
-python package to interface with PARSEC Benchmark
+
+python module to interface with PARSEC Benchmark
 
 ## Features
 
  - Run parsec application with repetitions e multiple input sizes and output data to file
  - Process a group of Parsec logs files generates from a shell direct execution of parsec
- - Manipulation of data resulting for logs process or execution obtained by package run script
+ - Manipulate of data resulting for logs process or execution obtained by module run script itself
+ - Calculate the speedups os applications, if it' possible, using the measures times of execution
 
 ## Install
 
@@ -16,7 +18,9 @@ python package to interface with PARSEC Benchmark
  - Using the source
 
     `$ git clone git@github.com:alexfurtunatoifrn/parsecpy.git`
+    
     `$ cd parsecpy`
+    
     `$ pip3 install -U .`
 
 ## Usage
@@ -25,10 +29,20 @@ python package to interface with PARSEC Benchmark
 
     >>> from parsecpy import ParsecData
     >>> d = ParsecData('path_to_datafile')
+    >>> print(d)        # Print summary informations
     >>> d.times()       # Show a Dataframe with mesures times
     >>> d.speedups()    # Show a Dataframe with speedups
     >>> d.plot3D()      # plot a 3D Plot : speedups x number of cores x input sizes
 
+### Class ParsecData
+
+    >>> from parsecpy import ParsecLogsData
+    >>> l = ParsecLogsData('path_to_folder_with_logfiles')
+    >>> print(l)        # Print summary informations
+    >>> l.times()       # Show a Dataframe with mesures times
+    >>> l.speedups()    # Show a Dataframe with speedups
+    >>> l.plot3D()      # plot a 3D Plot : speedups x number of cores x input sizes
+    
 ### Run Parsec
 
     parsecpy_runprocess [-h] -p PACKAGE
@@ -53,6 +67,9 @@ python package to interface with PARSEC Benchmark
                             Ex: native or native_1:10
       -r REPITITIONS, --repititions REPITITIONS
                             Number of repititions for a specific run. (Default: 1)
+                            
+    Example:
+        parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
     
 ### Logs process
 
@@ -68,6 +85,8 @@ python package to interface with PARSEC Benchmark
     optional arguments:
       -h, --help      show this help message and exit
 
+    Example:
+        parsecpy_processlogs logs_folder my-logs-folder-data.dat
 
 ### Create split parts
 
@@ -91,3 +110,6 @@ python package to interface with PARSEC Benchmark
       -x EXTRAARG, --extraarg EXTRAARG
                             Specific argument: Freqmine=minimum support (11000),
                             Fluidanimate=Max number of frames
+    
+    Example:
+        parsec_createinputs -p fluidanimate -n 10 -t diff -x 500 fluidanimate_native.tar
