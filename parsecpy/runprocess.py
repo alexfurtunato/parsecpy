@@ -9,32 +9,30 @@
     Pandas Dataframe with times and speedups.
 
     parsecpy_runprocess [-h] -p PACKAGE
-                           [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
-                           [-i INPUT] [-r REPITITIONS]
-                           c
+        [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
+        [-i INPUT] [-r REPITITIONS] c
 
     Script to run parsec app with repetitions and multiples inputs sizes
 
-    positional arguments:
-      c                     List of cores numbers to be used. Ex: 1,2,4
+    positional arguments
+        c
+            List of cores numbers to be used. Ex: 1,2,4
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -p PACKAGE, --package PACKAGE
-                            Package Name to run
-      -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}, --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
-                            Compiler name to be used on run. (Default: gcc-hooks).
-      -i INPUT, --input INPUT
-                            Input name to be used on run. (Default: native).
-                            Syntax: inputsetname[<initialnumber>:<finalnumber>].
-                            Ex: native or native_1:10
-      -r REPITITIONS, --repititions REPITITIONS
-                            Number of repititions for a specific run. (Default: 1)
-
-    Example:
+    optional arguments
+        -h, --help
+            show this help message and exit
+        -p PACKAGE, --package PACKAGE
+            Package Name to run
+        -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb},
+            --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
+            Compiler name to be used on run. (Default: gcc-hooks).
+        -i INPUT, --input INPUT
+            Input name to be used on run. (Default: native).
+            Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10
+        -r REPITITIONS, --repititions REPITITIONS
+            Number of repititions for a specific run. (Default: 1)
+    Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
-
-
 """
 
 import argparse

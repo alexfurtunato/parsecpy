@@ -7,29 +7,28 @@
 
 
     parsecpy_createinputs [-h] -p {freqmine,fluidanimate} -n NUMBEROFPARTS
-                                   [-t {equal,diff}] -x EXTRAARG
-                                   inputfilename
+        [-t {equal,diff}] -x EXTRAARG inputfilename
 
         Script to split a parsec input file on specific parts
 
-        positional arguments:
-          inputfilename         Input filename from Parsec specificated package.
+        positional arguments
+            inputfilename
+                Input filename from Parsec specificated package.
 
-        optional arguments:
-          -h, --help            show this help message and exit
-          -p {freqmine,fluidanimate}, --package {freqmine,fluidanimate}
-                                Package name to be used on split.
-          -n NUMBEROFPARTS, --numberofparts NUMBEROFPARTS
-                                Number of split parts
-          -t {equal,diff}, --typeofsplit {equal,diff}
-                                Split on equal or diferent size partes parts
-          -x EXTRAARG, --extraarg EXTRAARG
-                                Specific argument: Freqmine=minimum support (11000),
-                                Fluidanimate=Max number of frames
-
-        Example:
+        optional arguments
+            -h, --help
+                show this help message and exit
+            -p {freqmine,fluidanimate}, --package {freqmine,fluidanimate}
+                Package name to be used on split.
+            -n NUMBEROFPARTS, --numberofparts NUMBEROFPARTS
+                Number of split parts
+            -t {equal,diff}, --typeofsplit {equal,diff}
+                Split on equal or diferent size partes parts
+            -x EXTRAARG, --extraarg EXTRAARG
+                Specific argument: Freqmine=minimum support (11000),
+                Fluidanimate=Max number of frames
+        Example
             parsec_createinputs -p fluidanimate -n 10 -t diff -x 500 fluidanimate_native.tar
-
 """
 
 import os

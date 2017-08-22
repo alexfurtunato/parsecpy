@@ -30,17 +30,17 @@ class ParsecData:
     """
     Class that store parsec run measures values
 
-        Atrributes:
-            config: The metadata about execution informations
-            measures: Resume dictionary with all measures times
+        Atrributes
+            config - The metadata about execution informations
+            measures - Resume dictionary with all measures times
 
-        Methods:
-            loadata():
-            savedata():
-            times():
-            speedups():
-            plot2D():
-            plot3D:
+        Methods
+            loadata()
+            savedata()
+            times()
+            speedups()
+            plot2D()
+            plot3D
 
     """
 
@@ -168,13 +168,8 @@ class ParsecData:
         Resume all tests, grouped by input sizes and number of cores,
         on a dictionary.
 
-            Dictionary format: {'inputsize':
-                                    {'numberofcores1':
-                                        ['timevalue1', ... ],
-                                         ...
-                                    },
-                                    ...
-                                }
+        Dictionary format
+            {'inputsize':{'numberofcores1':['timevalue1', ... ], ... }, ...}
 
         :param attrs: Attributes to insert into dictionary.
         :param numberofcores: Number of cores used on executed process.
@@ -202,10 +197,10 @@ class ParsecData:
         Return a Pandas Dataframe with resume of all tests,
         grouped by input size e number of cores.
 
-            Dataframe format:
-                row indexes=<number cores>
-                columns indexes=<input sizes>,
-                    values=<median of measures times>.
+        Dataframe format
+            row indexes=<number cores>
+            columns indexes=<input sizes>,
+            values=<median of measures times>.
 
         :return: dataframe with median of measures times.
         """
@@ -225,10 +220,10 @@ class ParsecData:
         Return a Pandas Dataframe with speedups,
         grouped by input size e number of cores.
 
-            Dataframe format:
-                row indexes=<number cores>
-                columns indexes=<input sizes>,
-                    values=<calculated speedups>.
+        Dataframe format
+            row indexes=<number cores>
+            columns indexes=<input sizes>,
+            values=<calculated speedups>.
 
         :return: dataframe with calculated speedups.
         """
@@ -300,7 +295,7 @@ class ParsecLogsData(ParsecData):
     Class that store parsec run measures values obtained from
     logs files
 
-        Atrributes:
+        Atrributes
             config: The metadata about execution informations
             measures: Resume dictionary with all measures times
             foldername: Folder where was found logs files
@@ -308,14 +303,14 @@ class ParsecLogsData(ParsecData):
             benchmarks: List of benchmarks applications founder on log files
 
         Methods:
-            loadata():
-            savedata():
-            fileproccess():
-            runlogfilesproc():
-            times():
-            speedups():
-            plot2D():
-            plot3D:
+            loadata()
+            savedata()
+            fileproccess()
+            runlogfilesproc()
+            times()
+            speedups()
+            plot2D()
+            plot3D
 
     """
 

@@ -9,16 +9,17 @@
     Script to parse a folder with parsec log files and save measures an output
     file
 
-    positional arguments:
-      foldername      Foldername with parsec log files.
-      outputfilename  Filename to save the measures dictionary.
+    positional arguments
+        foldername
+            Foldername with parsec log files.
+        outputfilename
+            Filename to save the measures dictionary.
 
-    optional arguments:
-      -h, --help      show this help message and exit
-
-    Example:
+    optional arguments
+        -h, --help
+            show this help message and exit
+    Example
         parsecpy_processlogs logs_folder my-logs-folder-data.dat
-
 """
 
 import os

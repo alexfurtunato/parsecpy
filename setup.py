@@ -16,8 +16,6 @@ setup(name='parsecpy',
             'pandas',
             'matplotlib>=2.0.2',
             ],
-      scripts=['bin/parsecpy_runprocess', 'bin/parsecpy_processlogs',
-               'bin/parsecpy_createinputs'],
       long_description=read('README.md'),
       classifiers=[
           "Development Status :: 3 - Alpha",
@@ -27,5 +25,12 @@ setup(name='parsecpy',
           "License :: OSI Approved :: MIT License",
           "Programming Language :: Python :: 3",
       ],
+      entry_points={
+          'console_scripts': [
+              'parsecpy_createinputs = parsecpy.createinputs:main',
+              'parsecpy_processlogs = parsecpy.processlogs:main',
+              'parsecpy_runprocess = parsecpy.runprocess:main',
+          ],
+      },
       keywords='parsec benchmark tool',
       zip_safe=False)
