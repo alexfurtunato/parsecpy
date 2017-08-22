@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    Module with classes that parsec execution results.
+    Module with Classes with generates Pandas Dataframes
+    with prossed data from Parsec applications execution.
 
 
 """
@@ -27,14 +28,15 @@ import json
 
 class ParsecData:
     """
-    Class that represent parsec run measures values
+    Class that store parsec run measures values
 
         Atrributes:
             config: The metadata about execution informations
-            measures: Resume dictionary with all times measures
+            measures: Resume dictionary with all measures times
 
         Methods:
             loadata():
+            savedata():
             times():
             speedups():
             plot2D():
@@ -46,9 +48,10 @@ class ParsecData:
 
     def __init__(self,filename=None):
         """
-        Create a object empty or with loaded data from a file
+        Create a empty object or initialized of data from a file saved
+        with savedata method.
 
-        :param filename: File name within measures for load into class
+        :param filename: File name that store measures
         """
         if filename:
             self.loaddata(filename)
@@ -56,7 +59,7 @@ class ParsecData:
 
     def __str__(self):
         """
-        Default string output informations of object
+        Default output string representation of class
 
         :return: specific formated string
         """
@@ -70,8 +73,8 @@ class ParsecData:
 
     def loaddata(self,filename):
         """
-        Read a runprocess result dictionary stored on a file and initialize
-        the class dictionaries.
+        Read a file previously saved with method savedata() and initialize
+        the object class dictionaries.
 
         :param filename: Filename with data dictionary of execution times.
         """
@@ -97,7 +100,7 @@ class ParsecData:
 
     def savedata(self):
         """
-        Write to file the measures information
+        Write to file the measures information stored on object class
 
         :return:
         """
@@ -113,7 +116,8 @@ class ParsecData:
 
     def contentextract(self, txt):
         """
-        Extract times values from a parsec log output.
+        Extract times values from a parsec log file output and return a
+        dictionary of data.
 
         :param txt: Content text from a parsec output run.
         :return: dict with extracted values.
@@ -159,8 +163,16 @@ class ParsecData:
 
     def measurebuild(self, attrs, numberofcores=None):
         """
-        Resume all tests, grouped by size, on a dictionary.
-          - Dictionary format: {'testname': {'coresnumber': ['timevalue', ... ], ...}, ...}
+        Resume all tests, grouped by input sizes and number of cores,
+        on a dictionary.
+
+            Dictionary format: {'inputsize':
+                                    {'numberofcores1':
+                                        ['timevalue1', ... ],
+                                         ...
+                                    },
+                                    ...
+                                }
 
         :param attrs: Attributes to insert into dictionary.
         :param numberofcores: Number of cores used on executed process.
@@ -185,10 +197,13 @@ class ParsecData:
 
     def times(self):
         """
-        Resume all tests, grouped by size, on DataFrame.
+        Return a Pandas Dataframe with resume of all tests,
+        grouped by input size e number of cores.
 
-            Dataframe format: index=<cores>, columns=<inputsize>,
-                values=<median of times>.
+            Dataframe format:
+                row indexes=<number cores>
+                columns indexes=<input sizes>,
+                    values=<median of measures times>.
 
         :return: dataframe with median of measures times.
         """
@@ -205,12 +220,15 @@ class ParsecData:
 
     def speedups(self):
         """
-        Resume speedups test grouped by size on a DataFrame.
+        Return a Pandas Dataframe with speedups,
+        grouped by input size e number of cores.
 
-            Dataframe format: index=<cores>, columns=<inputsize>,
-                values=<speedups>.
+            Dataframe format:
+                row indexes=<number cores>
+                columns indexes=<input sizes>,
+                    values=<calculated speedups>.
 
-        :return: dataframe with speedups.
+        :return: dataframe with calculated speedups.
         """
 
         ds = DataFrame()
@@ -228,7 +246,7 @@ class ParsecData:
 
     def plot2D(self):
         """
-        Plot the 2D (Speedup x Cores) linear graph.
+        Plot the 2D (Speedup x Cores) lines graph.
 
         """
 
@@ -248,7 +266,7 @@ class ParsecData:
 
     def plot3D(self):
         """
-        Plot the 3D (Speedup x cores x size) graph.
+        Plot the 3D (Speedup x cores x input size) surface.
 
         """
 
@@ -277,11 +295,25 @@ class ParsecData:
 
 class ParsecLogsData(ParsecData):
     """
-    Class that represent processed parsec log files
+    Class that store parsec run measures values obtained from
+    logs files
 
-        Attributes:
+        Atrributes:
+            config: The metadata about execution informations
+            measures: Resume dictionary with all measures times
+            foldername: Folder where was found logs files
+            runfiles: List of processed files
+            benchmarks: List of benchmarks applications founder on log files
 
         Methods:
+            loadata():
+            savedata():
+            fileproccess():
+            runlogfilesproc():
+            times():
+            speedups():
+            plot2D():
+            plot3D:
 
     """
     foldername = ''
@@ -290,8 +322,10 @@ class ParsecLogsData(ParsecData):
 
     def __init__(self, foldername=None):
         """
-        Create a logs object empty or within processed log files data
+        Create a empty object or initialized of data from files found
+        in foldername
 
+        :param foldername: Folder name that store logs files
         """
 
         ParsecData.__init__(self)
@@ -301,7 +335,7 @@ class ParsecLogsData(ParsecData):
 
     def __str__(self):
         """
-        Default string output informations of object
+        Default output string representation of class
 
         :return: specific formated string
         """
@@ -317,6 +351,12 @@ class ParsecLogsData(ParsecData):
         return folder + '\n' + files + '\n' + pkg+'\n' + dt + '\n' + command
 
     def loaddata(self,foldername):
+        """
+        Read all logs files that found in foldername and initialize
+        the object class dictionaries.
+
+        :param filename: Filename with data dictionary of execution times.
+        """
         """
         Read foldername and runfiles
 
@@ -341,7 +381,7 @@ class ParsecLogsData(ParsecData):
 
     def savedata(self):
         """
-        Write to file the measures information
+        Write to file the measures information stored on object class
 
         :return:
         """
@@ -357,7 +397,7 @@ class ParsecLogsData(ParsecData):
 
     def fileprocess(self, filename):
         """
-        Process a parsec log file and return a dictionary with data.
+        Process a parsec log file and return a dictionary with processed data.
 
         :param filename: File name to extract the contents data.
         :return: dictionary with extracted values.
@@ -377,7 +417,7 @@ class ParsecLogsData(ParsecData):
     def runlogfilesprocess(self):
         """
         Process parsec log files within a folder and load data on
-        class attributes
+        object class attributes
 
         :return:
         """

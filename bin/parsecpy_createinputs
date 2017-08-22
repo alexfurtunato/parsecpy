@@ -1,7 +1,34 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 """
-  Module to create new input sizes on parsec packages.
+    Module to create new input sizes on parsec packages.
+
+    Actually it can create onle fluidanimate and fremine new inputs
+
+
+    parsecpy_createinputs [-h] -p {freqmine,fluidanimate} -n NUMBEROFPARTS
+                                   [-t {equal,diff}] -x EXTRAARG
+                                   inputfilename
+
+        Script to split a parsec input file on specific parts
+
+        positional arguments:
+          inputfilename         Input filename from Parsec specificated package.
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -p {freqmine,fluidanimate}, --package {freqmine,fluidanimate}
+                                Package name to be used on split.
+          -n NUMBEROFPARTS, --numberofparts NUMBEROFPARTS
+                                Number of split parts
+          -t {equal,diff}, --typeofsplit {equal,diff}
+                                Split on equal or diferent size partes parts
+          -x EXTRAARG, --extraarg EXTRAARG
+                                Specific argument: Freqmine=minimum support (11000),
+                                Fluidanimate=Max number of frames
+
+        Example:
+            parsec_createinputs -p fluidanimate -n 10 -t diff -x 500 fluidanimate_native.tar
 
 """
 
@@ -38,6 +65,7 @@ export OMP_NUM_THREADS=${NTHREADS}
 run_args="%s %s"
 '''
 
+# Template with 2 arguments: filename.runconf and filename.dat
 template_fluidanimate_inputconf =  '''#!/bin/bash
 #
 # %s - file containing information necessary to run a specific
@@ -169,7 +197,7 @@ def freqmine_splitequal(tfile, n, ms):
 
 def freqmine_splitdiff(tfile, n, ms):
     """
-    Split Freqmine Benchmark input tar file within 'n' aritmetic progressive
+    Split Freqmine Benchmark input tar file within 'n' arithmetic progressive
     size parts of new tar files with names like originalname_1 ...
     originalname_n.
 
@@ -255,7 +283,7 @@ def freqmine_splitdiff(tfile, n, ms):
 
 def argsparsevalidation():
     """
-    Validation of passed script arguments.
+    Validation of script arguments passed via console.
 
     :return: argparse object with validated arguments.
     """
@@ -282,12 +310,10 @@ def argsparsevalidation():
     args = parser.parse_args()
     return args
 
+
 def main():
     """
-    Main function executed from the linux shell script run.
-    Process a specificated package parsec input file.
-
-    Packages: freqmine, fluidanimate
+    Main function executed from console run.
 
     """
 

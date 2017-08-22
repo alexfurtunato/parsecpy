@@ -1,11 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-  Module to run a parsec application.
+    Module to run a parsec application.
 
-  Its possible run on loop to repeat the same sigle parsec execution on
-  specific number of times; And, also, its possiblme refer to multiples
-  input sizes on the same execution.
+    Its possible use a loop to repeat the same single parsec application
+    run on specific number of times; And, also, its possible to refer
+    differents input sizes to generate executions and resume all on a
+    Pandas Dataframe with times and speedups.
+
+    parsecpy_runprocess [-h] -p PACKAGE
+                           [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
+                           [-i INPUT] [-r REPITITIONS]
+                           c
+
+    Script to run parsec app with repetitions and multiples inputs sizes
+
+    positional arguments:
+      c                     List of cores numbers to be used. Ex: 1,2,4
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PACKAGE, --package PACKAGE
+                            Package Name to run
+      -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}, --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
+                            Compiler name to be used on run. (Default: gcc-hooks).
+      -i INPUT, --input INPUT
+                            Input name to be used on run. (Default: native).
+                            Syntax: inputsetname[<initialnumber>:<finalnumber>].
+                            Ex: native or native_1:10
+      -r REPITITIONS, --repititions REPITITIONS
+                            Number of repititions for a specific run. (Default: 1)
+
+    Example:
+        parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
+
 
 """
 import argparse
@@ -33,7 +61,7 @@ def argsparseinputlist(txt):
     Validate the single or multiple input names argument.
      - Formats:
        - Single: one input name string. Ex: native.
-       - Multiple: input names with sequential range numbers. Ex: native2:5
+       - Multiple: input names with sequential range numbers. Ex: native02:05
 
     :param txt: argument of input name.
     :return: list with a single input name or multiples separated input names.
@@ -77,7 +105,7 @@ def argsparseinputlist(txt):
 
 def argsparsevalidation():
     """
-    Validation of passed script arguments.
+    Validation of script arguments passed via console.
 
     :return: argparse object with validated arguments.
     """
@@ -109,9 +137,7 @@ def argsparsevalidation():
 
 def main():
     """
-    Main function executed from the linux shell script run.
-    Trigger a sequence of parsecmgmt program runs and save the
-    Dataframes of data within files.
+    Main function executed from console run.
 
     """
 
