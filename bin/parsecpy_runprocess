@@ -36,6 +36,7 @@
 
 
 """
+
 import argparse
 import shlex
 import subprocess
@@ -141,7 +142,6 @@ def main():
 
     """
 
-    datadict = {}
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()

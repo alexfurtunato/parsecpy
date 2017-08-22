@@ -43,6 +43,7 @@ class ParsecData:
             plot3D:
 
     """
+
     config = {}
     measures = {}
 
@@ -53,6 +54,7 @@ class ParsecData:
 
         :param filename: File name that store measures
         """
+
         if filename:
             self.loaddata(filename)
         return
@@ -316,6 +318,7 @@ class ParsecLogsData(ParsecData):
             plot3D:
 
     """
+
     foldername = ''
     runfiles = []
     benchmarks = []
@@ -356,12 +359,6 @@ class ParsecLogsData(ParsecData):
         the object class dictionaries.
 
         :param filename: Filename with data dictionary of execution times.
-        """
-        """
-        Read foldername and runfiles
-
-        :param foldername: folder to find runfiles
-        :return:
         """
 
         if os.path.isdir(foldername):
