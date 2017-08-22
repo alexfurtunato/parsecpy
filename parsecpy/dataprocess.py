@@ -15,6 +15,7 @@ from pandas import Series
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib import ticker
 from matplotlib.ticker import LinearLocator
 from matplotlib.ticker import FormatStrFormatter
 
@@ -241,7 +242,7 @@ class ParsecData:
         ds = ds.sort_index()
         return ds
 
-    def plot2D(self):
+    def plot2D(self,title='Speedups'):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
@@ -256,12 +257,19 @@ class ParsecData:
                 line, = ax.plot(xs, ys, '-', linewidth=2,
                                 label='Speedup for %s' % (test))
             ax.legend(loc='lower right')
+            ax.set_xlabel('Number of Cores')
+            ax.set_xlim(0,xs.max())
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            ax.set_ylabel('Speedup')
+            ax.set_ylim(0,data.max().max()+1)
+            ax.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            plt.title(title)
             plt.show()
         else:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self):
+    def plot3D(self, title='Speedup Variation', greycolor=False):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
@@ -275,15 +283,33 @@ class ParsecData:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             tests = data.columns.sort_values()
-            yc = [i+1 for (i,j) in enumerate(tests)]
-            xc = data.index
-            X, Y = np.meshgrid(xc, yc)
+            xc = [i+1 for (i,j) in enumerate(tests)]
+            yc = data.index
+            X, Y = np.meshgrid(yc, xc)
             lz = []
             for i in tests:
                 lz.append(data[i])
             Z = np.array(lz)
-            surf = ax.plot_surface(Y, X, Z, cmap=cm.coolwarm, linewidth = 0,
-                                   antialiased = False)
+            zmin = Z.min()
+            zmax = Z.max()
+            plt.title(title)
+            if greycolor:
+                colormap = cm.Greys
+            else:
+                colormap = cm.coolwarm
+            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth = 0.5,
+                                   edgecolor = 'k', linestyle = '-',
+                                   vmin = (zmin - (zmax-zmin)/10),
+                                   vmax = (zmax + (zmax-zmin)/10))
+            ax.set_xlabel('Input Size')
+            ax.set_xlim(0,xc[-1])
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            ax.set_ylabel('Number of Cores')
+            ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
+            ax.set_ylim(0,yc.max())
+            ax.set_zlabel('Speedup')
+            ax.set_zlim(zmin,1.10*zmax)
+            ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             plt.show()
         else:
             print('Error: Do not possible plot data without '
