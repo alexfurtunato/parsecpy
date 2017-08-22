@@ -5,7 +5,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='parsecpy',
-      version='0.1',
+      version='0.2',
       description='Parsec Benchmark tool',
       url='https://github.com/alexfurtunatoifrn/parsecpy',
       author='Alex Furtunato',
@@ -16,7 +16,7 @@ setup(name='parsecpy',
             'pandas',
             'matplotlib>=2.0.2',
             ],
-      long_description=read('README.md'),
+      long_description=read('README.rst'),
       classifiers=[
           "Development Status :: 3 - Alpha",
           "Topic :: Software Development :: Build Tools",
