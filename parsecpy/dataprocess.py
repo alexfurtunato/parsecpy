@@ -242,10 +242,13 @@ class ParsecData:
         ds = ds.sort_index()
         return ds
 
-    def plot2D(self,title='Speedups'):
+    def plot2D(self,title='Speedups', filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
+        :param title: Plot Title.
+        :param filename: File name to save figure (eps format).
+        :return:
         """
 
         data = self.speedups()
@@ -264,15 +267,21 @@ class ParsecData:
             ax.set_ylim(0,data.max().max()+1)
             ax.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
             plt.title(title)
+            if filename:
+                plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
         else:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self, title='Speedup Variation', greycolor=False):
+    def plot3D(self, title='Speedup Variation', greycolor=False, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
+        :param title: Plot Title.
+        :param greycolor: If set color of graph to grey colormap.
+        :param filename: File name to save figure (eps format).
+        :return:
         """
 
         if not support3d:
@@ -310,6 +319,8 @@ class ParsecData:
             ax.set_zlabel('Speedup')
             ax.set_zlim(zmin,1.10*zmax)
             ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            if filename:
+                plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
         else:
             print('Error: Do not possible plot data without '
