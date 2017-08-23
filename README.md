@@ -1,18 +1,18 @@
 # parsecpy
 
-Python module to interface with PARSEC 3.0 Benchmark, controlling execution triggers and
+Python module to interface with PARSEC 2.1 Benchmark, controlling execution triggers and
 processing the output measures times data to calculate speedups
 
 ## Features
 
  - Run parsec application with repetitions e multiple input sizes and output data to file
- - Process a group of Parsec 3.0 logs files generates from a shell direct execution of parsec
+ - Process a group of Parsec 2.1 logs files generates from a shell direct execution of parsec
  - Manipulate of data resulting from logs process or execution obtained by module run script itself
  - Calculate the speedups of applications, if it' possible, using the measured times of execution
 
 ## Prerequisites
 
- - Parsec 3.0 or newer
+ - Parsec 2.1 or newer
  - Python3 or newer
  - Numpy
  - Pandas
