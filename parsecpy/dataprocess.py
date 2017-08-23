@@ -129,7 +129,10 @@ class ParsecData:
         for l in txt.split('\n'):
             if l.strip().startswith("[PARSEC] Benchmarks to run:"):
                 benchmark = l.strip().split(':')[1]
-                benchmark = benchmark.strip().split('.')[1]
+                if benchmark.startswith("parsec"):
+                    benchmark = benchmark.strip().split('.')[1]
+                else:
+                    benchmark = benchmark.strip()
             elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
                 input = l.strip().split("'")[1]
             if l.strip().startswith("[HOOKS] Total time spent in ROI"):
