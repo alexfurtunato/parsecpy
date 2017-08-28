@@ -25,7 +25,6 @@ try:
 except:
     support3d = False
 
-import json
 
 class ParsecData:
     """
@@ -245,7 +244,7 @@ class ParsecData:
         ds = ds.sort_index()
         return ds
 
-    def plot2D(self,title='Speedups', filename=''):
+    def plot2D(self,title='Speedups', greycolor=False, filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
@@ -257,10 +256,17 @@ class ParsecData:
         data = self.speedups()
         if not data.empty:
             fig, ax = plt.subplots()
-            for test in data.columns:
+            if greycolor:
+                colors = plt.cm.Greys(
+                    np.linspace(0, 1, len(data.columns) + 10))
+                colors = colors[::-1]
+                colors = colors[:-5]
+            else:
+                colors = plt.cm.jet(np.linspace(0, 1, len(data.columns)))
+            for i, test in enumerate(data.columns):
                 xs = data.index
                 ys = data[test]
-                line, = ax.plot(xs, ys, '-', linewidth=2,
+                line, = ax.plot(xs, ys, '-', linewidth=2, color=colors[i],
                                 label='Speedup for %s' % (test))
             ax.legend(loc='lower right')
             ax.set_xlabel('Number of Cores')
