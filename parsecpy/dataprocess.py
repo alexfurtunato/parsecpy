@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    Module with Classes with generates Pandas Dataframes
-    with prossed data from Parsec applications execution.
+    Module with Classes that generates Pandas Dataframes
+    with processed data from Parsec applications execution.
 
 
 """

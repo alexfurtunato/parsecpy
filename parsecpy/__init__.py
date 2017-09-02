@@ -1,5 +1,7 @@
 from .dataprocess import ParsecData
 from .dataprocess import ParsecLogsData
+from .particleswarm import Swarm
+from .particleswarm import Model
 from . import createinputs
 from . import processlogs
 from . import runprocess

@@ -5,7 +5,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='parsecpy',
-      version='0.5',
+      version='0.6',
       description='Parsec Benchmark interface tool',
       url='https://github.com/alexfurtunatoifrn/parsecpy',
       author='Alex Furtunato',
@@ -31,6 +31,7 @@ setup(name='parsecpy',
               'parsecpy_createinputs = parsecpy.createinputs:main',
               'parsecpy_processlogs = parsecpy.processlogs:main',
               'parsecpy_runprocess = parsecpy.runprocess:main',
+              'parsecpy_runmodel = parsecpy.runmodel:main',
           ],
       },
       keywords='parsec benchmark tool',
