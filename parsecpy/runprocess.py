@@ -144,10 +144,12 @@ def main():
 
     args = argsparsevalidation()
     rundate = datetime.now()
+    hostname = os.uname()[1]
     datarun = ParsecData()
     datarun.config = {'pkg': args.package, 'execdate': rundate,
                    'command': command % (args.package, args.compiler,
-                                         args.input, args.c)}
+                                         args.input, args.c),
+                      'hostname': hostname}
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
         for c in args.c:

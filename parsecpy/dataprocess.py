@@ -85,11 +85,16 @@ class ParsecData:
             with open(filename) as f:
                 datadict = json.load(f)
             if 'config' in datadict.keys():
-                self.config['pkg'] = datadict['config']['pkg']
-                self.config['execdate'] = datetime.strptime(
-                                          datadict['config']['execdate'],
-                                          "%d-%m-%Y_%H:%M:%S")
-                self.config['command'] = datadict['config']['command']
+                if 'pkg' in datadict['config']:
+                    self.config['pkg'] = datadict['config']['pkg']
+                if 'execdate' in datadict['config']:
+                    self.config['execdate'] = datetime.strptime(
+                                              datadict['config']['execdate'],
+                                              "%d-%m-%Y_%H:%M:%S")
+                if 'command' in datadict['config']:
+                    self.config['command'] = datadict['config']['command']
+                if 'hostname' in datadict['config']:
+                    self.config['hostname'] = datadict['config']['hostname']
             else:
                 print('Warning: The config data not must read')
             if 'data' in datadict.keys():
