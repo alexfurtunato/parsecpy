@@ -1,36 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-    Module to run a parsec application.
+    Module to run a model of a parsec application.
 
-    Its possible use a loop to repeat the same single parsec application
-    run on specific number of times; And, also, its possible to refer
-    differents input sizes to generate executions and resume all on a
-    Pandas Dataframe with times and speedups.
+    Its possible define the number of threads to execute a model
+    on a fast way; The modelfunc to represent the application should be
+    provided by user on a python module file. Its possible, also, provide a
+    overhead function to integrate the model
 
-    parsecpy_runprocess [-h] -p PACKAGE
-        [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
-        [-i INPUT] [-r REPITITIONS] c
+    usage: parsecpy_runmodel [-h] [-f PARSECPYFILENAME] [-o OVERHEAD]
+                         [-x MAXITERATIONS] [-p PARTICLES] [-t THREADS]
+                         [-m MODELFILEABSPATH]
 
-    Script to run parsec app with repetitions and multiples inputs sizes
+    Script to run swarm modelling to predict aparsec application output
 
-    positional arguments
-        c
-            List of cores numbers to be used. Ex: 1,2,4
-
-    optional arguments
-        -h, --help
-            show this help message and exit
-        -p PACKAGE, --package PACKAGE
-            Package Name to run
-        -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb},
-            --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
-            Compiler name to be used on run. (Default: gcc-hooks).
-        -i INPUT, --input INPUT
-            Input name to be used on run. (Default: native).
-            Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10
-        -r REPITITIONS, --repititions REPITITIONS
-            Number of repititions for a specific run. (Default: 1)
+    optional arguments:
+        -h, --help            show this help message and exit
+        -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
+                        Run output filename from Parsec specificated package.
+        -o OVERHEAD, --overhead OVERHEAD
+                        If it consider the overhead on model function
+        -x MAXITERATIONS, --maxiterations MAXITERATIONS
+                        Number max of iterations to run the algorithm
+        -p PARTICLES, --particles PARTICLES
+                        Number of particles used on pso
+        -t THREADS, --threads THREADS
+                        Number of Threads to run the algorithm
+        -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
+                        Absolute path from Python file with model function.
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
 """

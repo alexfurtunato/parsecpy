@@ -1,7 +1,9 @@
 # parsecpy
 
-Python module to interface with PARSEC 2.1 Benchmark, controlling execution triggers and
-processing the output measures times data to calculate speedups
+Python library to interface with PARSEC 2.1 and 3.0 Benchmark, controlling execution triggers and
+processing the output measures times data to calculate speedups. Further, the library can generate a 
+mathematical model of speedup of a parallel application, based on "Particles Swarm Optimization" algorithm to discover
+the parameters to minimize a "objective function".
 
 ## Features
 
@@ -9,6 +11,7 @@ processing the output measures times data to calculate speedups
  - Process a group of Parsec 2.1 logs files generates from a shell direct execution of parsec
  - Manipulate of data resulting from logs process or execution obtained by module run script itself
  - Calculate the speedups of applications, if it' possible, using the measured times of execution
+ - provide a "PSO" algorithm to model the speedup of a parallel application 
 
 ## Prerequisites
 
@@ -24,7 +27,7 @@ processing the output measures times data to calculate speedups
 
 ## Installation
 
-    `$ pip3 install parsecpy`
+    $ pip3 install parsecpy
 
 ## Usage
 
@@ -45,6 +48,20 @@ processing the output measures times data to calculate speedups
     >>> l.times()       # Show a Dataframe with mesures times
     >>> l.speedups()    # Show a Dataframe with speedups
     >>> l.plot3D()      # plot a 3D Plot : speedups x number of cores x input sizes
+  
+### Class Swarm
+
+    >>> from mparsecpy import Swarm
+    >>> parsec_date = ParsecData("my_output_parsec_file.dat")
+    >>> out_measure = parsec_exec.speedups()
+    >>> inputsizes = [(col, int(col.split('_')[1])) for col in y_measure]
+    >>> cores = y_measure.index
+    >>> overhead = False
+    >>> argsswarm = (out_measure, overhead, cores, inputsizes)
+    >>> pso = Swarm([0,0,0,0], [2.0,1.0,1.0,2.0], args=argsswarm, threads=10, 
+                    size=100, maxiter=1000, modelpath=/root/mymodelfunc.py)
+    >>> model = pso.run()
+    >>> print(model.params)
     
 ### Run Parsec
 
