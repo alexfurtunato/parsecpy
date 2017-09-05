@@ -63,6 +63,32 @@ the parameters to minimize a "objective function".
     >>> model = pso.run()
     >>> print(model.params)
     
+#### Requirements for model python module
+
+The python module file provided by user should has the following
+requirements:
+
+ - Should has, at least, two function as following:
+ 
+        def constraint_function(p, *args):
+            # your code
+            # arguments: 
+            # p - particle object
+            # args - list of position arguments passed to function:
+            #   args[0] - Pandas Dataframe object of measured speedups (PasecData speedups)     
+            #   args[1] - boolean value (if overhead should be considerable)
+            #   args[2] - list of number of cores used on args[0] measured speedups
+            #   args[3] - list of number of problems sizes used on args[0] measured speedups
+            # analize the feasable of particles position (searched parameters)
+            # return True or False, depend of requirements
+            return boolean_value
+            
+        def objective_function(p, *args):
+            # your code
+            # calculate the function with should be minimized
+            # return the calculated value
+            return float_value 
+    
 ### Run Parsec
 
     parsecpy_runprocess [-h] -p PACKAGE
