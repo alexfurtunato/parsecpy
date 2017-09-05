@@ -33,12 +33,13 @@
 """
 
 import os
+import sys
 import time
 import argparse
 from parsecpy import ParsecData
 from parsecpy import Swarm
 
-def argsparseintlist(txt):
+def argsparsefloatlist(txt):
     """
     Validate the list int argument.
 
@@ -46,9 +47,8 @@ def argsparseintlist(txt):
     :return: list of integer converted ints.
     """
 
-    print('TXT: ',txt)
     txt = txt.split(',')
-    listarg = [int(i) for i in txt]
+    listarg = [float(i.strip()) for i in txt]
     return listarg
 
 def argsparsevalidation():
@@ -61,9 +61,14 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run swarm '
                                                  'modelling to predict a'
                                                  'parsec application output')
-    parser.add_argument('-f','--parsecpyfilename', help='Input filename from '
-                                                        'Parsec specificated '
-                                                        'package.')
+    parser.add_argument('-f','--parsecpyfilename', required=True,
+                        help='Input filename from Parsec specificated package.')
+    parser.add_argument('-l', '--lowervalues', type=argsparsefloatlist, required=True,
+                        help='List of minimum particles values '
+                             'used. Ex: -1,0,-2,0')
+    parser.add_argument('-u', '--uppervalues', type=argsparsefloatlist, required=True,
+                        help='List of maximum particles values '
+                             'used. Ex: 5,2,1,10')
     parser.add_argument('-o','--overhead', type=bool,
                         help='If it consider the overhead', default=False)
     parser.add_argument('-x','--maxiterations', type=int,
@@ -72,9 +77,9 @@ def argsparsevalidation():
                         help='Number of particles', default=100)
     parser.add_argument('-t','--threads', type=int,
                         help='Number of Threads', default=1)
-    parser.add_argument('-m','--modelfileabspath', help='Absolute path from '
-                                                        'Python file with the'
-                                                        'objective function.')
+    parser.add_argument('-m','--modelfileabspath', required=True,
+                        help='Absolute path from Python file with the'
+                             'objective function.')
     args = parser.parse_args()
     return args
 
@@ -86,6 +91,11 @@ def main():
 
     print("Processing the Model")
 
+    # adjust list of arguments to avoid negative number values error
+    for i, arg in enumerate(sys.argv):
+        if (arg[0] == '-') and arg[1].isdigit():
+            sys.argv[i] = ' ' + arg
+
     args = argsparsevalidation()
 
     if os.path.isfile(args.modelfileabspath):
@@ -93,13 +103,8 @@ def main():
     else:
         print('Error: You should inform the correct module of objective function to model')
 
-    if(args.overhead):
-        print('Com Overhead:')
-        l = [-10,-10,-10,-10,-10,-10,-10]
-        u = [10,10,10,10,10,10,10]
-    else:
-        l = [-10,-10,-10,-10]
-        u = [10,10,10,10]
+    l = args.lowervalues
+    u = args.uppervalues
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
