@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to parsecpy’s documentation! &#8212; parsecpy 0.4 documentation</title>
+    <title>Welcome to parsecpy’s documentation! &#8212; parsecpy 0.6 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.4',
+        VERSION:     '0.6',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -46,9 +46,12 @@
 </div>
 <div class="section" id="parsecpy">
 <h1>parsecpy<a class="headerlink" href="#parsecpy" title="Permalink to this headline">¶</a></h1>
-<p>Python module to interface with PARSEC 2.1 Benchmark, controlling
-execution triggers and processing the output measures times data to
-calculate speedups</p>
+<p>Python library to interface with PARSEC 2.1 and 3.0 Benchmark,
+controlling execution triggers and processing the output measures times
+data to calculate speedups. Further, the library can generate a
+mathematical model of speedup of a parallel application, based on
+&#8220;Particles Swarm Optimization&#8221; algorithm to discover the parameters to
+minimize a &#8220;objective function&#8221;.</p>
 <div class="section" id="features">
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
@@ -60,6 +63,8 @@ direct execution of parsec</li>
 by module run script itself</li>
 <li>Calculate the speedups of applications, if it&#8217; possible, using the
 measured times of execution</li>
+<li>provide a &#8220;PSO&#8221; algorithm to model the speedup of a parallel
+application</li>
 </ul>
 </div>
 <div class="section" id="prerequisites">
@@ -80,7 +85,7 @@ measured times of execution</li>
 </div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default"><div class="highlight"><pre><span></span>`$ pip3 install parsecpy`
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip3 install parsecpy
 </pre></div>
 </div>
 </div>
@@ -106,6 +111,51 @@ measured times of execution</li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">l</span><span class="o">.</span><span class="n">speedups</span><span class="p">()</span>    <span class="c1"># Show a Dataframe with speedups</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">l</span><span class="o">.</span><span class="n">plot3D</span><span class="p">()</span>      <span class="c1"># plot a 3D Plot : speedups x number of cores x input sizes</span>
 </pre></div>
+</div>
+</div>
+<div class="section" id="class-swarm">
+<h3>Class Swarm<a class="headerlink" href="#class-swarm" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mparsecpy</span> <span class="k">import</span> <span class="n">Swarm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parsec_date</span> <span class="o">=</span> <span class="n">ParsecData</span><span class="p">(</span><span class="s2">&quot;my_output_parsec_file.dat&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out_measure</span> <span class="o">=</span> <span class="n">parsec_exec</span><span class="o">.</span><span class="n">speedups</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">inputsizes</span> <span class="o">=</span> <span class="p">[(</span><span class="n">col</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]))</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">y_measure</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cores</span> <span class="o">=</span> <span class="n">y_measure</span><span class="o">.</span><span class="n">index</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">overhead</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">argsswarm</span> <span class="o">=</span> <span class="p">(</span><span class="n">out_measure</span><span class="p">,</span> <span class="n">overhead</span><span class="p">,</span> <span class="n">cores</span><span class="p">,</span> <span class="n">inputsizes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pso</span> <span class="o">=</span> <span class="n">Swarm</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">2.0</span><span class="p">],</span> <span class="n">args</span><span class="o">=</span><span class="n">argsswarm</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="go">                size=100, maxiter=1000, modelpath=/root/mymodelfunc.py)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">pso</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="requirements-for-model-python-module">
+<h4>Requirements for model python module<a class="headerlink" href="#requirements-for-model-python-module" title="Permalink to this headline">¶</a></h4>
+<p>The python module file provided by user should has the following
+requirements:</p>
+<ul>
+<li><p class="first">Should has, at least, two function as following:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">constraint_function</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># your code</span>
+    <span class="c1"># arguments:</span>
+    <span class="c1"># p - particle object</span>
+    <span class="c1"># args - list of position arguments passed to function:</span>
+    <span class="c1">#   args[0] - Pandas Dataframe object of measured speedups (PasecData speedups)</span>
+    <span class="c1">#   args[1] - boolean value (if overhead should be considerable)</span>
+    <span class="c1">#   args[2] - list of number of cores used on args[0] measured speedups</span>
+    <span class="c1">#   args[3] - list of number of problems sizes used on args[0] measured speedups</span>
+    <span class="c1"># analize the feasable of particles position (searched parameters)</span>
+    <span class="c1"># return True or False, depend of requirements</span>
+    <span class="k">return</span> <span class="n">boolean_value</span>
+
+<span class="k">def</span> <span class="nf">objective_function</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># your code</span>
+    <span class="c1"># calculate the function with should be minimized</span>
+    <span class="c1"># return the calculated value</span>
+    <span class="k">return</span> <span class="n">float_value</span>
+</pre></div>
+</div>
+</li>
+</ul>
 </div>
 </div>
 <div class="section" id="run-parsec">
@@ -215,6 +265,10 @@ measured times of execution</li>
 <li><a class="reference internal" href="#usage">Usage</a><ul>
 <li><a class="reference internal" href="#class-parsecdata">Class ParsecData</a></li>
 <li><a class="reference internal" href="#class-parseclogsdata">Class ParsecLogsData</a></li>
+<li><a class="reference internal" href="#class-swarm">Class Swarm</a><ul>
+<li><a class="reference internal" href="#requirements-for-model-python-module">Requirements for model python module</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#run-parsec">Run Parsec</a></li>
 <li><a class="reference internal" href="#logs-process">Logs process</a></li>
 <li><a class="reference internal" href="#create-split-parts">Create split parts</a></li>

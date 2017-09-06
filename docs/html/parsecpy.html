@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>parsecpy package &#8212; parsecpy 0.4 documentation</title>
+    <title>parsecpy package &#8212; parsecpy 0.6 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.4',
+        VERSION:     '0.6',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -190,8 +190,8 @@ parts of new tar files with names like originalname_1 ... originalname_n.</p>
 </div>
 <div class="section" id="module-parsecpy.dataprocess">
 <span id="parsecpy-dataprocess-module"></span><h2>parsecpy.dataprocess module<a class="headerlink" href="#module-parsecpy.dataprocess" title="Permalink to this headline">¶</a></h2>
-<p>Module with Classes with generates Pandas Dataframes
-with prossed data from Parsec applications execution.</p>
+<p>Module with Classes that generates Pandas Dataframes
+with processed data from Parsec applications execution.</p>
 <dl class="class">
 <dt id="parsecpy.dataprocess.ParsecData">
 <em class="property">class </em><code class="descclassname">parsecpy.dataprocess.</code><code class="descname">ParsecData</code><span class="sig-paren">(</span><em>filename=None</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData" title="Permalink to this definition">¶</a></dt>
@@ -281,7 +281,7 @@ on a dictionary.</p>
 
 <dl class="method">
 <dt id="parsecpy.dataprocess.ParsecData.plot2D">
-<code class="descname">plot2D</code><span class="sig-paren">(</span><em>title='Speedups'</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot2D" title="Permalink to this definition">¶</a></dt>
+<code class="descname">plot2D</code><span class="sig-paren">(</span><em>title='Speedups'</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot2D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot the 2D (Speedup x Cores) lines graph.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -483,6 +483,207 @@ object class attributes</p>
 </dd></dl>
 
 </div>
+<div class="section" id="module-parsecpy.particleswarm">
+<span id="parsecpy-particleswarm-module"></span><h2>parsecpy.particleswarm module<a class="headerlink" href="#module-parsecpy.particleswarm" title="Permalink to this headline">¶</a></h2>
+<p>Module with Classes that modeling an application
+based on data output generate from ParsecData Class.</p>
+<dl class="class">
+<dt id="parsecpy.particleswarm.Model">
+<em class="property">class </em><code class="descclassname">parsecpy.particleswarm.</code><code class="descname">Model</code><span class="sig-paren">(</span><em>bp=None</em>, <em>ymeas=None</em>, <em>ypred=None</em>, <em>pf=None</em>, <em>oh=False</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class that represent a speedup model of a parallel application using
+the Swarm Optimization algorithm</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Atrributes</dt>
+<dd>params - position of best particle (model parameters)
+error - output of objective function for above position
+y_measure - speedups of parallel application using ParsecData
+y_model - speedups of model
+parallelfraction - parallel fraction calculated by this model
+overhead - overhead part calculated by this model</dd>
+<dt>Methods</dt>
+<dd>loadata()
+savedata()
+times()
+speedups()
+plot2D()
+plot3D</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="parsecpy.particleswarm.Model.loaddata">
+<code class="descname">loaddata</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Model.loaddata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a file previously saved with method savedata() and initialize
+the object class dictionaries.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> &#8211; Filename with data dictionary of execution times.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parsecpy.particleswarm.Model.plot3D">
+<code class="descname">plot3D</code><span class="sig-paren">(</span><em>title='Model Speedup'</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Model.plot3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the 3D (Speedup x cores x input size) surface.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>title</strong> &#8211; Plot Title.</li>
+<li><strong>greycolor</strong> &#8211; If set color of graph to grey colormap.</li>
+<li><strong>filename</strong> &#8211; File name to save figure (eps format).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parsecpy.particleswarm.Model.savedata">
+<code class="descname">savedata</code><span class="sig-paren">(</span><em>parsecconfig</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Model.savedata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write to file the caculated model information stored on object class</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="parsecpy.particleswarm.Particle">
+<em class="property">class </em><code class="descclassname">parsecpy.particleswarm.</code><code class="descname">Particle</code><span class="sig-paren">(</span><em>lxmin</em>, <em>lxmax</em>, <em>vxmin</em>, <em>vxmax</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Particle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class that represent a particle of swarm</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Atrributes</dt>
+<dd>dim - size of swarm, is that, number of particles of it
+lxmin - minimum values of particle position (parameters os model)
+lxmax - maximum values of particle position (parameters os model)
+vxmin - Minimum values of velocity of particles
+vxmax - Maximum values of velocity of particles
+pos - actual position (parameters of model) of particle
+fpos - output of model function, is that, objective value to minimize
+vel - actual velocity of particle
+bestpos - best position found for this particle
+bestfpos - best objective value found for this particle</dd>
+<dt>Methods</dt>
+<dd><dl class="first last docutils">
+<dt>setfpos() - Set a fpos attribute and if, depend of some conditions,</dt>
+<dd>set also the bestfpos and the bestpos array os parameters</dd>
+<dt>update() - update the velocity of particles and the</dt>
+<dd>newpos (new parameters) of them.</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="parsecpy.particleswarm.Particle.setfpos">
+<code class="descname">setfpos</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Particle.setfpos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a new fpos value. And, depend of its value, set a new bestfpos
+and new bestpos of particle.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value</strong> &#8211; new fpos value to set.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">return a new bestfpos.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parsecpy.particleswarm.Particle.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>bestparticula</em>, <em>w</em>, <em>c1</em>, <em>c2</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Particle.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a particle new velocity and new position.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>bestparticle</strong> &#8211; actual bestparticle of swarm.</li>
+<li><strong>w</strong> &#8211; inertial factor used to adjust the velocity of particle.</li>
+<li><strong>c1</strong> &#8211; scaling factor for bestpos of particle.</li>
+<li><strong>c2</strong> &#8211; scaling factor for bestpos of bestparticle.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">new calculated position of particle.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="parsecpy.particleswarm.Swarm">
+<em class="property">class </em><code class="descclassname">parsecpy.particleswarm.</code><code class="descname">Swarm</code><span class="sig-paren">(</span><em>lxmin</em>, <em>lxmax</em>, <em>modelpath</em>, <em>size=100</em>, <em>w=0.5</em>, <em>c1=2</em>, <em>c2=2</em>, <em>maxiter=100</em>, <em>threads=1</em>, <em>args=()</em>, <em>kwargs={}</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Swarm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class that represent a particle of swarm</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Atrributes</dt>
+<dd><p class="first">maxiter - Maximum number of iterations of algorithm
+threads - Number of threads to use to calculate the objective and</p>
+<blockquote>
+<div>constratint function</div></blockquote>
+<p class="last">args - Positional arguments passed for objective and constraint functions
+kwargs - Key arguments passed for objective and constraint functions
+pdim - Particles dimention
+pxmin - Particle minimum position values
+pxmax - Particle maximum position values
+w - Inertial factor to calculate velocity of particle
+c1 - Scaling factor for bestpos of particle.
+c2 - Scaling factor for bestpos of best particle.
+vxmin - Minimum velocity of particles
+vxmax - Maximum velocity of particles
+size - Size of swarm (number of particles)
+particles - A list of particles objects within swarm
+bestparticle - Best particle of swarm</p>
+</dd>
+<dt>Methods</dt>
+<dd>_obj_wrapper()
+_constraint_wrapper()
+_swarm_med()
+run()</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="parsecpy.particleswarm.Swarm.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.particleswarm.Swarm.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the iterations of swarm algorithm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">return the model object of best particle found.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 <div class="section" id="module-parsecpy.processlogs">
 <span id="parsecpy-processlogs-module"></span><h2>parsecpy.processlogs module<a class="headerlink" href="#module-parsecpy.processlogs" title="Permalink to this headline">¶</a></h2>
 <p>Module to process parsec logs files within a folder and generate
@@ -530,6 +731,95 @@ file</p>
 <dl class="function">
 <dt id="parsecpy.processlogs.main">
 <code class="descclassname">parsecpy.processlogs.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.processlogs.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function executed from console run.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-parsecpy.runmodel">
+<span id="parsecpy-runmodel-module"></span><h2>parsecpy.runmodel module<a class="headerlink" href="#module-parsecpy.runmodel" title="Permalink to this headline">¶</a></h2>
+<p>Module to run a model of a parsec application.</p>
+<p>Its possible define the number of threads to execute a model
+on a fast way; The modelfunc to represent the application should be
+provided by user on a python module file. Its possible, also, provide a
+overhead function to integrate the model</p>
+<dl class="docutils">
+<dt>usage: parsecpy_runmodel [-h] [-f PARSECPYFILENAME] [-o OVERHEAD]</dt>
+<dd>[-x MAXITERATIONS] [-p PARTICLES] [-t THREADS]
+[-m MODELFILEABSPATH]</dd>
+</dl>
+<p>Script to run swarm modelling to predict aparsec application output</p>
+<dl class="docutils">
+<dt>optional arguments:</dt>
+<dd><table class="first last docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></td>
+<td>show this help message and exit</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-f <var>PARSECPYFILENAME</var></span>, <span class="option">--parsecpyfilename <var>PARSECPYFILENAME</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Run output filename from Parsec specificated package.</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-o <var>OVERHEAD</var></span>, <span class="option">--overhead <var>OVERHEAD</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>If it consider the overhead on model function</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-x <var>MAXITERATIONS</var></span>, <span class="option">--maxiterations <var>MAXITERATIONS</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Number max of iterations to run the algorithm</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-p <var>PARTICLES</var></span>, <span class="option">--particles <var>PARTICLES</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Number of particles used on pso</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-t <var>THREADS</var></span>, <span class="option">--threads <var>THREADS</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Number of Threads to run the algorithm</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-m <var>MODELFILEABSPATH</var></span>, <span class="option">--modelfileabspath <var>MODELFILEABSPATH</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Absolute path from Python file with model function.</td></tr>
+</tbody>
+</table>
+</dd>
+<dt>Example</dt>
+<dd>parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8</dd>
+</dl>
+<dl class="function">
+<dt id="parsecpy.runmodel.argsparsefloatlist">
+<code class="descclassname">parsecpy.runmodel.</code><code class="descname">argsparsefloatlist</code><span class="sig-paren">(</span><em>txt</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.runmodel.argsparsefloatlist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate the list int argument.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>txt</strong> &#8211; argument of comma separated int strings.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list of integer converted ints.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="parsecpy.runmodel.argsparsevalidation">
+<code class="descclassname">parsecpy.runmodel.</code><code class="descname">argsparsevalidation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.runmodel.argsparsevalidation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validation of script arguments passed via console.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">argparse object with validated arguments.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="parsecpy.runmodel.main">
+<code class="descclassname">parsecpy.runmodel.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.runmodel.main" title="Permalink to this definition">¶</a></dt>
 <dd><p>Main function executed from console run.</p>
 </dd></dl>
 
@@ -670,7 +960,9 @@ Syntax: inputsetname[&lt;initialnumber&gt;:&lt;finalnumber&gt;]. Ex: native or n
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#module-parsecpy.createinputs">parsecpy.createinputs module</a></li>
 <li><a class="reference internal" href="#module-parsecpy.dataprocess">parsecpy.dataprocess module</a></li>
+<li><a class="reference internal" href="#module-parsecpy.particleswarm">parsecpy.particleswarm module</a></li>
 <li><a class="reference internal" href="#module-parsecpy.processlogs">parsecpy.processlogs module</a></li>
+<li><a class="reference internal" href="#module-parsecpy.runmodel">parsecpy.runmodel module</a></li>
 <li><a class="reference internal" href="#module-parsecpy.runprocess">parsecpy.runprocess module</a></li>
 <li><a class="reference internal" href="#module-parsecpy">Module contents</a></li>
 </ul>
