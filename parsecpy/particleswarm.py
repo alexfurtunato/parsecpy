@@ -392,7 +392,7 @@ class Model:
             datatosave['data']['parsecdata'] = self.y_measure.to_json()
             datatosave['data']['speedupmodel'] = self.y_model.to_json()
             datatosave['data']['parallelfraction'] = self.parallelfraction.to_json()
-            if not self.overhead:
+            if type(self.overhead) == bool:
                 datatosave['data']['overhead'] = False
             else:
                 datatosave['data']['overhead'] = self.overhead.to_json()
