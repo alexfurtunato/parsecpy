@@ -249,16 +249,38 @@ class ParsecData:
         ds = ds.sort_index()
         return ds
 
-    def plot2D(self,title='Speedups', greycolor=False, filename=''):
+    def efficiency(self):
+        """
+        Return a Pandas Dataframe with efficiency,
+        grouped by input size e number of cores.
+
+        Dataframe format
+            row indexes=<number cores>
+            columns indexes=<input sizes>,
+            values=<calculated efficiency>.
+
+        :return: dataframe with calculated efficiency.
+        """
+
+        de = DataFrame()
+        data = self.speedups()
+        for input in data.columns:
+            idx = data.index
+            darr = data.loc[:, input] / idx
+            de[input] = Series(darr, index=idx)
+        de = de.sort_index()
+        return de
+
+    def plot2D(self,data, title='', greycolor=False, filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
         :param title: Plot Title.
+        :param greycolor: If set color of graph to grey colormap.
         :param filename: File name to save figure (eps format).
         :return:
         """
 
-        data = self.speedups()
         if not data.empty:
             fig, ax = plt.subplots()
             if greycolor:
@@ -288,11 +310,12 @@ class ParsecData:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self, title='Speedup Variation', greycolor=False, filename=''):
+    def plot3D(self, data, title='Speedup Surface', zlabel='speedup', greycolor=False, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
         :param title: Plot Title.
+        :param zlabel: Z Axis Label.
         :param greycolor: If set color of graph to grey colormap.
         :param filename: File name to save figure (eps format).
         :return:
@@ -301,7 +324,6 @@ class ParsecData:
         if not support3d:
             print('Warning: No 3D plot support. Please install matplotlib with Axes3D toolkit')
             return
-        data = self.speedups()
         if not data.empty:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
@@ -326,13 +348,13 @@ class ParsecData:
                                    vmax = (zmax + (zmax-zmin)/10))
             ax.set_xlabel('Input Size')
             ax.set_xlim(0,xc[-1])
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            #ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
             ax.set_ylabel('Number of Cores')
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
             ax.set_ylim(0,yc.max())
-            ax.set_zlabel('Speedup')
-            ax.set_zlim(zmin,1.10*zmax)
-            ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            #ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
+            ax.set_zlabel(zlabel)
+            ax.set_zlim(0,1.10*zmax)
+            #ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()

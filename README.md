@@ -10,7 +10,7 @@ the parameters to minimize a "objective function".
  - Run parsec application with repetitions e multiple input sizes and output data to file
  - Process a group of Parsec 2.1 logs files generates from a shell direct execution of parsec
  - Manipulate of data resulting from logs process or execution obtained by module run script itself
- - Calculate the speedups of applications, if it' possible, using the measured times of execution
+ - Calculate the speedups and efficency of applications, if it' possible, using the measured times of execution
  - provide a "PSO" algorithm to model the speedup of a parallel application 
 
 ## Prerequisites
@@ -38,7 +38,8 @@ the parameters to minimize a "objective function".
     >>> print(d)        # Print summary informations
     >>> d.times()       # Show a Dataframe with mesures times
     >>> d.speedups()    # Show a Dataframe with speedups
-    >>> d.plot3D()      # plot a 3D Plot : speedups x number of cores x input sizes
+    >>> d.plot3D(d.speedups(), title='Speedup', zlabel='speedup')   # plot a 3D Plot : speedups x number of cores x input sizes
+    >>> d.plot3D(d.efficiency(), title='Efficiency', zlabel='efficiency')   # plot a 3D Plot : speedups x number of cores x input sizes
 
 ### Class ParsecLogsData
 
