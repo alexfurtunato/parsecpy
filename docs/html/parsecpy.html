@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>parsecpy package &#8212; parsecpy 0.6 documentation</title>
+    <title>parsecpy package &#8212; parsecpy 0.8 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.6',
+        VERSION:     '0.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -234,6 +234,27 @@ dictionary of data.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="parsecpy.dataprocess.ParsecData.efficiency">
+<code class="descname">efficiency</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.efficiency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Pandas Dataframe with efficiency,
+grouped by input size e number of cores.</p>
+<dl class="docutils">
+<dt>Dataframe format</dt>
+<dd>row indexes=&lt;number cores&gt;
+columns indexes=&lt;input sizes&gt;,
+values=&lt;calculated efficiency&gt;.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dataframe with calculated efficiency.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="parsecpy.dataprocess.ParsecData.loaddata">
 <code class="descname">loaddata</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.loaddata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read a file previously saved with method savedata() and initialize
@@ -281,7 +302,7 @@ on a dictionary.</p>
 
 <dl class="method">
 <dt id="parsecpy.dataprocess.ParsecData.plot2D">
-<code class="descname">plot2D</code><span class="sig-paren">(</span><em>title='Speedups'</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot2D" title="Permalink to this definition">¶</a></dt>
+<code class="descname">plot2D</code><span class="sig-paren">(</span><em>data</em>, <em>title=''</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot2D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot the 2D (Speedup x Cores) lines graph.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -289,6 +310,7 @@ on a dictionary.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>title</strong> &#8211; Plot Title.</li>
+<li><strong>greycolor</strong> &#8211; If set color of graph to grey colormap.</li>
 <li><strong>filename</strong> &#8211; File name to save figure (eps format).</li>
 </ul>
 </td>
@@ -302,7 +324,7 @@ on a dictionary.</p>
 
 <dl class="method">
 <dt id="parsecpy.dataprocess.ParsecData.plot3D">
-<code class="descname">plot3D</code><span class="sig-paren">(</span><em>title='Speedup Variation'</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot3D" title="Permalink to this definition">¶</a></dt>
+<code class="descname">plot3D</code><span class="sig-paren">(</span><em>data</em>, <em>title='Speedup Surface'</em>, <em>zlabel='speedup'</em>, <em>greycolor=False</em>, <em>filename=''</em><span class="sig-paren">)</span><a class="headerlink" href="#parsecpy.dataprocess.ParsecData.plot3D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot the 3D (Speedup x cores x input size) surface.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -310,6 +332,7 @@ on a dictionary.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>title</strong> &#8211; Plot Title.</li>
+<li><strong>zlabel</strong> &#8211; Z Axis Label.</li>
 <li><strong>greycolor</strong> &#8211; If set color of graph to grey colormap.</li>
 <li><strong>filename</strong> &#8211; File name to save figure (eps format).</li>
 </ul>

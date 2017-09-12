@@ -3,7 +3,6 @@
     Module with Classes that modeling an application
     based on data output generate from ParsecData Class.
 
-
 """
 
 import sys
