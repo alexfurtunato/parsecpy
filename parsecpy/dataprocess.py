@@ -130,6 +130,10 @@ class ParsecData:
         :return: dict with extracted values.
         """
 
+        roitime =  ''
+        realtime = ''
+        usertime = ''
+        systime = ''
         for l in txt.split('\n'):
             if l.strip().startswith("[PARSEC] Benchmarks to run:"):
                 benchmark = l.strip().split(':')[1]
