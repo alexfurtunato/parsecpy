@@ -39,6 +39,7 @@ import argparse
 import shlex
 import subprocess
 import sys
+import os
 from datetime import datetime
 
 from parsecpy.dataprocess import ParsecData
