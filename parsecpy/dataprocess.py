@@ -275,10 +275,11 @@ class ParsecData:
         de = de.sort_index()
         return de
 
-    def plot2D(self,data, title='', greycolor=False, filename=''):
+    def plot2D(self, data, title='', greycolor=False, filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
+        :param data: dataframe to plot, generate by speedups(), times() or efficiency().
         :param title: Plot Title.
         :param greycolor: If set color of graph to grey colormap.
         :param filename: File name to save figure (eps format).
@@ -318,6 +319,7 @@ class ParsecData:
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
+        :param data: dataframe to plot, generate by speedups(), times() or efficiency().
         :param title: Plot Title.
         :param zlabel: Z Axis Label.
         :param greycolor: If set color of graph to grey colormap.
