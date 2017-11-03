@@ -143,7 +143,9 @@ class ParsecData:
                     benchmark = benchmark.strip()
             elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
                 input = l.strip().split("'")[1]
-            if l.strip().startswith("[HOOKS] Total time spent in ROI"):
+            elif l.strip().startswith("[PARSEC] No archive for input"):
+                input = l.strip().split("'")[1]
+            elif l.strip().startswith("[HOOKS] Total time spent in ROI"):
                 roitime = l.strip().split(':')[-1]
             elif l.strip().startswith("real"):
                 realtime = l.strip().split('\t')[-1]
