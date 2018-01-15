@@ -317,11 +317,11 @@ class Swarm:
             oh = modelfunc.get_overhead(self.bestparticle.pos, self.args[1:])
         else:
             oh = False
-        modelbest = Model(self.bestparticle,y_measure,y_pred,pf,oh)
+        modelbest = ModelSwarm(self.bestparticle,y_measure,y_pred,pf,oh)
         return modelbest
 
 
-class Model:
+class ModelSwarm:
     """
     Class that represent a speedup model of a parallel application using
     the Swarm Optimization algorithm
