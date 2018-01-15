@@ -92,9 +92,9 @@ class CoupledAnnealer(object):
             Set verbose=2, 1, or 0 depending on how much output you wish to see
             (2 being the most, 0 being no output).
 
-      - processes: int
+      - threads: int
             The number of parallel processes. Defaults to a single process.
-            If `processes` <= 0, then the number of processes will be set to the
+            If `threads` <= 0, then the number of processes will be set to the
             number of available CPUs. Note that this is different from the
             `n_annealers`. If `objective_function` is costly to compute, it might
             make sense to set `n_annealers` = `processes` = max number of CPUs.
@@ -114,17 +114,19 @@ class CoupledAnnealer(object):
                  alpha=0.05,
                  desired_variance=None,
                  verbose=1,
-                 processes=1,
-                 args=()):
+                 threads=1,
+                 args=(),
+                 kwargs={}):
         self.steps = steps
         self.m = n_annealers
-        self.processes = processes if processes > 0 else mp.cpu_count()
+        self.threads = threads if threads > 0 else mp.cpu_count()
         self.update_interval = update_interval
         self.verbose = verbose
         self.tgen = tgen_initial
         self.tacc = tacc_initial
         self.alpha = alpha
         self.args = args
+        self.kwargs = kwargs
 
         global modelfunc
         pythonfile = os.path.basename(modelpath)
@@ -135,9 +137,9 @@ class CoupledAnnealer(object):
             sys.path.append(os.path.dirname(modelpath))
         modelfunc = importlib.import_module(pythonmodule)
 
-        self.probe_function = partial(self._probe_wrapper, modelfunc.probe_function, self.args)
+        self.probe_function = partial(self._probe_wrapper, modelfunc.probe_function, self.args, self.kwargs)
 
-        self.objective_function = partial(self._obj_wrapper, modelfunc.objective_function, self.args)
+        self.objective_function = partial(self._obj_wrapper, modelfunc.objective_function, self.args, self.kwargs)
 
         # Set desired_variance.
         if desired_variance is None:
@@ -154,7 +156,7 @@ class CoupledAnnealer(object):
         # Initialize energies.
         self.probe_energies = self.current_energies = [None] * self.m
 
-    def _obj_wrapper(self, func, args, x):
+    def _obj_wrapper(self, func, args, kwargs, x):
         """
         wrapper function that point to objective function provided by user
         on attibutes of object class.
@@ -166,9 +168,9 @@ class CoupledAnnealer(object):
         :return: return the calculated objective function.
         """
 
-        return func(x, *args)
+        return func(x, *args, **kwargs)
 
-    def _probe_wrapper(self, func, args, x, tgen):
+    def _probe_wrapper(self, func, args, kwargs, x, tgen):
         """
         wrapper function that point to objective function provided by user
         on attibutes of object class.
@@ -180,14 +182,15 @@ class CoupledAnnealer(object):
         :return: return a new random state.
         """
 
-        return func(x, tgen, *args)
+        return func(x, tgen, *args, **kwargs)
 
     def __update_state(self):
         """
         Update the current state across all annealers in parallel.
         """
+
         # Set up the mp pool.
-        pool = mp.Pool(processes=self.processes)
+        pool = mp.Pool(processes=self.threads)
 
         # Put the workers to work.
         results = []
@@ -209,6 +212,7 @@ class CoupledAnnealer(object):
         """
         Update the current state across all annealers sequentially.
         """
+
         for i in xrange(self.m):
             i, energy, probe = worker_probe(self, i)
             self.probe_energies[i] = energy
@@ -218,6 +222,7 @@ class CoupledAnnealer(object):
         """
         Perform one entire step of the CSA algorithm.
         """
+
         cool = True if k % self.update_interval == 0 else False
 
         max_energy = max(self.current_energies)
@@ -255,6 +260,7 @@ class CoupledAnnealer(object):
         """
         Print updates to the user. Everybody is happy.
         """
+
         if start_time:
             elapsed = time.time() - start_time
             print("Step {:6d}, Energy {:,.4f}, Elapsed time {:,.2f} secs"
@@ -270,6 +276,7 @@ class CoupledAnnealer(object):
         """
         Return the optimal state so far.
         """
+
         energy = min(self.current_energies)
         index = self.current_energies.index(energy)
         state = self.current_states[index]
@@ -279,9 +286,10 @@ class CoupledAnnealer(object):
         """
         Run the CSA annealing process.
         """
+
         start_time = time.time()
 
-        if self.processes > 1:
+        if self.threads > 1:
             update_func = self.__update_state
         else:
             update_func = self.__update_state_no_par
@@ -320,9 +328,10 @@ def worker_probe(annealer, i):
     This is the function that will spread across different processes in
     parallel to compute the current energy at each probe.
     """
+
     state = annealer.current_states[i]
     probe = annealer.probe_function(state, annealer.tgen)
-    energy = annealer.objective_function(probe, *annealer.args)
+    energy = annealer.objective_function(probe)
     return i, energy, probe
 
 class ModelAnnealer:

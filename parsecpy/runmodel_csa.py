@@ -84,6 +84,8 @@ def argsparsevalidation():
                         help='Number of annealers', default=10)
     parser.add_argument('-t','--threads', type=int,
                         help='Number of Threads', default=1)
+    parser.add_argument('-r','--repetitions', type=int,
+                        help='Number of repetitions to algorithm execution', default=10)
     parser.add_argument('-m','--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
@@ -124,13 +126,13 @@ def main():
         tgen_initial=0.01,
         tacc_initial=0.1,
         steps=args.steps,
-        processes=args.threads,
+        threads=args.threads,
         verbose=args.verbose,
         update_interval=100,
         args=argsanneal
     )
 
-    repititions = range(10)
+    repititions = range(args.repetitions)
     err_min = 0
 
     starttime = time.time()

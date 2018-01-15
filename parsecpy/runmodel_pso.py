@@ -77,6 +77,8 @@ def argsparsevalidation():
                         help='Number of particles', default=100)
     parser.add_argument('-t','--threads', type=int,
                         help='Number of Threads', default=1)
+    parser.add_argument('-r','--repetitions', type=int,
+                        help='Number of repetitions to algorithm execution', default=10)
     parser.add_argument('-m','--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
@@ -115,7 +117,7 @@ def main():
     S = Swarm(l, u, args=argsswarm, threads=args.threads, size=args.particles,
               maxiter=args.maxiterations, modelpath=modelpath)
 
-    repititions = range(10)
+    repititions = range(args.repetitions)
     err_min = 0
 
     starttime = time.time()
