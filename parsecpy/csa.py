@@ -107,8 +107,8 @@ class CoupledAnnealer(object):
     def __init__(self, modelpath,
                  n_annealers=10,
                  initial_state=[],
-                 steps=100000,
-                 update_interval=5,
+                 steps=10000,
+                 update_interval=100,
                  tgen_initial=0.01,
                  tacc_initial=0.9,
                  alpha=0.05,
@@ -248,7 +248,7 @@ class CoupledAnnealer(object):
         # Update temperatures according to schedule.
         if cool:
             # Update generation temp.
-            self.tgen = self.tgen / k
+            self.tgen = 0.99*self.tgen
 
             sigma2 = np.var(prob_accept)
             if sigma2 < self.desired_variance:
@@ -263,10 +263,10 @@ class CoupledAnnealer(object):
 
         if start_time:
             elapsed = time.time() - start_time
-            print("Step {:6d}, Energy {:,.4f}, Elapsed time {:,.2f} secs"
+            print("Step {:6d}, Energy {:,.8f}, Elapsed time {:,.2f} secs"
                   .format(k, energy, elapsed))
         else:
-            print("Step {:6d}, Energy {:,.4f}".format(k, energy))
+            print("Step {:6d}, Energy {:,.8f}".format(k, energy))
         if temps:
             print("Updated acceptance temp {:,.6f}".format(temps[0]))
             print("Updated generation temp {:,.6f}".format(temps[1]))
@@ -491,13 +491,13 @@ class ModelAnnealer:
                                    vmax=(zmax + (zmax - zmin) / 10))
             ax.set_xlabel('Input Size')
             ax.set_xlim(0, xc[-1])
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            #ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
             ax.set_ylabel('Number of Cores')
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
+            #ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
             ax.set_ylim(0, yc.max())
             ax.set_zlabel('Speedup')
-            ax.set_zlim(zmin, 1.10 * zmax)
-            ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            ax.set_zlim(0, 1.10 * zmax)
+            #ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()

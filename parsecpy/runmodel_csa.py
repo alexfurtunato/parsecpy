@@ -80,6 +80,8 @@ def argsparsevalidation():
                         help='Number of parameters', default=5)
     parser.add_argument('-s','--steps', type=int,
                         help='Number max of iterations', default=100)
+    parser.add_argument('-u','--update_interval', type=int,
+                        help='Number steps to run cooling temperatures', default=10)
     parser.add_argument('-a','--annealers', type=int,
                         help='Number of annealers', default=10)
     parser.add_argument('-t','--threads', type=int,
@@ -138,7 +140,7 @@ def main():
             steps=args.steps,
             threads=args.threads,
             verbose=args.verbose,
-            update_interval=100,
+            update_interval=args.update_interval,
             args=argsanneal
         )
         model = A.run()
