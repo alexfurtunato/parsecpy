@@ -109,9 +109,6 @@ def main():
     else:
         print('Error: You should inform the correct module of objective function to model')
 
-    initial_state = [
-           tuple((random.normalvariate(0, 5) for _ in xrange(args.dimension)))
-           for x in xrange(args.annealers)]
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
@@ -119,42 +116,50 @@ def main():
     p = y_measure.index
     argsanneal = (y_measure, args.overhead, p, N)
 
-    A = CoupledAnnealer(
-        modelpath,
-        n_annealers=args.annealers,
-        initial_state=initial_state,
-        tgen_initial=0.01,
-        tacc_initial=0.1,
-        steps=args.steps,
-        threads=args.threads,
-        verbose=args.verbose,
-        update_interval=100,
-        args=argsanneal
-    )
-
     repititions = range(args.repetitions)
     err_min = 0
+    computed_models = []
+    best_model_idx = 0
 
     starttime = time.time()
     for i in repititions:
         print('Iteration: ',i+1)
+
+        initial_state = [
+            tuple((random.normalvariate(0, 5) for _ in xrange(args.dimension)))
+            for x in xrange(args.annealers)]
+
+        A = CoupledAnnealer(
+            modelpath,
+            n_annealers=args.annealers,
+            initial_state=initial_state,
+            tgen_initial=0.01,
+            tacc_initial=0.1,
+            steps=args.steps,
+            threads=args.threads,
+            verbose=args.verbose,
+            update_interval=100,
+            args=argsanneal
+        )
         model = A.run()
+        computed_models.append(model)
         if i == 0:
             err_min = model.error
             print('Error: ', err_min)
         else:
             if model.error < err_min:
+                best_model_idx = i
                 print('Error: ', err_min, '->', model.error)
                 err_min = model.error
         endtime = time.time()
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('Best Params: \n',model.params)
+    print('Best Params: \n',computed_models[best_model_idx].params)
     print('Measured: \n',y_measure)
-    print('Model: \n',model.y_model)
+    print('Model: \n',computed_models[best_model_idx].y_model)
 
-    model.savedata(parsec_exec.config)
+    computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Terminado!')
 
 if __name__ == '__main__':

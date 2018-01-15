@@ -114,32 +114,38 @@ def main():
     p = y_measure.index
     argsswarm = (y_measure, args.overhead, p, N)
 
-    S = Swarm(l, u, args=argsswarm, threads=args.threads, size=args.particles,
-              maxiter=args.maxiterations, modelpath=modelpath)
 
     repititions = range(args.repetitions)
     err_min = 0
+    computed_models = []
+    best_model_idx = 0
 
     starttime = time.time()
     for i in repititions:
         print('Iteration: ',i+1)
+
+        S = Swarm(l, u, args=argsswarm, threads=args.threads,
+                  size=args.particles,
+                  maxiter=args.maxiterations, modelpath=modelpath)
         model = S.run()
+        computed_models.append(model)
         if i == 0:
             err_min = model.error
             print('Error: ', err_min)
         else:
             if model.error < err_min:
+                best_model_idx = i
                 print('Error: ', err_min, '->', model.error)
                 err_min = model.error
         endtime = time.time()
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('Best Params: \n',model.params)
+    print('Best Params: \n',computed_models[best_model_idx].params)
     print('Measured: \n',y_measure)
-    print('Model: \n',model.y_model)
+    print('Model: \n',computed_models[best_model_idx].y_model)
 
-    model.savedata(parsec_exec.config)
+    computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Terminado!')
 
 if __name__ == '__main__':
