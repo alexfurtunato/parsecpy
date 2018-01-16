@@ -375,8 +375,8 @@ class ModelSwarm:
         """
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        with open('swarm' + '_datafile_' + filedate \
-                          + '.dat', 'w') as f:
+        filename = 'swarm_datafile_%s.dat' % filedate
+        with open(filename, 'w') as f:
             datatosave = {'config': {}, 'data': {}}
             if 'pkg' in parsecconfig:
                 datatosave['config']['pkg'] = parsecconfig['pkg']
@@ -396,7 +396,7 @@ class ModelSwarm:
             else:
                 datatosave['data']['overhead'] = self.overhead.to_json()
             json.dump(datatosave, f, ensure_ascii=False)
-        return
+        return filename
 
     def loaddata(self, filename):
         """

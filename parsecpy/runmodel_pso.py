@@ -146,7 +146,7 @@ def main():
     print('Model: \n',computed_models[best_model_idx].y_model)
 
     computed_models[best_model_idx].savedata(parsec_exec.config)
-    print('Terminado!')
+    print('Done! Data saved on filename: %s' % fn)
 
 if __name__ == '__main__':
     main()

@@ -161,8 +161,8 @@ def main():
     print('Measured: \n',y_measure)
     print('Model: \n',computed_models[best_model_idx].y_model)
 
-    computed_models[best_model_idx].savedata(parsec_exec.config)
-    print('Terminado!')
+    fn = computed_models[best_model_idx].savedata(parsec_exec.config)
+    print('Done! Data saved on filename: %s' % fn)
 
 if __name__ == '__main__':
     main()
