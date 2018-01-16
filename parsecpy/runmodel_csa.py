@@ -1,37 +1,43 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-    Module to run a model of a parsec application.
+    Module to run a csa model of a parsec application.
 
     Its possible define the number of threads to execute a model
     on a fast way; The modelfunc to represent the application should be
     provided by user on a python module file. Its possible, also, provide a
     overhead function to integrate the model
 
-    usage: parsecpy_runmodel [-h] [-f PARSECPYFILENAME] [-o OVERHEAD]
-                         [-x MAXITERATIONS] [-p PARTICLES] [-t THREADS]
-                         [-m MODELFILEABSPATH]
+    usage: parsecpy_runmodel_csa [-h] -f PARSECPYFILENAME [-o OVERHEAD]
+                                 [-d DIMENSION] [-s STEPS] [-u UPDATE_INTERVAL]
+                                 [-a ANNEALERS] [-t THREADS] [-r REPETITIONS] -m
+                                 MODELFILEABSPATH [-v VERBOSE]
 
-    Script to run swarm modelling to predict aparsec application output
+    Script to run csa modelling to predict aparsec application output
 
     optional arguments:
-        -h, --help            show this help message and exit
-        -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
-                        Run output filename from Parsec specificated package.
-        -o OVERHEAD, --overhead OVERHEAD
-                        If it consider the overhead on model function
-        -d DIMENSION, --dimension DIMENSION
-                        Number of parameters of model
-        -s STEPS, --steps STEPS
-                        Number of steps to run
-        -a ANNEALERS, --annealers ANNEALERS
-                        Number of annealers to use on model
-        -t THREADS, --threads THREADS
-                        Number of Threads to run the algorithm
-        -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
-                        Absolute path from Python file with model function.
-        -v VERBOSE, --verbose VERBOSE
-                        Verbose level: 0, 1 or 2.
+      -h, --help            show this help message and exit
+      -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
+                            Input filename from Parsec specificated package.
+      -o OVERHEAD, --overhead OVERHEAD
+                            If it consider the overhead
+      -d DIMENSION, --dimension DIMENSION
+                            Number of parameters
+      -s STEPS, --steps STEPS
+                            Number max of iterations
+      -u UPDATE_INTERVAL, --update_interval UPDATE_INTERVAL
+                            Number steps to run cooling temperatures
+      -a ANNEALERS, --annealers ANNEALERS
+                            Number of annealers
+      -t THREADS, --threads THREADS
+                            Number of Threads
+      -r REPETITIONS, --repetitions REPETITIONS
+                            Number of repetitions to algorithm execution
+      -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
+                            Absolute path from Python file with theobjective
+                            function.
+      -v VERBOSE, --verbose VERBOSE
+                            If it shows output verbosily: Values: 0, 1, 2
 
     Example
         parsecpy_runmodel_csa -f /var/myparsecsim.dat -m /var/mymodelfunc.py -d 5 -s 1000 -a 10
@@ -157,12 +163,13 @@ def main():
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
+    print('***** Done! *****')
     print('Best Params: \n',computed_models[best_model_idx].params)
     print('Measured: \n',y_measure)
     print('Model: \n',computed_models[best_model_idx].y_model)
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
-    print('Done! Data saved on filename: %s' % fn)
+    print('Model data saved on filename: %s' % fn)
 
 if __name__ == '__main__':
     main()

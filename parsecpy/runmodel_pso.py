@@ -8,28 +8,37 @@
     provided by user on a python module file. Its possible, also, provide a
     overhead function to integrate the model
 
-    usage: parsecpy_runmodel [-h] [-f PARSECPYFILENAME] [-o OVERHEAD]
-                         [-x MAXITERATIONS] [-p PARTICLES] [-t THREADS]
-                         [-m MODELFILEABSPATH]
+    usage: parsecpy_runmodel_pso [-h] -f PARSECPYFILENAME -l LOWERVALUES -u
+                                 UPPERVALUES [-o OVERHEAD] [-x MAXITERATIONS]
+                                 [-p PARTICLES] [-t THREADS] [-r REPETITIONS] -m
+                                 MODELFILEABSPATH
 
     Script to run swarm modelling to predict aparsec application output
 
     optional arguments:
-        -h, --help            show this help message and exit
-        -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
-                        Run output filename from Parsec specificated package.
-        -o OVERHEAD, --overhead OVERHEAD
-                        If it consider the overhead on model function
-        -x MAXITERATIONS, --maxiterations MAXITERATIONS
-                        Number max of iterations to run the algorithm
-        -p PARTICLES, --particles PARTICLES
-                        Number of particles used on pso
-        -t THREADS, --threads THREADS
-                        Number of Threads to run the algorithm
-        -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
-                        Absolute path from Python file with model function.
+      -h, --help            show this help message and exit
+      -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
+                            Input filename from Parsec specificated package.
+      -l LOWERVALUES, --lowervalues LOWERVALUES
+                            List of minimum particles values used. Ex: -1,0,-2,0
+      -u UPPERVALUES, --uppervalues UPPERVALUES
+                            List of maximum particles values used. Ex: 5,2,1,10
+      -o OVERHEAD, --overhead OVERHEAD
+                            If it consider the overhead
+      -x MAXITERATIONS, --maxiterations MAXITERATIONS
+                            Number max of iterations
+      -p PARTICLES, --particles PARTICLES
+                            Number of particles
+      -t THREADS, --threads THREADS
+                            Number of Threads
+      -r REPETITIONS, --repetitions REPETITIONS
+                            Number of repetitions to algorithm execution
+      -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
+                            Absolute path from Python file with theobjective
+                            function.
     Example
-        parsecpy_runmodel_pso -f /var/myparsecsim.dat -m /var/mymodelfunc.py -x 1000 -p 10
+        parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10
+            -f /var/myparsecsim.dat -m /var/mymodelfunc.py -x 1000 -p 10
 """
 
 import os
@@ -141,12 +150,13 @@ def main():
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
+    print('***** Done! *****')
     print('Best Params: \n',computed_models[best_model_idx].params)
     print('Measured: \n',y_measure)
     print('Model: \n',computed_models[best_model_idx].y_model)
 
     computed_models[best_model_idx].savedata(parsec_exec.config)
-    print('Done! Data saved on filename: %s' % fn)
+    print('Model data saved on filename: %s' % fn)
 
 if __name__ == '__main__':
     main()
