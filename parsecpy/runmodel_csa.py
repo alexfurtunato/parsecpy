@@ -87,7 +87,7 @@ def argsparsevalidation():
     parser.add_argument('-s','--steps', type=int,
                         help='Number max of iterations', default=100)
     parser.add_argument('-u','--update_interval', type=int,
-                        help='Number steps to run cooling temperatures', default=10)
+                        help='Number steps to run cooling temperatures', default=1)
     parser.add_argument('-a','--annealers', type=int,
                         help='Number of annealers', default=10)
     parser.add_argument('-t','--threads', type=int,
@@ -134,14 +134,14 @@ def main():
         print('Iteration: ',i+1)
 
         initial_state = [
-            tuple((random.normalvariate(0, 5) for _ in xrange(args.dimension)))
+            tuple((random.normalvariate(0,5) for _ in xrange(args.dimension)))
             for x in xrange(args.annealers)]
 
         A = CoupledAnnealer(
             modelpath,
             n_annealers=args.annealers,
             initial_state=initial_state,
-            tgen_initial=0.01,
+            tgen_initial=1,
             tacc_initial=0.1,
             steps=args.steps,
             threads=args.threads,
@@ -163,10 +163,11 @@ def main():
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('***** Done! *****')
-    print('Best Params: \n',computed_models[best_model_idx].params)
-    print('Measured: \n',y_measure)
-    print('Model: \n',computed_models[best_model_idx].y_model)
+    print('\n\n***** Done! *****\n')
+    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' % (err_min, 100*err_min/y_measure.mean().mean()))
+    print('Best Parameters: \n',computed_models[best_model_idx].params)
+    print('\nMeasured Speedups: \n',y_measure)
+    print('\nModeled Speedups: \n',computed_models[best_model_idx].y_model)
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)

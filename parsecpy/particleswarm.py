@@ -73,7 +73,8 @@ class Particle:
         self.pos = lxmin + np.random.rand(self.dim)*(lxmax - lxmin)
         self.fpos = np.inf # Infinite float
         self.vel = vxmin + np.random.rand(self.dim)*(vxmax - vxmin)
-        self.bestpos = np.zeros_like(self.pos)
+        # self.bestpos = np.zeros_like(self.pos)
+        self.bestpos = self.pos.copy()
         self.bestfpos = np.inf   # Infinite float
 
     def __str__(self):
@@ -103,7 +104,7 @@ class Particle:
             self.bestpos = self.pos.copy()
         return self.bestfpos
 
-    def update(self, bestparticula, w, c1, c2):
+    def update(self, bestparticle, w, c1, c2):
         """
         Update a particle new velocity and new position.
 
@@ -119,7 +120,7 @@ class Particle:
         #self.vel = w * self.vel + c1 * rp * (self.bestpos - self.pos) + c2 * rg * (bestp.pos - self.pos)
         phi = c1+c2
         constricao = 2*w/(abs(2-phi - np.sqrt(pow(phi,2)-4*phi)))
-        self.vel = constricao * (self.vel + c1 * rp * (self.bestpos - self.pos) + c2 * rg * (bestparticula.bestpos - self.pos))
+        self.vel = constricao * (self.vel + c1 * rp * (self.bestpos - self.pos) + c2 * rg * (bestparticle.bestpos - self.pos))
         maskvl = self.vel < self.vxmin
         maskvh = self.vel > self.vxmax
         self.vel = self.vel*(~np.logical_or(maskvl, maskvh)) + self.vxmin*maskvl + self.vxmax*maskvh
@@ -218,10 +219,10 @@ class Swarm:
         for i,p in enumerate(self.particles):
             newfpos[i] = self.obj(p)
             constraint[i] = self.constr(p)
-        for i,p in enumerate(self.particles):
             if constraint[i]:
                 bestfpos[i] = p.setfpos(newfpos[i])
         self.bestparticle = copy.copy(self.particles[np.argmin(bestfpos)])
+
 
     def _obj_wrapper(self, func, args, kwargs, x):
         """
@@ -263,7 +264,7 @@ class Swarm:
         if med == np.inf or self.bestparticle.fpos == np.inf:
             return np.inf
         else:
-            return (1 - med/self.bestparticle.fpos)
+            return abs(1 - med/self.bestparticle.fpos)
 
     def run(self):
         """
@@ -281,9 +282,13 @@ class Swarm:
         iter = 0
 
         print(self.bestparticle)
+        sm = self._swarm_med()
 
-        while (self._swarm_med() > 1e-5 or gbestmax < 10) and iter < self.maxiter:
-            print('Best Particle Error: ',self.bestparticle.bestfpos)
+        while (sm > 1e-5 or gbestmax < 10) and iter < self.maxiter:
+            print('Iteration: ',iter+1)
+            print('Best Particle Error: ',self.bestparticle.bestfpos,
+                  ' Swarm Medium Distance: ', sm,
+                  'Gbest not change: ', gbestmax+1,'\n')
             for p in self.particles:
                 p.update(self.bestparticle,self.w,self.c1,self.c2)
             if self.threads > 1:
@@ -306,6 +311,7 @@ class Swarm:
                 gbestmax = 0
                 gbestfpos_ant = self.bestparticle.fpos
             iter += 1
+            sm = self._swarm_med()
         if self.threads > 1:
             mpool.terminate()
 
@@ -356,16 +362,17 @@ class ModelSwarm:
         :param oh: the overhead calculated by parameters of model.
         """
 
+        self.y_measure = ymeas
+        self.y_model = ypred
+        self.parallelfraction = pf
+        self.overhead = oh
         if not bp:
             self.params = None
             self.error = None
         else:
             self.params = bp.pos
             self.error = bp.fpos
-        self.y_measure = ymeas
-        self.y_model = ypred
-        self.parallelfraction = pf
-        self.overhead = oh
+            self.errorrel = 100*(self.error/self.y_measure.mean().mean())
 
     def savedata(self,parsecconfig):
         """
@@ -388,6 +395,7 @@ class ModelSwarm:
                 "%d-%m-%Y_%H:%M:%S")
             datatosave['data']['params'] = pd.Series(self.params).to_json()
             datatosave['data']['error'] = self.error
+            datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_json()
             datatosave['data']['speedupmodel'] = self.y_model.to_json()
             datatosave['data']['parallelfraction'] = self.parallelfraction.to_json()
@@ -421,6 +429,8 @@ class ModelSwarm:
                 self.params = pd.Series(eval(datadict['params']))
             if 'error' in datadict.keys():
                 self.error = datadict['error']
+            if 'errorrel' in datadict.keys():
+                self.errorrel = datadict['errorrel']
             if 'parsecdata' in datadict.keys():
                 self.y_measure = pd.read_json(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():

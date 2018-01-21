@@ -127,6 +127,7 @@ class CoupledAnnealer(object):
         self.alpha = alpha
         self.args = args
         self.kwargs = kwargs
+        self.tgen_initial = tgen_initial
 
         global modelfunc
         pythonfile = os.path.basename(modelpath)
@@ -248,7 +249,7 @@ class CoupledAnnealer(object):
         # Update temperatures according to schedule.
         if cool:
             # Update generation temp.
-            self.tgen = 0.99*self.tgen
+            self.tgen = self.tgen_initial/k
 
             sigma2 = np.var(prob_accept)
             if sigma2 < self.desired_variance:

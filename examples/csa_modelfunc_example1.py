@@ -136,8 +136,8 @@ def probe_function(p, tgen, *args):
 
     probe_solution = []
     for i,x in enumerate(p):
-        w = random.normalvariate(0, 5)
-        r = math.tan(math.pi*w -0.5)
+        w = random.uniform(0, 1)
+        r = math.tan(math.pi*(w - 0.5))
         ps = 2*np.mod((x + r*tgen + 1)/2,1)-1
         probe_solution.append(ps)
     return probe_solution

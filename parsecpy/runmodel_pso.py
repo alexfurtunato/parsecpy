@@ -124,17 +124,17 @@ def main():
     argsswarm = (y_measure, args.overhead, p, N)
 
 
-    repititions = range(args.repetitions)
+    repetitions = range(args.repetitions)
     err_min = 0
     computed_models = []
     best_model_idx = 0
 
     starttime = time.time()
-    for i in repititions:
-        print('Iteration: ',i+1)
+    for i in repetitions:
+        print('Algorithm Execution: ',i+1)
 
         S = Swarm(l, u, args=argsswarm, threads=args.threads,
-                  size=args.particles,
+                  size=args.particles, w=1, c1=1, c2=4,
                   maxiter=args.maxiterations, modelpath=modelpath)
         model = S.run()
         computed_models.append(model)
@@ -150,12 +150,15 @@ def main():
         print('Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('***** Done! *****')
-    print('Best Params: \n',computed_models[best_model_idx].params)
-    print('Measured: \n',y_measure)
-    print('Model: \n',computed_models[best_model_idx].y_model)
+    print('\n\n***** Done! *****\n')
+    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' %
+          (computed_models[best_model_idx].error,
+           computed_models[best_model_idx].errorrel))
+    print('Best Parameters: \n',computed_models[best_model_idx].params)
+    print('\nMeasured Speedup: \n',y_measure)
+    print('\nModeled Speedup: \n',computed_models[best_model_idx].y_model)
 
-    computed_models[best_model_idx].savedata(parsec_exec.config)
+    fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)
 
 if __name__ == '__main__':

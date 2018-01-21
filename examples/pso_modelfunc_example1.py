@@ -55,7 +55,10 @@ def _func_parallelfraction(f, p, N):
     :param N: Problems size used on model data
     """
 
-    return f[0] + f[1]/p + f[2]*pow(f[3],N)
+    fp = pd.Series(f[0] + f[1]/p + f[2]*pow(f[3],N))
+    for i,v in enumerate(fp):
+        fp[i] = max(min(v,1),0)
+    return fp
 
 def _func_overhead(q, p, N):
     """
@@ -66,7 +69,7 @@ def _func_overhead(q, p, N):
     :param N: Problems size used on model data
     """
 
-    return q[0]+(q[1]*p)/pow(q[2],N)
+    return pd.Series(q[0]+(q[1]*p)/pow(q[2],N))
 
 def _func_speedup(fparam, p, N):
     """
