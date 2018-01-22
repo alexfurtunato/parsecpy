@@ -131,7 +131,7 @@ def main():
 
     starttime = time.time()
     for i in repetitions:
-        print('Algorithm Execution: ',i+1)
+        print('Algorithm Execution: ',i+1, '\n')
 
         S = Swarm(l, u, args=argsswarm, threads=args.threads,
                   size=args.particles, w=1, c1=1, c2=4,

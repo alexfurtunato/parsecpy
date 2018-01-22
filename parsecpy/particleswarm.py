@@ -281,8 +281,10 @@ class Swarm:
         gbestmax = 0
         iter = 0
 
-        print(self.bestparticle)
         sm = self._swarm_med()
+        print('Initial Swarm:')
+        print('Best Particle Error: ', self.bestparticle.bestfpos,
+              ' Swarm Medium Distance: ', sm, '\n')
 
         while (sm > 1e-5 or gbestmax < 10) and iter < self.maxiter:
             print('Iteration: ',iter+1)
