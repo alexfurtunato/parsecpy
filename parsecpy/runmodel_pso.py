@@ -23,6 +23,9 @@
                             List of minimum particles values used. Ex: -1,0,-2,0
       -u UPPERVALUES, --uppervalues UPPERVALUES
                             List of maximum particles values used. Ex: 5,2,1,10
+      -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
+                            List of problem sizes to model used. Ex: native_01,
+                                native_05, native_08
       -o OVERHEAD, --overhead OVERHEAD
                             If it consider the overhead
       -x MAXITERATIONS, --maxiterations MAXITERATIONS
@@ -48,9 +51,21 @@ import argparse
 from parsecpy import ParsecData
 from parsecpy import Swarm
 
+def argsparselist(txt):
+    """
+    Validate the list of txt argument.
+
+    :param txt: argument of comma separated int strings.
+    :return: list of strings.
+    """
+
+    txt = txt.split(',')
+    listarg = [i.strip() for i in txt]
+    return listarg
+
 def argsparsefloatlist(txt):
     """
-    Validate the list int argument.
+    Validate the list of int argument.
 
     :param txt: argument of comma separated int strings.
     :return: list of integer converted ints.
@@ -78,6 +93,9 @@ def argsparsevalidation():
     parser.add_argument('-u', '--uppervalues', type=argsparsefloatlist, required=True,
                         help='List of maximum particles values '
                              'used. Ex: 5,2,1,10')
+    parser.add_argument('-n', '--problemsizes', type=argsparselist,
+                        help='List of problem sizes to model '
+                             'used. Ex: native_01,native_05,native_08')
     parser.add_argument('-o','--overhead', type=bool,
                         help='If it consider the overhead', default=False)
     parser.add_argument('-x','--maxiterations', type=int,
@@ -113,16 +131,27 @@ def main():
         modelpath = args.modelfileabspath
     else:
         print('Error: You should inform the correct module of objective function to model')
+        sys.exit()
 
     l = args.lowervalues
     u = args.uppervalues
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
-    N = [(col, int(col.split('_')[1])) for col in y_measure]
     p = y_measure.index
-    argsswarm = (y_measure, args.overhead, p, N)
 
+    if args.problemsizes:
+        N_model = [col for col in y_measure]
+        for i in args.problemsizes:
+            if not i in N_model:
+                print('Error: Measures not has especified problem sizes')
+                sys.exit()
+        N = [(col, int(col.split('_')[1])) for col in args.problemsizes]
+        y_measure = y_measure[args.problemsizes]
+    else:
+        N = [(col, int(col.split('_')[1])) for col in y_measure]
+
+    argsswarm = (y_measure, args.overhead, p, N)
 
     repetitions = range(args.repetitions)
     err_min = 0
