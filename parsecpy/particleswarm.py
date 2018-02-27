@@ -27,7 +27,6 @@ try:
 except:
     support3d = False
 
-modelfunc = None
 
 class Particle:
     """
@@ -200,19 +199,21 @@ class Swarm:
         self.size = size
         self.particles = np.array([Particle(self.pxmin,self.pxmax,self.vxmin, self.vxmax)
                           for i in range(self.size)])
+        self.modelpath = modelpath
+        self.modelfunc = None
+        self.modelbest = None
 
-        global modelfunc
         pythonfile = os.path.basename(modelpath)
         pythonmodule = pythonfile.split('.')[0]
         if not os.path.dirname(modelpath):
             sys.path.append('.')
         else:
             sys.path.append(os.path.dirname(modelpath))
-        modelfunc = importlib.import_module(pythonmodule)
+        self.modelfunc = importlib.import_module(pythonmodule)
 
-        self.constr = partial(self._constraint_wrapper, modelfunc.constraint_function, self.args, self.kwargs)
+        self.constr = partial(self._constraint_wrapper, self.modelfunc.constraint_function, self.args, self.kwargs)
 
-        self.obj = partial(self._obj_wrapper, modelfunc.objective_function, self.args, self.kwargs)
+        self.obj = partial(self._obj_wrapper, self.modelfunc.objective_function, self.args, self.kwargs)
         bestfpos = np.ones(self.size)*np.inf
         newfpos = np.zeros(self.size)
         constraint = np.zeros(self.size)
@@ -236,7 +237,7 @@ class Swarm:
         :return: return the calculated objective function.
         """
 
-        return func(x, *args, **kwargs)
+        return func(x.pos, *args, **kwargs)
 
     def _constraint_wrapper(self, func, args, kwargs, x):
         """
@@ -250,7 +251,7 @@ class Swarm:
         :return: return if this particle is feasable or not.
         """
 
-        return func(x, *args, **kwargs)
+        return func(x.pos, *args, **kwargs)
 
     def _swarm_med(self):
         """
@@ -265,6 +266,19 @@ class Swarm:
             return np.inf
         else:
             return abs(1 - med/self.bestparticle.fpos)
+
+    def data_build(self, data):
+        data_dict = {}
+        for x, y in zip(data[0],data[1]):
+            sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
+            if sizename in data_dict:
+                data_dict[sizename][x[0]] = y
+            else:
+                data_dict[sizename] = {x[0]: y}
+        df = pd.DataFrame(data_dict)
+        df.sort_index(inplace=True)
+        df.sort_index(inplace=True, axis=1, ascending=False)
+        return df
 
     def run(self):
         """
@@ -317,16 +331,17 @@ class Swarm:
         if self.threads > 1:
             mpool.terminate()
 
-        y_measure = self.args[0]
-        y_pred = modelfunc.model(self.bestparticle, self.args[1:])
-        y_pred.sort_index(inplace=True)
-        pf = modelfunc.get_parallelfraction(self.bestparticle.pos, self.args[1:])
-        if self.args[1]:
-            oh = modelfunc.get_overhead(self.bestparticle.pos, self.args[1:])
+        y_measure = self.data_build((self.args[1]['x'],self.args[1]['y']))
+        y_pred = self.data_build(self.modelfunc.model(self.bestparticle.pos, self.args[1]['x'], self.args[0]))
+
+        pf = self.data_build(self.modelfunc.get_parallelfraction(self.bestparticle.pos, self.args[1]['x']))
+        if self.args[0]:
+            oh = self.data_build(self.modelfunc.get_overhead(self.bestparticle.pos, self.args[1]['x']))
         else:
             oh = False
-        modelbest = ModelSwarm(self.bestparticle,y_measure,y_pred,pf,oh)
-        return modelbest
+
+        self.modelbest = ModelSwarm(self.bestparticle,y_measure,y_pred,pf,oh,self.modelpath)
+        return self.modelbest
 
 
 class ModelSwarm:
@@ -352,7 +367,7 @@ class ModelSwarm:
 
     """
 
-    def __init__(self, bp=None, ymeas=None,ypred=None, pf=None, oh=False):
+    def __init__(self, modeldata = None, bp=None, ymeas=None, ypred=None, pf=None, oh=False, modelcodepath=None):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
@@ -362,19 +377,61 @@ class ModelSwarm:
         :param ypred: output speedup measured by ParsecData class
         :param pf: the parallel fraction calculated by parameters of model.
         :param oh: the overhead calculated by parameters of model.
+        :param modelpath: path of the python module with model coded.
         """
 
-        self.y_measure = ymeas
-        self.y_model = ypred
-        self.parallelfraction = pf
-        self.overhead = oh
-        if not bp:
-            self.params = None
-            self.error = None
+        if modeldata:
+            self.loaddata(modeldata)
         else:
-            self.params = bp.pos
-            self.error = bp.fpos
-            self.errorrel = 100*(self.error/self.y_measure.mean().mean())
+            self.y_measure = ymeas
+            self.y_model = ypred
+            self.parallelfraction = pf
+            self.overhead = oh
+            if modelcodepath is None:
+                self.modelcode = None
+            else:
+                f = open(modelcodepath)
+                self.modelcode = f.read()
+            if not bp:
+                self.params = None
+                self.error = None
+            else:
+                self.params = bp.pos
+                self.error = bp.fpos
+                self.errorrel = 100*(self.error/self.y_measure.mean().mean())
+
+    def loadCode(self, codetext, modulename):
+        """
+        Load a python module stored on a string.
+
+        :param codetext: string with in model alghorithm.
+        :param modulename: name of module to load with python code.
+        :return: return module object with model alghorithm
+        """
+        import types
+
+        module = types.ModuleType(modulename)
+        exec(codetext, module.__dict__)
+        return module
+
+    def predict(self, args):
+        """
+        Predict the speedup using the input values and based on mathematical model.
+
+        :param args: tuple with number of cores and input size.
+        :return: return the speedup values.
+        """
+
+        if self.params is None:
+            print('Error: You should run or load the model data before make predictions!')
+            return None
+        if not (type(args) is tuple) or len(args) != 2:
+            print('Error: The inputs should be a tuple with number of cores and input size')
+            return None
+        psomodel = self.loadCode(self.modelcode,'psomodel')
+        oh = not (type(self.overhead) is bool)
+        y = psomodel.model(self.params, [args], oh)
+        return y
 
     def savedata(self,parsecconfig):
         """
@@ -395,6 +452,7 @@ class ModelSwarm:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
             datatosave['config']['savedate'] = datetime.now().strftime(
                 "%d-%m-%Y_%H:%M:%S")
+            datatosave['config']['modelcode'] = self.modelcode
             datatosave['data']['params'] = pd.Series(self.params).to_json()
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
@@ -427,6 +485,8 @@ class ModelSwarm:
                 self.command = configdict['command']
             if 'hostname' in configdict.keys():
                 self.hostname = configdict['hostname']
+            if 'modelcode' in configdict.keys():
+                self.modelcode = configdict['modelcode']
             if 'params' in datadict.keys():
                 self.params = pd.Series(eval(datadict['params']))
             if 'error' in datadict.keys():
@@ -450,7 +510,7 @@ class ModelSwarm:
         else:
             print('Error: File not found')
             return
-        return datadict
+        return
 
     def plot3D(self, title='Model Speedup', greycolor=False, filename=''):
         """

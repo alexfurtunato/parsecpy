@@ -133,25 +133,34 @@ def main():
         print('Error: You should inform the correct module of objective function to model')
         sys.exit()
 
+    if not os.path.isfile(args.parsecpyfilename):
+        print('Error: You should inform the correct parsecpy measures file')
+        sys.exit()
+
     l = args.lowervalues
     u = args.uppervalues
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
-    p = y_measure.index
 
+    N = y_measure.columns
     if args.problemsizes:
-        N_model = [col for col in y_measure]
+        N_model = N.copy()
         for i in args.problemsizes:
             if not i in N_model:
                 print('Error: Measures not has especified problem sizes')
                 sys.exit()
-        N = [(col, int(col.split('_')[1])) for col in args.problemsizes]
         y_measure = y_measure[args.problemsizes]
-    else:
-        N = [(col, int(col.split('_')[1])) for col in y_measure]
 
-    argsswarm = (y_measure, args.overhead, p, N)
+    x = []
+    y = []
+    for i, row in y_measure.iterrows():
+        for c, v in row.iteritems():
+            x.append((i,int(c.split('_')[1])))
+            y.append(v)
+    input_name = c.split('_')[0]
+
+    argsswarm = (args.overhead, {'x': x, 'y': y, 'input_name': input_name})
 
     repetitions = range(args.repetitions)
     err_min = 0
@@ -164,7 +173,7 @@ def main():
 
         S = Swarm(l, u, args=argsswarm, threads=args.threads,
                   size=args.particles, w=1, c1=1, c2=4,
-                  maxiter=args.maxiterations, modelpath=modelpath)
+                  maxiter =args.maxiterations, modelpath=modelpath)
         model = S.run()
         computed_models.append(model)
         if i == 0:

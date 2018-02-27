@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 
 
-def get_parallelfraction(param,args):
+def get_parallelfraction(param,x):
     """
     Return a Dataframe with parallel fraction calculate of model predicted.
 
@@ -26,13 +26,12 @@ def get_parallelfraction(param,args):
     :param args: Positional arguments passed for objective and constraint functions
     """
 
-    pf = pd.DataFrame()
-    for sizename,N in args[2]:
-        pf[sizename] = _func_parallelfraction(param[:4],args[1],N)
-    pf.set_index(args[1],inplace=True)
-    return pf
+    pf = []
+    for p,N in x:
+        pf.append(_func_parallelfraction(param[:4],p,N))
+    return (x,pf)
 
-def get_overhead(param,args):
+def get_overhead(param,x):
     """
     Return a Dataframe with overhead calculate with of model predicted.
 
@@ -40,11 +39,10 @@ def get_overhead(param,args):
     :param args: Positional arguments passed for objective and constraint functions
     """
 
-    oh = pd.DataFrame()
-    for sizename,N in args[2]:
-        oh[sizename] = _func_overhead(param[:4],args[1],N)
-    oh.set_index(args[1],inplace=True)
-    return oh
+    oh = []
+    for p,N in x:
+        oh.append(_func_overhead(param[:4],p,N))
+    return (x,oh)
 
 def _func_parallelfraction(f, p, N):
     """
@@ -55,10 +53,8 @@ def _func_parallelfraction(f, p, N):
     :param N: Problems size used on model data
     """
 
-    fp = pd.Series(f[0] + f[1]/p + f[2]*pow(f[3],N))
-    for i,v in enumerate(fp):
-        fp[i] = max(min(v,1),0)
-    return fp
+    fp = f[0] + f[1]/p + f[2]*pow(f[3],N)
+    return max(min(fp,1),0)
 
 def _func_overhead(q, p, N):
     """
@@ -69,7 +65,7 @@ def _func_overhead(q, p, N):
     :param N: Problems size used on model data
     """
 
-    return pd.Series(q[0]+(q[1]*p)/pow(q[2],N))
+    return q[0]+(q[1]*p)/pow(q[2],N)
 
 def _func_speedup(fparam, p, N):
     """
@@ -96,7 +92,7 @@ def _func_speedup_with_overhead(fparam, p, N):
     q = _func_overhead(fparam[4:],p,N)
     return 1/((1-f)+f/p+q)
 
-def model(p, args):
+def model(par, x, oh):
     """
     Model function that represent the mathematical model used to predict parameters.
 
@@ -104,19 +100,18 @@ def model(p, args):
     :param args: Positional arguments passed for objective and constraint functions
     """
 
-    y_pred = pd.DataFrame()
-    for sizename,N in args[2]:
-        if args[0]:
-            param = p.pos.copy()
-            modelserie = _func_speedup_with_overhead(param, args[1], N)
+    pred = []
+    for p,N in x:
+        if oh:
+            param = par[:]
+            y_model = _func_speedup_with_overhead(param, p, N)
         else:
-            param = p.pos[:4]
-            modelserie = _func_speedup(param, args[1], N)
-        y_pred[sizename] = modelserie
-    y_pred.set_index(args[1], inplace=True)
-    return y_pred
+            param = par[:4]
+            y_model = _func_speedup(param, p, N)
+        pred.append(y_model)
+    return (x,pred)
 
-def constraint_function(p, *args):
+def constraint_function(par, *args):
     """
     Constraint function that would be considered on model.
 
@@ -124,16 +119,15 @@ def constraint_function(p, *args):
     :param args: Positional arguments passed for objective and constraint functions
     """
 
-    args = args[1:]
-    y_pred = model(p, args)
-    y_min = y_pred.min().min()
-    f_pred = get_parallelfraction(p.pos,args)
-    f_max = f_pred.max().max()
-    f_min = f_pred.min().min()
+    pred = model(par, args[1]['x'], args[0])
+    y_min = np.min(pred[1])
+    f_pred = get_parallelfraction(par, args[1]['x'])
+    f_max = np.max(f_pred[1])
+    f_min = np.min(f_pred[1])
     is_feasable = np.all(np.array([1-f_max,f_min,y_min])>=0)
     return is_feasable
 
-def objective_function(p, *args):
+def objective_function(par, *args):
     """
     Objective function (target function) to minimize.
 
@@ -141,7 +135,6 @@ def objective_function(p, *args):
     :param args: Positional arguments passed for objective and constraint functions
     """
 
-    y_measure = args[0]
-    args = args[1:]
-    y_pred = model(p, args)
-    return mean_squared_error(y_measure, y_pred)
+    measure = args[1]
+    pred = model(par, measure['x'], args[0])
+    return mean_squared_error(measure['y'], pred[1])
