@@ -226,7 +226,8 @@ class ParsecData:
         for inp in inputs:
             df[inp] = Series([np.median(i) for i in data[inp].values()],
                              index=[int(j) for j in data[inp].keys()])
-        df = df.sort_index()
+        df.sort_index(inplace=True)
+        df.sort_index(axis=1,ascending=True,inplace=True)
         return df
 
     def speedups(self):
@@ -252,7 +253,8 @@ class ParsecData:
             idx = data.index[1:]
             darr = data.loc[1, input] / data[input][data.index != 1]
             ds[input] = Series(darr, index=idx)
-        ds = ds.sort_index()
+        ds.sort_index(inplace=True)
+        ds.sort_index(axis=1,ascending=True,inplace=True)
         return ds
 
     def efficiency(self):
@@ -274,7 +276,8 @@ class ParsecData:
             idx = data.index
             darr = data.loc[:, input] / idx
             de[input] = Series(darr, index=idx)
-        de = de.sort_index()
+        de.sort_index(inplace=True)
+        de.sort_index(axis=1,ascending=True,inplace=True)
         return de
 
     def plot2D(self, data, title='', greycolor=False, filename=''):

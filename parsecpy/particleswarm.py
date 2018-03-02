@@ -289,7 +289,7 @@ class Swarm:
                 data_dict[sizename] = {x[0]: y}
         df = pd.DataFrame(data_dict)
         df.sort_index(inplace=True)
-        #df.sort_index(inplace=True, axis=1, ascending=False)
+        df.sort_index(axis=1, ascending=True, inplace=True)
         return df
 
     def run(self):
@@ -308,11 +308,11 @@ class Swarm:
         iter = 0
 
         sm = self._swarm_med()
-        if self.verbosity>0:
+        if self.verbosity>1:
             print('\nInitial Swarm - Initial Error: ', self.bestparticle.bestfpos)
 
         while sm > 1e-8 and gbestmax < 10 and iter < self.maxiter:
-            if self.verbosity>0:
+            if self.verbosity>1:
                 print('Iteration: ',iter+1,' - Error: ',self.bestparticle.bestfpos)
             for p in self.particles:
                 p.update(self.bestparticle,self.w,self.c1,self.c2)
@@ -538,18 +538,22 @@ class ModelSwarm:
             if 'parsecdata' in datadict.keys():
                 self.y_measure = pd.read_json(datadict['parsecdata'])
                 self.y_measure.sort_index(inplace=True)
+                self.y_measure.sort_index(axis=1, ascending=True, inplace=True)
             if 'speedupmodel' in datadict.keys():
                 self.y_model = pd.read_json(datadict['speedupmodel'])
                 self.y_model.sort_index(inplace=True)
+                self.y_model.sort_index(axis=1, ascending=True, inplace=True)
             if 'parallelfraction' in datadict.keys():
                 self.parallelfraction = pd.read_json(datadict['parallelfraction'])
                 self.parallelfraction.sort_index(inplace=True)
+                self.parallelfraction.sort_index(axis=1, ascending=True, inplace=True)
             if 'overhead' in datadict.keys():
                 if not datadict['overhead']:
                     self.overhead = datadict['overhead']
                 else:
                     self.overhead = pd.read_json(datadict['overhead'])
                     self.overhead.sort_index(inplace=True)
+                    self.overhead.sort_index(axis=1, ascending=True, inplace=True)
             if 'savedate' in configdict.keys():
                 self.savedate = datetime.strptime(
                     configdict['savedate'], "%d-%m-%Y_%H:%M:%S")

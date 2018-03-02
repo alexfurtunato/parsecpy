@@ -16,7 +16,7 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
 
     def fit(self, X, y, **kwargs):
         X, y = check_X_y(X, y)
-        if self.verbosity > 0:
+        if self.verbosity > 2:
             print('\nFit: X lenght = ', X.shape,' y lenght = ',y.shape)
             print('X :')
             print(X)
@@ -36,7 +36,7 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
         check_is_fitted(self, ['X_', 'y_'])
         X = check_array(X)
         y = self.modeldata.predict(X)[1]
-        if self.verbosity > 0:
+        if self.verbosity > 2:
             print('\nPredict: X lenght = ', X.shape)
             print('X :')
             print(X)

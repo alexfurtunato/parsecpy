@@ -207,7 +207,7 @@ def main():
                 print('  Error: %.8f -> %.8f ' % (err_min, model.error))
                 err_min = model.error
         endtime = time.time()
-        print('  Execution time = %s seconds' % (endtime - starttime))
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
     print('\n\n***** Modelling Results! *****\n')
@@ -228,7 +228,7 @@ def main():
         print('\n\n***** Starting cross validation! *****\n')
         starttime = time.time()
 
-        kf = KFold(n_splits=3, shuffle=True)
+        kf = KFold(n_splits=10, shuffle=True)
         scoring = {
             'neg_mse_error': 'neg_mean_squared_error',
             'neg_mae_error': 'neg_mean_absolute_error',
@@ -236,13 +236,13 @@ def main():
         }
         scores = cross_validate(SwarmEstimator(computed_models[best_model_idx], verbosity=args.verbosity),
                                 x, y, cv=kf, scoring=scoring,
-                                return_train_score = False)
+                                return_train_score = False, verbose=args.verbosity)
         print('\n  Cross Validation Metrics: ')
         for key in scores.keys():
             print('    ',key,scores[key],' - Mean: ',scores[key].mean())
 
         endtime = time.time()
-        print('  Execution time = %s seconds' % (endtime - starttime))
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
 
 
 
