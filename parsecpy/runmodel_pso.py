@@ -39,6 +39,10 @@
       -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
                             Absolute path from Python file with theobjective
                             function.
+      -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
+                            If run the cross validation of modelling
+      -v VERBOSITY, --verbosity VERBOSITY
+                            verbosity level. 0 = No verbose
     Example
         parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10
             -f /var/myparsecsim.dat -m /var/mymodelfunc.py -x 1000 -p 10
@@ -48,8 +52,12 @@ import os
 import sys
 import time
 import argparse
+import numpy as np
 from parsecpy import ParsecData
 from parsecpy import Swarm
+from parsecpy import SwarmEstimator
+from sklearn.model_selection import cross_val_score, cross_validate, KFold
+from sklearn.metrics import make_scorer, mean_squared_error
 
 def argsparselist(txt):
     """
@@ -109,8 +117,20 @@ def argsparsevalidation():
     parser.add_argument('-m','--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
+    parser.add_argument('-c','--crossvalidation', type=bool,
+                        help='If run the cross validation of modelling', default=False)
+    parser.add_argument('-v','--verbosity', type=int,
+                        help='verbosity level. 0 = No verbose', default=0)
     args = parser.parse_args()
     return args
+
+
+def see_score(y, y_pred, **kwargs):
+    mse = mean_squared_error(y,y_pred)
+    n = len(y)
+    p = kwargs['parameters_number']
+    see = np.sqrt(n*mse/(n-p))
+    return see
 
 def main():
     """
@@ -118,7 +138,7 @@ def main():
 
     """
 
-    print("Processing the Model")
+    print("\n***** Processing the Model *****")
 
     # adjust list of arguments to avoid negative number values error
     for i, arg in enumerate(sys.argv):
@@ -128,7 +148,7 @@ def main():
     args = argsparsevalidation()
 
     if os.path.isfile(args.modelfileabspath):
-        modelpath = args.modelfileabspath
+        modelcodepath = args.modelfileabspath
     else:
         print('Error: You should inform the correct module of objective function to model')
         sys.exit()
@@ -156,9 +176,11 @@ def main():
     y = []
     for i, row in y_measure.iterrows():
         for c, v in row.iteritems():
-            x.append((i,int(c.split('_')[1])))
+            x.append([i,int(c.split('_')[1])])
             y.append(v)
     input_name = c.split('_')[0]
+    x = np.array(x)
+    y = np.array(y)
 
     argsswarm = (args.overhead, {'x': x, 'y': y, 'input_name': input_name})
 
@@ -169,35 +191,63 @@ def main():
 
     starttime = time.time()
     for i in repetitions:
-        print('Algorithm Execution: ',i+1, '\n')
+        print('\nAlgorithm Execution: ',i+1)
 
         S = Swarm(l, u, args=argsswarm, threads=args.threads,
                   size=args.particles, w=1, c1=1, c2=4,
-                  maxiter =args.maxiterations, modelpath=modelpath)
+                  maxiter =args.maxiterations, modelcodepath=modelcodepath, verbosity=args.verbosity)
         model = S.run()
         computed_models.append(model)
         if i == 0:
             err_min = model.error
-            print('Error: ', err_min)
+            print('  Error: %.8f' % err_min)
         else:
             if model.error < err_min:
                 best_model_idx = i
-                print('Error: ', err_min, '->', model.error)
+                print('  Error: %.8f -> %.8f ' % (err_min, model.error))
                 err_min = model.error
         endtime = time.time()
-        print('Execution time = %s seconds' % (endtime - starttime))
+        print('  Execution time = %s seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('\n\n***** Done! *****\n')
-    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' %
+    print('\n\n***** Modelling Results! *****\n')
+    print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
           (computed_models[best_model_idx].error,
            computed_models[best_model_idx].errorrel))
-    print('Best Parameters: \n',computed_models[best_model_idx].params)
-    print('\nMeasured Speedup: \n',y_measure)
-    print('\nModeled Speedup: \n',computed_models[best_model_idx].y_model)
+    if args.verbosity>0:
+        print('Best Parameters: \n',computed_models[best_model_idx].params)
+        print('\nMeasured Speedup: \n',y_measure)
+        print('\nModeled Speedup: \n',computed_models[best_model_idx].y_model)
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)
+
+    print('\n***** Modelling Done! *****\n')
+
+    if args.crossvalidation:
+        print('\n\n***** Starting cross validation! *****\n')
+        starttime = time.time()
+
+        kf = KFold(n_splits=3, shuffle=True)
+        scoring = {
+            'neg_mse_error': 'neg_mean_squared_error',
+            'neg_mae_error': 'neg_mean_absolute_error',
+            'see_error': make_scorer(see_score, parameters_number=len(computed_models[best_model_idx].params))
+        }
+        scores = cross_validate(SwarmEstimator(computed_models[best_model_idx], verbosity=args.verbosity),
+                                x, y, cv=kf, scoring=scoring,
+                                return_train_score = False)
+        print('\n  Cross Validation Metrics: ')
+        for key in scores.keys():
+            print('    ',key,scores[key],' - Mean: ',scores[key].mean())
+
+        endtime = time.time()
+        print('  Execution time = %s seconds' % (endtime - starttime))
+
+
+
+    print('\n\n***** ALL DONE! *****\n')
+
 
 if __name__ == '__main__':
     main()

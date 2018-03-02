@@ -158,8 +158,8 @@ class Swarm:
 
     """
 
-    def __init__(self, lxmin, lxmax, modelpath, size=100, w=0.5, c1=2, c2=2, maxiter=100,
-                 threads=1, args=(), kwargs={}):
+    def __init__(self, lxmin, lxmax, modelcodepath=None, modelcodesource = None, size=100, w=0.5, c1=2, c2=2, maxiter=100,
+                 threads=1, verbosity=True, args=(), kwargs={}):
         """
         Initialize the swarm of particle calculating the initial attribute values and
         find the initial best particle. The objective and constraint functions are
@@ -167,7 +167,8 @@ class Swarm:
 
         :param lxmin - Particle minimum position values
         :param lxmax - Particle maximum position values
-        :param modelpath - path of model file python module provided by user
+        :param modelcodepath - path of model file python module provided by user
+        :param modelcodesource - string with python code of model algorithm
         :param size - Size of swarm (number of particles)
         :param w - Inertial factor to calculate velocity of particle
         :param c1 - Scaling factor for bestpos of particle.
@@ -179,10 +180,13 @@ class Swarm:
         :param kwargs - Key arguments passed for objective and constraint functions
         """
 
-        assert len(lxmin) == len(lxmax)
-        lxmin = np.array(lxmin)
-        lxmax = np.array(lxmax)
-        assert np.all(lxmin<lxmax)
+        if len(lxmin) == len(lxmax):
+            lxmin = np.array(lxmin)
+            lxmax = np.array(lxmax)
+            if not np.all(lxmin<lxmax):
+                raise AssertionError()
+        else:
+            raise AssertionError()
 
         self.maxiter = maxiter
         self.threads = threads
@@ -199,17 +203,25 @@ class Swarm:
         self.size = size
         self.particles = np.array([Particle(self.pxmin,self.pxmax,self.vxmin, self.vxmax)
                           for i in range(self.size)])
-        self.modelpath = modelpath
-        self.modelfunc = None
+        self.modelcodepath = modelcodepath
+        self.modelcodesource = modelcodesource
         self.modelbest = None
+        self.verbosity = verbosity
 
-        pythonfile = os.path.basename(modelpath)
-        pythonmodule = pythonfile.split('.')[0]
-        if not os.path.dirname(modelpath):
-            sys.path.append('.')
+        if not self.modelcodepath is None:
+            pythonfile = os.path.basename(modelcodepath)
+            pythonmodule = pythonfile.split('.')[0]
+            if not os.path.dirname(modelcodepath):
+                sys.path.append('.')
+            else:
+                sys.path.append(os.path.dirname(modelcodepath))
+            self.modelfunc = importlib.import_module(pythonmodule)
         else:
-            sys.path.append(os.path.dirname(modelpath))
-        self.modelfunc = importlib.import_module(pythonmodule)
+            if not modelcodesource is None:
+                import types
+
+                self.modelfunc = types.ModuleType('psomodel')
+                exec(self.modelcodesource, self.modelfunc.__dict__)
 
         self.constr = partial(self._constraint_wrapper, self.modelfunc.constraint_function, self.args, self.kwargs)
 
@@ -277,7 +289,7 @@ class Swarm:
                 data_dict[sizename] = {x[0]: y}
         df = pd.DataFrame(data_dict)
         df.sort_index(inplace=True)
-        df.sort_index(inplace=True, axis=1, ascending=False)
+        #df.sort_index(inplace=True, axis=1, ascending=False)
         return df
 
     def run(self):
@@ -296,15 +308,12 @@ class Swarm:
         iter = 0
 
         sm = self._swarm_med()
-        print('Initial Swarm:')
-        print('Best Particle Error: ', self.bestparticle.bestfpos,
-              ' Swarm Medium Distance: ', sm, '\n')
+        if self.verbosity>0:
+            print('\nInitial Swarm - Initial Error: ', self.bestparticle.bestfpos)
 
-        while (sm > 1e-5 or gbestmax < 10) and iter < self.maxiter:
-            print('Iteration: ',iter+1)
-            print('Best Particle Error: ',self.bestparticle.bestfpos,
-                  ' Swarm Medium Distance: ', sm,
-                  'Gbest not change: ', gbestmax+1,'\n')
+        while sm > 1e-8 and gbestmax < 10 and iter < self.maxiter:
+            if self.verbosity>0:
+                print('Iteration: ',iter+1,' - Error: ',self.bestparticle.bestfpos)
             for p in self.particles:
                 p.update(self.bestparticle,self.w,self.c1,self.c2)
             if self.threads > 1:
@@ -340,7 +349,11 @@ class Swarm:
         else:
             oh = False
 
-        self.modelbest = ModelSwarm(self.bestparticle,y_measure,y_pred,pf,oh,self.modelpath)
+        modelexecparams = {'pxmin': list(self.pxmin), 'pxmax': list(self.pxmax), 'args': self.args,
+                       'threads': self.threads, 'size': self.size, 'w': self.w,
+                       'c1': self.c1, 'c2': self.c2, 'maxiter': self.maxiter,
+                       'modelcodepath': self.modelcodepath}
+        self.modelbest = ModelSwarm(bp=self.bestparticle,ymeas=y_measure,ypred=y_pred,pf=pf,oh=oh,modelcodepath=self.modelcodepath, modelcodesource=self.modelcodesource, modelexecparams=modelexecparams)
         return self.modelbest
 
 
@@ -367,17 +380,19 @@ class ModelSwarm:
 
     """
 
-    def __init__(self, modeldata = None, bp=None, ymeas=None, ypred=None, pf=None, oh=False, modelcodepath=None):
+    def __init__(self, modeldata = None, bp=None, ymeas=None, ypred=None, pf=None, oh=False, modelcodepath=None, modelcodesource=None, modelexecparams=None):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
 
+        :param modeldata: path of the model data previously saved.
         :param bp: best particle object of swarm
         :param ymeas: output speedup model calculated by model parameters
         :param ypred: output speedup measured by ParsecData class
         :param pf: the parallel fraction calculated by parameters of model.
         :param oh: the overhead calculated by parameters of model.
-        :param modelpath: path of the python module with model coded.
+        :param modelcodepath: path of the python module with model coded.
+        :param modelparams: Model execution used parameters.
         """
 
         if modeldata:
@@ -387,11 +402,13 @@ class ModelSwarm:
             self.y_model = ypred
             self.parallelfraction = pf
             self.overhead = oh
-            if modelcodepath is None:
-                self.modelcode = None
-            else:
+            self.modelexecparams = modelexecparams
+            self.modelcodesource = None
+            if not modelcodepath is None:
                 f = open(modelcodepath)
-                self.modelcode = f.read()
+                self.modelcodesource = f.read()
+            if not modelcodesource is None:
+                self.modelcodesource = modelcodesource
             if not bp:
                 self.params = None
                 self.error = None
@@ -418,19 +435,22 @@ class ModelSwarm:
         """
         Predict the speedup using the input values and based on mathematical model.
 
-        :param args: tuple with number of cores and input size.
+        :param args: tuple with number of cores and input size or list of tuples.
         :return: return the speedup values.
         """
 
         if self.params is None:
             print('Error: You should run or load the model data before make predictions!')
             return None
-        if not (type(args) is tuple) or len(args) != 2:
-            print('Error: The inputs should be a tuple with number of cores and input size')
+        if not isinstance(args, np.ndarray):
+            print('Error: The inputs should be a array (number of cores, input size) '
+                  'or a array of array')
             return None
-        psomodel = self.loadCode(self.modelcode,'psomodel')
+        if len(args.shape) == 1:
+            args = args.reshape((1,args.shape[0]))
+        psomodel = self.loadCode(self.modelcodesource,'psomodel')
         oh = not (type(self.overhead) is bool)
-        y = psomodel.model(self.params, [args], oh)
+        y = psomodel.model(self.params, args, oh)
         return y
 
     def savedata(self,parsecconfig):
@@ -452,7 +472,15 @@ class ModelSwarm:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
             datatosave['config']['savedate'] = datetime.now().strftime(
                 "%d-%m-%Y_%H:%M:%S")
-            datatosave['config']['modelcode'] = self.modelcode
+            datatosave['config']['modelcodesource'] = self.modelcodesource
+            mep = self.modelexecparams.copy()
+            mep['pxmin'] = str(mep['pxmin'])
+            mep['pxmax'] = str(mep['pxmax'])
+            mep['args'][1]['xtype'] = str(mep['args'][1]['x'].dtype)
+            mep['args'][1]['x'] = json.dumps(mep['args'][1]['x'].tolist())
+            mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
+            mep['args'][1]['y'] = json.dumps(mep['args'][1]['y'].tolist())
+            datatosave['config']['modelexecparams'] = mep
             datatosave['data']['params'] = pd.Series(self.params).to_json()
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
@@ -485,8 +513,22 @@ class ModelSwarm:
                 self.command = configdict['command']
             if 'hostname' in configdict.keys():
                 self.hostname = configdict['hostname']
-            if 'modelcode' in configdict.keys():
-                self.modelcode = configdict['modelcode']
+            if 'modelcodesource' in configdict.keys():
+                self.modelcodesource = configdict['modelcodesource']
+            if 'modelexecparams' in configdict.keys():
+                mep = configdict['modelexecparams'].copy()
+                self.modelexecparams = mep.copy()
+                self.modelexecparams['pxmin'] = eval(mep['pxmin'])
+                self.modelexecparams['pxmax'] = eval(mep['pxmax'])
+                self.modelexecparams['args'] = (mep['args'][0],{})
+                self.modelexecparams['args'][1]['input_name'] = \
+                    mep['args'][1]['input_name']
+                self.modelexecparams['args'][1]['x'] = \
+                    np.array(json.loads(mep['args'][1]['x']),
+                             dtype=mep['args'][1]['xtype'])
+                self.modelexecparams['args'][1]['y'] = \
+                    np.array(json.loads(mep['args'][1]['y']),
+                             dtype=mep['args'][1]['ytype'])
             if 'params' in datadict.keys():
                 self.params = pd.Series(eval(datadict['params']))
             if 'error' in datadict.keys():
@@ -495,15 +537,19 @@ class ModelSwarm:
                 self.errorrel = datadict['errorrel']
             if 'parsecdata' in datadict.keys():
                 self.y_measure = pd.read_json(datadict['parsecdata'])
+                self.y_measure.sort_index(inplace=True)
             if 'speedupmodel' in datadict.keys():
                 self.y_model = pd.read_json(datadict['speedupmodel'])
+                self.y_model.sort_index(inplace=True)
             if 'parallelfraction' in datadict.keys():
                 self.parallelfraction = pd.read_json(datadict['parallelfraction'])
+                self.parallelfraction.sort_index(inplace=True)
             if 'overhead' in datadict.keys():
                 if not datadict['overhead']:
                     self.overhead = datadict['overhead']
                 else:
                     self.overhead = pd.read_json(datadict['overhead'])
+                    self.overhead.sort_index(inplace=True)
             if 'savedate' in configdict.keys():
                 self.savedate = datetime.strptime(
                     configdict['savedate'], "%d-%m-%Y_%H:%M:%S")
