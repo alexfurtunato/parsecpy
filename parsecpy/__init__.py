@@ -2,7 +2,6 @@ from .dataprocess import ParsecData
 from .dataprocess import ParsecLogsData
 from .particleswarm import Swarm
 from .particleswarm import ModelSwarm
-from .validation import SwarmEstimator
 from .csa import CoupledAnnealer
 from .csa import ModelAnnealer
 from . import createinputs

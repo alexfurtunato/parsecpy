@@ -13,17 +13,17 @@
 
 """
 
-import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
 
 def get_parallelfraction(param,x):
     """
-    Return a Dataframe with parallel fraction calculate of model predicted.
+    Get the calculated parallel fraction of model.
 
-    :param param: Parameters of model overhead part
-    :param args: Positional arguments passed for objective and constraint functions
+    :param param: Actual parameters values
+    :param x: Inputs array
+    :return: Tuple within input array and predicted parallel fraction array
     """
 
     pf = []
@@ -33,10 +33,11 @@ def get_parallelfraction(param,x):
 
 def get_overhead(param,x):
     """
-    Return a Dataframe with overhead calculate with of model predicted.
+    Get the calculated overhead of model.
 
-    :param param: Parameters of model overhead part
-    :param args: Positional arguments passed for objective and constraint functions
+    :param param: Actual parameters values
+    :param x: Inputs array
+    :return: Tuple within input array and predicted overhead array
     """
 
     oh = []
@@ -46,11 +47,12 @@ def get_overhead(param,x):
 
 def _func_parallelfraction(f, p, N):
     """
-    Model function that calculate the parallel fraction.
+    Model function to calculate the parallel fraction.
 
-    :param f: Parameters of model
+    :param f: Actual parallel fraction parameters values
     :param p: Numbers of cores used on model data
     :param N: Problems size used on model data
+    :return: calculated parallel fraction value
     """
 
     fp = f[0] + f[1]/p + f[2]*pow(f[3],N)
@@ -58,22 +60,24 @@ def _func_parallelfraction(f, p, N):
 
 def _func_overhead(q, p, N):
     """
-    Model function that calculate the overhead.
+    Model function to calculate the overhead.
 
-    :param q: Parameters of model overhead part
+    :param q: Actual overhead parameters values
     :param p: Numbers of cores used on model data
     :param N: Problems size used on model data
+    :return: calculated overhead value
     """
 
     return q[0]+(q[1]*p)/pow(q[2],N)
 
 def _func_speedup(fparam, p, N):
     """
-    Model function that calculate the speedup without overhead.
+    Model function to calculate the speedup without overhead.
 
     :param fparam: Actual parameters values
     :param p: Numbers of cores used on model data
     :param N: Problems size used on model data
+    :return: calculated speedup value
     """
 
     f = _func_parallelfraction(fparam,p,N)
@@ -81,11 +85,12 @@ def _func_speedup(fparam, p, N):
 
 def _func_speedup_with_overhead(fparam, p, N):
     """
-    Model function that calculate the speedup with overhead.
+    Model function to calculate the speedup with overhead.
 
     :param fparam: Actual parameters values
     :param p: Numbers of cores used on model data
     :param N: Problems size used on model data
+    :return: calculated speedup value
     """
 
     f = _func_parallelfraction(fparam[:4],p,N)
@@ -94,10 +99,12 @@ def _func_speedup_with_overhead(fparam, p, N):
 
 def model(par, x, oh):
     """
-    Model function that represent the mathematical model used to predict parameters.
+    Mathematical Model function to predict the measures values.
 
-    :param p: Actual parameters values
-    :param args: Positional arguments passed for objective and constraint functions
+    :param par: Actual parameters values
+    :param x: inputs array
+    :param oh: If should be considered the overhead
+    :return: Tuple within input array and predicted output array
     """
 
     pred = []
@@ -115,8 +122,9 @@ def constraint_function(par, *args):
     """
     Constraint function that would be considered on model.
 
-    :param p: Actual parameters values
+    :param par: Actual parameters values
     :param args: Positional arguments passed for objective and constraint functions
+    :return: If parameters are acceptable based on return functions
     """
 
     pred = model(par, args[1]['x'], args[0])
@@ -131,8 +139,9 @@ def objective_function(par, *args):
     """
     Objective function (target function) to minimize.
 
-    :param p: Actual parameters values
+    :param par: Actual parameters values
     :param args: Positional arguments passed for objective and constraint functions
+    :return: Mean squared error between measures and predicts
     """
 
     measure = args[1]

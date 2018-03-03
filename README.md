@@ -2,17 +2,19 @@
 
 Python library to interface with PARSEC 2.1 and 3.0 Benchmark, controlling execution triggers and
 processing the output measures times data to calculate speedups. Further, the library can generate a 
-mathematical model of speedup of a parallel application, based on "Particles Swarm Optimization" or "Coupled Simulating Annealing" algorithm to discover
-the parameters that minimize a "objective function".
+mathematical model of speedup of a parallel application, based on "Particles Swarm Optimization" or 
+"Coupled Simulating Annealing" algorithms to discover the parameters that minimize a "objective function".
+The objective function can be build within a module python passed as argument to library on execution script.
 
 ## Features
 
- - Run parsec application with repetitions e multiple input sizes and output data to file
- - Process a group of Parsec 2.1 logs files generates from a shell direct execution of parsec
- - Manipulate of data resulting from logs process or execution obtained by module run script itself
- - Calculate the speedups and efficency of applications, if it' possible, using the measured times of execution
- - provide a "PSO" algorithm to model the speedup of a parallel application 
- - Provide a "CSA" algorithm to model the speedup of a parallel application
+ - Run parsec application with multiple input sizes and, optionally, repet the execution to better find outs.
+ - Process a group of Parsec 2.1 or 3.0 logs files, generates from a shell direct execution of parsec.
+ - Manipulate of resulting data from logs process or online execution, obtained by module run script itself.
+ - Calculate the speedups and efficency of applications, if it's possible, using the measured times of execution.
+ - provide a "PSO" algorithm to model the speedup of a parallel application with regression process.
+ - Provide a "CSA" algorithm to model the speedup of a parallel application with regression process.
+ - Calculate statistics scores of model data using cross validate process.
 
 ## Prerequisites
 
@@ -21,6 +23,7 @@ the parameters that minimize a "objective function".
  - Numpy
  - Pandas
  - Matplotlib with Mplot3D Toolkit (Optional, to plot 3D surface)
+ - Scikit-learn
 
 ## Site
 
@@ -63,7 +66,9 @@ the parameters that minimize a "objective function".
     >>> pso = Swarm([0,0,0,0], [2.0,1.0,1.0,2.0], args=argsswarm, threads=10, 
                     size=100, maxiter=1000, modelpath=/root/mymodelfunc.py)
     >>> model = pso.run()
+    >>> model.validate()
     >>> print(model.params)
+    >>> print(model.validation)
 
 ### Class CoupledAnnealer
 

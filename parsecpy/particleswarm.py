@@ -1,25 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-    Module with Classes that modeling an application
-    based on data output generate from ParsecData Class.
+    Module with Classes that modelling an application
+    based on data output generate by ParsecData Class.
 
 """
 
 import sys
 import os
 import importlib
-from functools import partial
-import numpy as np
-import copy
 import json
-from datetime import datetime
+import numpy as np
 import pandas as pd
+from datetime import datetime
+from copy import deepcopy
+from functools import partial
+
+from sklearn.model_selection import cross_validate, KFold
+from sklearn.metrics import make_scorer, mean_squared_error
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import ticker
-from matplotlib.ticker import LinearLocator
-from matplotlib.ticker import FormatStrFormatter
 
 support3d = True
 try:
@@ -30,15 +33,15 @@ except:
 
 class Particle:
     """
-    Class that represent a particle of swarm
+    Class of a particle of swarm
 
         Atrributes
-            dim - size of swarm, is that, number of particles of it
-            lxmin - minimum values of particle position (parameters os model)
-            lxmax - maximum values of particle position (parameters os model)
-            vxmin - Minimum values of velocity of particles
-            vxmax - Maximum values of velocity of particles
-            pos - actual position (parameters of model) of particle
+            dim - size of swarm, is that, number of particles
+            lxmin - minimum values of particle position (parameters of model)
+            lxmax - maximum values of particle position (parameters of model)
+            vxmin - Minimum values of particles velocity
+            vxmax - Maximum values of particles velocity
+            pos - actual position of particle (parameters of model)
             fpos - output of model function, is that, objective value to minimize
             vel - actual velocity of particle
             bestpos - best position found for this particle
@@ -48,14 +51,13 @@ class Particle:
         Methods
             setfpos() - Set a fpos attribute and if, depend of some conditions,
                 set also the bestfpos and the bestpos array os parameters
-            update() - update the velocity of particles and the
-                newpos (new parameters) of them.
+            update() - update the particle velocity and the new parameters.
 
     """
 
     def __init__(self, lxmin, lxmax, vxmin, vxmax):
         """
-        Create a particle object of initial position, best position, velocity,
+        Create a particle object with initial position, best position, velocity,
         objective value and best objective value.
 
         :param lxmin: miminum value of particle position
@@ -108,10 +110,9 @@ class Particle:
         Update a particle new velocity and new position.
 
         :param bestparticle: actual bestparticle of swarm.
-        :param w: inertial factor used to adjust the velocity of particle.
-        :param c1: scaling factor for bestpos of particle.
-        :param c2: scaling factor for bestpos of bestparticle.
-        :return: new calculated position of particle.
+        :param w: inertial factor used to adjust the particle velocity.
+        :param c1: scaling factor for particle bestpos attribute.
+        :param c2: scaling factor for bestparticle bestpos attribute.
         """
 
         rp = np.random.rand(self.dim)
@@ -130,25 +131,25 @@ class Particle:
 
 class Swarm:
     """
-    Class that represent a particle of swarm
+    Class of particle of swarm
 
         Atrributes
-            maxiter - Maximum number of iterations of algorithm
-            threads - Number of threads to use to calculate the objective and
+            maxiter - Maximum number of algorithm iterations
+            threads - Number of threads to calculate the objective and
                       constratint function
             args - Positional arguments passed for objective and constraint functions
             kwargs - Key arguments passed for objective and constraint functions
             pdim - Particles dimention
             pxmin - Particle minimum position values
             pxmax - Particle maximum position values
-            w - Inertial factor to calculate velocity of particle
-            c1 - Scaling factor for bestpos of particle.
-            c2 - Scaling factor for bestpos of best particle.
-            vxmin - Minimum velocity of particles
-            vxmax - Maximum velocity of particles
+            w - Inertial factor to calculate particle velocity
+            c1 - Scaling factor for particle bestpos attribute.
+            c2 - Scaling factor for best particle bestpos attribute.
+            vxmin - Minimum particles velocity
+            vxmax - Maximum particles velocity
             size - Size of swarm (number of particles)
-            particles - A list of particles objects within swarm
-            bestparticle - Best particle of swarm
+            particles - List within swarm particles objects
+            bestparticle - Swarm best particle object
 
         Methods
             _obj_wrapper()
@@ -159,25 +160,25 @@ class Swarm:
     """
 
     def __init__(self, lxmin, lxmax, modelcodepath=None, modelcodesource = None, size=100, w=0.5, c1=2, c2=2, maxiter=100,
-                 threads=1, verbosity=True, args=(), kwargs={}):
+                 threads=1, verbosity=True, parsecpydatapath=None, args=(), kwargs={}):
         """
-        Initialize the swarm of particle calculating the initial attribute values and
-        find the initial best particle. The objective and constraint functions are
+        Initialize the particles swarm calculating the initial attribute values and
+        find out the initial best particle. The objective and constraint functions are
         pointed by the swarm attributes.
 
         :param lxmin - Particle minimum position values
         :param lxmax - Particle maximum position values
-        :param modelcodepath - path of model file python module provided by user
-        :param modelcodesource - string with python code of model algorithm
+        :param modelcodepath - path of python module with model functions
+        :param modelcodesource - string with python code of model functions
         :param size - Size of swarm (number of particles)
-        :param w - Inertial factor to calculate velocity of particle
-        :param c1 - Scaling factor for bestpos of particle.
-        :param c2- Scaling factor for bestpos of best particle.
-        :param maxiter - Maximum number of iterations of algorithm
-        :param threads - Number of threads to use to calculate the objective and
+        :param w - Inertial factor to calculate particle velocity
+        :param c1 - Scaling factor for particle bestpos attribute.
+        :param c2- Scaling factor for best particle bestpos attribute.
+        :param maxiter - Maximum number of algorithm iterations
+        :param threads - Number of threads to calculate the objective and
                       constratint function
-        :param args - Positional arguments passed for objective and constraint functions
-        :param kwargs - Key arguments passed for objective and constraint functions
+        :param args - Positional arguments passed to objective and constraint functions
+        :param kwargs - Key arguments passed to objective and constraint functions
         """
 
         if len(lxmin) == len(lxmax):
@@ -206,6 +207,7 @@ class Swarm:
         self.modelcodepath = modelcodepath
         self.modelcodesource = modelcodesource
         self.modelbest = None
+        self.parsecpydatapath = parsecpydatapath
         self.verbosity = verbosity
 
         if not self.modelcodepath is None:
@@ -234,18 +236,17 @@ class Swarm:
             constraint[i] = self.constr(p)
             if constraint[i]:
                 bestfpos[i] = p.setfpos(newfpos[i])
-        self.bestparticle = copy.copy(self.particles[np.argmin(bestfpos)])
+        self.bestparticle = deepcopy(self.particles[np.argmin(bestfpos)])
 
 
     def _obj_wrapper(self, func, args, kwargs, x):
         """
-        wrapper function that point to objective function provided by user
-        on attibutes of object class.
+        Wrapper function that point to objective function.
 
-        :param func: objective function .
-        :param args: positional arguments to pass to objective function
-        :param kwargs: key arguments to pass to objective function
-        :param x: particle to calculate objective function
+        :param func: objective function.
+        :param args: positional arguments to pass on to objective function
+        :param kwargs: key arguments to pass on to objective function
+        :param x: particle used to calculate objective function
         :return: return the calculated objective function.
         """
 
@@ -253,22 +254,21 @@ class Swarm:
 
     def _constraint_wrapper(self, func, args, kwargs, x):
         """
-        wrapper function that point to objective function provided by user
-        on attibutes of object class.
+        Wrapper function that point to constraint function.
 
-        :param func: constraint function to evaluate a particle condition.
-        :param args: positional arguments to pass to objective function
-        :param kwargs: key arguments to pass to objective function
-        :param x: particle to calculate objective function
-        :return: return if this particle is feasable or not.
+        :param func: constraint function.
+        :param args: positional arguments to pass on to constraint function
+        :param kwargs: key arguments to pass on to constraint function
+        :param x: particle used to calculate constraint function
+        :return: If this particle is feasable or not.
         """
 
         return func(x.pos, *args, **kwargs)
 
     def _swarm_med(self):
         """
-        calculate a percentual distance of mean of particles positions by
-        the best particle position.
+        Calculate the percentual distance between the mean of particles
+        positions and the best particle position.
 
         :return: return the calculated parcentual distance.
         """
@@ -280,6 +280,13 @@ class Swarm:
             return abs(1 - med/self.bestparticle.fpos)
 
     def data_build(self, data):
+        """
+        Build a Dataframe data argument.
+
+        :param data: A tuple of two lists: input values and output values
+        :return: Dataframe of data.
+        """
+
         data_dict = {}
         for x, y in zip(data[0],data[1]):
             sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
@@ -296,7 +303,7 @@ class Swarm:
         """
         Run the iterations of swarm algorithm.
 
-        :return: return the model object of best particle found.
+        :return: return a ModelSwarm object with best particle found.
         """
 
         if self.threads > 1:
@@ -329,7 +336,7 @@ class Swarm:
             for i, p in enumerate(self.particles):
                 if constraint[i]:
                     bestfpos[i] = p.setfpos(newfpos[i])
-            self.bestparticle = copy.copy(self.particles[np.argmin(bestfpos)])
+            self.bestparticle = deepcopy(self.particles[np.argmin(bestfpos)])
             if gbestfpos_ant == self.bestparticle.fpos:
                 gbestmax += 1
             else:
@@ -349,26 +356,28 @@ class Swarm:
         else:
             oh = False
 
-        modelexecparams = {'pxmin': list(self.pxmin), 'pxmax': list(self.pxmax), 'args': self.args,
-                       'threads': self.threads, 'size': self.size, 'w': self.w,
-                       'c1': self.c1, 'c2': self.c2, 'maxiter': self.maxiter,
-                       'modelcodepath': self.modelcodepath}
+        modelexecparams = {'pxmin': list(self.pxmin), 'pxmax': list(self.pxmax),
+                           'args': self.args, 'threads': self.threads,
+                           'size': self.size, 'w': self.w, 'c1': self.c1,
+                           'c2': self.c2, 'maxiter': self.maxiter,
+                           'modelcodepath': self.modelcodepath,
+                           'parsecpydatapath': self.parsecpydatapath,
+                           'verbosity': self.verbosity}
         self.modelbest = ModelSwarm(bp=self.bestparticle,ymeas=y_measure,ypred=y_pred,pf=pf,oh=oh,modelcodepath=self.modelcodepath, modelcodesource=self.modelcodesource, modelexecparams=modelexecparams)
         return self.modelbest
 
 
 class ModelSwarm:
     """
-    Class that represent a speedup model of a parallel application using
-    the Swarm Optimization algorithm
+    Class of results of modelling using Swarm Optimization algorithm
 
         Atrributes
             params - position of best particle (model parameters)
-            error - output of objective function for above position
-            y_measure - speedups of parallel application using ParsecData
-            y_model - speedups of model
-            parallelfraction - parallel fraction calculated by this model
-            overhead - overhead part calculated by this model
+            error - model error or output of objective function
+            y_measure - measured speedups dataframe
+            y_model - modeled speedups dataframe
+            parallelfraction - parallel fraction calculated by model
+            overhead - overhead calculated by model
 
         Methods
             loadata()
@@ -421,7 +430,7 @@ class ModelSwarm:
         """
         Load a python module stored on a string.
 
-        :param codetext: string with in model alghorithm.
+        :param codetext: string within model alghorithm.
         :param modulename: name of module to load with python code.
         :return: return module object with model alghorithm
         """
@@ -435,8 +444,8 @@ class ModelSwarm:
         """
         Predict the speedup using the input values and based on mathematical model.
 
-        :param args: tuple with number of cores and input size or list of tuples.
-        :return: return the speedup values.
+        :param args: array with number of cores and input size or array of array.
+        :return: return a array within speedup values.
         """
 
         if self.params is None:
@@ -453,11 +462,59 @@ class ModelSwarm:
         y = psomodel.model(self.params, args, oh)
         return y
 
+    def validate(self, kfolds=3, scoring=None):
+        """
+        Validate the model.
+
+        :param args: array with number of cores and input size or array of array.
+        :return: return a array within scores.
+        """
+
+        kf = KFold(n_splits=kfolds, shuffle=True)
+
+        if scoring is None:
+            scoring = {
+                'description': {
+                    'test_neg_mse_error': 'Mean Squared Error',
+                    'test_neg_mae_error': 'Mean Absolute Error',
+                    'test_see_error': 'Standard Error of Estimate'
+                },
+                'type': {
+                    'neg_mse_error': 'neg_mean_squared_error',
+                    'neg_mae_error': 'neg_mean_absolute_error',
+                    'see_error': make_scorer(SwarmEstimator.see_score,
+                                             parameters_number=len(self.params))
+                }
+            }
+        scores = cross_validate(SwarmEstimator(self,
+                                verbosity=self.modelexecparams['verbosity']),
+                                self.modelexecparams['args'][1]['x'],
+                                self.modelexecparams['args'][1]['y'],
+                                cv=kf, scoring=scoring['type'],
+                                return_train_score=False,
+                                verbose=self.modelexecparams['verbosity'])
+        self.validation = {
+            'times': {
+                'fit_time': scores['fit_time'],
+                'score_time': scores['score_time']
+            },
+            'scores': {}
+        }
+        for key,value in scores.items():
+            if not key in ['fit_time','score_time']:
+                if '_neg_' in key:
+                    value = np.negative(value)
+                self.validation['scores'][key] = {
+                    'value': value,
+                    'description': scoring['description'][key]
+                }
+        return self.validation
+
     def savedata(self,parsecconfig):
         """
-        Write to file the caculated model information stored on object class
+        Write to a file the model information stored on object class
 
-        :return:
+        :return: saved file name
         """
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -473,7 +530,7 @@ class ModelSwarm:
             datatosave['config']['savedate'] = datetime.now().strftime(
                 "%d-%m-%Y_%H:%M:%S")
             datatosave['config']['modelcodesource'] = self.modelcodesource
-            mep = self.modelexecparams.copy()
+            mep = deepcopy(self.modelexecparams)
             mep['pxmin'] = str(mep['pxmin'])
             mep['pxmax'] = str(mep['pxmax'])
             mep['args'][1]['xtype'] = str(mep['args'][1]['x'].dtype)
@@ -491,6 +548,17 @@ class ModelSwarm:
                 datatosave['data']['overhead'] = False
             else:
                 datatosave['data']['overhead'] = self.overhead.to_json()
+            if self.validation:
+                val = deepcopy(self.validation)
+                for key,value in val['scores'].items():
+                    val['scores'][key]['type'] = str(value['value'].dtype)
+                    val['scores'][key]['value'] = json.dumps(value['value'].tolist())
+                for key,value in val['times'].items():
+                    valtemp = {'type': '', 'value': ''}
+                    valtemp['type'] = str(value.dtype)
+                    valtemp['value'] = json.dumps(value.tolist())
+                    val['times'][key] = valtemp.copy()
+                datatosave['data']['validation'] = val
             json.dump(datatosave, f, ensure_ascii=False)
         return filename
 
@@ -499,7 +567,7 @@ class ModelSwarm:
         Read a file previously saved with method savedata() and initialize
         the object class dictionaries.
 
-        :param filename: Filename with data dictionary of execution times.
+        :param filename: File name with data dictionary of execution times.
         """
 
         if os.path.isfile(filename):
@@ -516,8 +584,8 @@ class ModelSwarm:
             if 'modelcodesource' in configdict.keys():
                 self.modelcodesource = configdict['modelcodesource']
             if 'modelexecparams' in configdict.keys():
-                mep = configdict['modelexecparams'].copy()
-                self.modelexecparams = mep.copy()
+                mep = deepcopy(configdict['modelexecparams'])
+                self.modelexecparams = deepcopy(mep)
                 self.modelexecparams['pxmin'] = eval(mep['pxmin'])
                 self.modelexecparams['pxmax'] = eval(mep['pxmax'])
                 self.modelexecparams['args'] = (mep['args'][0],{})
@@ -529,6 +597,18 @@ class ModelSwarm:
                 self.modelexecparams['args'][1]['y'] = \
                     np.array(json.loads(mep['args'][1]['y']),
                              dtype=mep['args'][1]['ytype'])
+            if 'validation' in datadict.keys():
+                val = deepcopy(datadict['validation'])
+                for key,value in val['scores'].items():
+                    val['scores'][key]['value'] = \
+                        np.array(json.loads(value['value']),
+                                 dtype=value['type'])
+                    val['scores'][key].pop('type')
+                for key, value in val['times'].items():
+                    val['times'][key] = \
+                        np.array(json.loads(value['value']),
+                                 dtype=value['type'])
+                self.validation = val
             if 'params' in datadict.keys():
                 self.params = pd.Series(eval(datadict['params']))
             if 'error' in datadict.keys():
@@ -610,3 +690,84 @@ class ModelSwarm:
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
+
+
+class SwarmEstimator(BaseEstimator, RegressorMixin):
+    """
+    Class of estimator to use on Cross Validation process
+
+        Atrributes
+            modeldata - SwarmModel object with modelling results
+            verbosity - verbosity level of run
+
+        Methods
+            fit()
+            predict()
+            see_score()
+
+    """
+
+    def __init__(self, modeldata = None, verbosity=0):
+        self.modeldata = modeldata
+        self.verbosity = verbosity
+
+    def fit(self, X, y, **kwargs):
+        """
+        method to train of model with train splited data.
+
+        :param X: measured inputs array
+        :param y: measured outputs array
+        :return: return SwarmEstimator object.
+        """
+
+        X, y = check_X_y(X, y)
+        if self.verbosity > 2:
+            print('\nFit: X lenght = ', X.shape,' y lenght = ',y.shape)
+            print('X :')
+            print(X)
+            print('y :')
+            print(y)
+        p = deepcopy(self.modeldata.modelexecparams)
+        args = (p['args'][0], {'x': X, 'y': y, 'input_name': p['args'][1]['input_name']})
+        S = Swarm(p['pxmin'], p['pxmax'], args=args, threads=p['threads'],
+                  size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
+                  maxiter =p['maxiter'], modelcodesource=self.modeldata.modelcodesource,
+                  parsecpydatapath=p['parsecpydatapath'],verbosity=self.verbosity)
+        self.modeldata = S.run()
+        self.X_ = X
+        self.y_ = y
+        return self
+
+    def predict(self, X):
+        """
+        method to test of model with test splited data.
+
+        :param X: inputs array
+        :return: return model outputs array.
+        """
+
+        check_is_fitted(self, ['X_', 'y_'])
+        X = check_array(X)
+        y = self.modeldata.predict(X)[1]
+        if self.verbosity > 2:
+            print('\nPredict: X lenght = ', X.shape)
+            print('X :')
+            print(X)
+            print('y :')
+            print(y)
+        return y
+
+    def see_score(y, y_pred, **kwargs):
+        """
+        method to caclculate the "Standard Error of Estimator" score to use on cross validation process.
+
+        :param y: measured outputs array
+        :param y_pred: model outputs array
+        :return: return caclulated score.
+        """
+
+        mse = mean_squared_error(y, y_pred)
+        n = len(y)
+        p = kwargs['parameters_number']
+        see = np.sqrt(n * mse / (n - p))
+        return see

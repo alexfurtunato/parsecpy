@@ -55,9 +55,6 @@ import argparse
 import numpy as np
 from parsecpy import ParsecData
 from parsecpy import Swarm
-from parsecpy import SwarmEstimator
-from sklearn.model_selection import cross_val_score, cross_validate, KFold
-from sklearn.metrics import make_scorer, mean_squared_error
 
 def argsparselist(txt):
     """
@@ -125,13 +122,6 @@ def argsparsevalidation():
     return args
 
 
-def see_score(y, y_pred, **kwargs):
-    mse = mean_squared_error(y,y_pred)
-    n = len(y)
-    p = kwargs['parameters_number']
-    see = np.sqrt(n*mse/(n-p))
-    return see
-
 def main():
     """
     Main function executed from console run.
@@ -195,7 +185,8 @@ def main():
 
         S = Swarm(l, u, args=argsswarm, threads=args.threads,
                   size=args.particles, w=1, c1=1, c2=4,
-                  maxiter =args.maxiterations, modelcodepath=modelcodepath, verbosity=args.verbosity)
+                  maxiter =args.maxiterations, modelcodepath=modelcodepath,
+                  parsecpydatapath=args.parsecpyfilename,verbosity=args.verbosity)
         model = S.run()
         computed_models.append(model)
         if i == 0:
@@ -216,11 +207,9 @@ def main():
            computed_models[best_model_idx].errorrel))
     if args.verbosity>0:
         print('Best Parameters: \n',computed_models[best_model_idx].params)
+    if args.verbosity > 1:
         print('\nMeasured Speedup: \n',y_measure)
         print('\nModeled Speedup: \n',computed_models[best_model_idx].y_model)
-
-    fn = computed_models[best_model_idx].savedata(parsec_exec.config)
-    print('Model data saved on filename: %s' % fn)
 
     print('\n***** Modelling Done! *****\n')
 
@@ -228,25 +217,31 @@ def main():
         print('\n\n***** Starting cross validation! *****\n')
         starttime = time.time()
 
-        kf = KFold(n_splits=10, shuffle=True)
-        scoring = {
-            'neg_mse_error': 'neg_mean_squared_error',
-            'neg_mae_error': 'neg_mean_absolute_error',
-            'see_error': make_scorer(see_score, parameters_number=len(computed_models[best_model_idx].params))
-        }
-        scores = cross_validate(SwarmEstimator(computed_models[best_model_idx], verbosity=args.verbosity),
-                                x, y, cv=kf, scoring=scoring,
-                                return_train_score = False, verbose=args.verbosity)
+        scores = computed_models[best_model_idx].validate()
         print('\n  Cross Validation Metrics: ')
-        for key in scores.keys():
-            print('    ',key,scores[key],' - Mean: ',scores[key].mean())
+        if args.verbosity > 2:
+            print('\n   Times: ')
+            for key,value in scores['times'].items():
+                print('     %s: %.8f' % (key, value.mean()))
+                print('     ', value)
+        print('\n   Scores: ')
+        for key,value in scores['scores'].items():
+            if args.verbosity > 1:
+                print('     %s: %.8f' % (value['description'],value['value'].mean()))
+                print('     ',value['value'])
+            else:
+                print('     %s: %.8f' % (value['description'],value['value'].mean()))
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
 
-
+        print('\n***** Cross Validation Done! *****\n')
 
     print('\n\n***** ALL DONE! *****\n')
+
+    fn = computed_models[best_model_idx].savedata(parsec_exec.config)
+    print('Model data saved on filename: %s' % fn)
+
 
 
 if __name__ == '__main__':
