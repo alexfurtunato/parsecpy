@@ -518,7 +518,9 @@ class ModelSwarm:
         """
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        filename = 'swarm_datafile_%s.dat' % filedate
+        pkgname = os.path.basename(self.modelexecparams['parsecpydatapath'])
+        pkgname = pkgname.split('_')[0]
+        filename = '%s_psomodel_datafile_%s.dat' % (pkgname,filedate)
         with open(filename, 'w') as f:
             datatosave = {'config': {}, 'data': {}}
             if 'pkg' in parsecconfig:
