@@ -217,8 +217,8 @@ def main():
         print('\n\n***** Starting cross validation! *****\n')
         starttime = time.time()
 
-        scores = computed_models[best_model_idx].validate()
-        print('\n  Cross Validation Metrics: ')
+        scores = computed_models[best_model_idx].validate(kfolds=10)
+        print('\n  Cross Validation (K-fold, K=10) Metrics: ')
         if args.verbosity > 2:
             print('\n   Times: ')
             for key,value in scores['times'].items():
