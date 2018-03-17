@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 import json
 import numpy as np
+from copy import deepcopy
 from pandas import DataFrame
 from pandas import Series
 
@@ -71,7 +72,12 @@ class ParsecData:
         pkg = 'Package: '+ self.config['pkg']
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
         command = 'Command: '+ self.config['command']
-        return pkg+'\n'+dt+'\n'+command
+        threads = '%10s %s' % ('Thread ID', 'CPUs') + '\n'
+        for v in self.thread_cpu.values():
+            for t, c in v['threads'].items():
+                threads += '%10s %s' % (t, c) + '\n'
+        threads = 'Threads: \n' + threads
+        return pkg+'\n'+dt+'\n'+command+threads
 
     def loaddata(self,filename):
         """
@@ -95,6 +101,12 @@ class ParsecData:
                     self.config['command'] = datadict['config']['command']
                 if 'hostname' in datadict['config']:
                     self.config['hostname'] = datadict['config']['hostname']
+                if 'thread_cpu' in datadict['config']:
+                    tcpu = deepcopy(datadict['config']['thread_cpu'])
+                    for key, value in tcpu.items():
+                        for t, c in tcpu[key]['threads'].items():
+                            tcpu[key]['threads'][t] = json.loads(c)
+                    datadict['config']['thread_cpu'] = tcpu
             else:
                 print('Warning: The config data not must read')
             if 'data' in datadict.keys():
@@ -117,6 +129,11 @@ class ParsecData:
                           + '.dat', 'w') as f:
             conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            if self.config['thread_cpu']:
+                tcpu = deepcopy(self.config['thread_cpu'])
+                for key,value in tcpu.items():
+                    for t,c in tcpu[key]['threads'].items():
+                        tcpu[key]['threads'][t] = json.dumps(c)
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return

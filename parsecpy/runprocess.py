@@ -40,9 +40,42 @@ import shlex
 import subprocess
 import sys
 import os
+import psutil
 from datetime import datetime
 
 from parsecpy.dataprocess import ParsecData
+
+def find_procs_by_name(name):
+    "Return a list of processes matching 'name'."
+    ls = []
+    for p in psutil.process_iter(attrs=["name", "exe", "cmdline"]):
+        if name == p.info['name'] or \
+                p.info['exe'] and os.path.basename(p.info['exe']) == name or \
+                p.info['cmdline'] and p.info['cmdline'][0] == name:
+            ls.append(p)
+    return ls
+
+def procs_list(name,prs=None):
+    procs = find_procs_by_name(name)
+
+    if prs is None:
+        pts = {}
+    else:
+        pts = prs
+    for p in procs:
+        if not str(p.pid) in pts.keys():
+            pts[str(p.pid)] = {'pid': p.pid, 'name': p.name(), 'cpu': p.cpu_num(), 'threads': {}}
+            thr = {}
+        else:
+            thr = pts[str(p.pid)]['threads']
+        for t in p.threads():
+            if str(t.id) in thr.keys():
+                if thr[str(t.id)][-1] != t.cpu_num:
+                    thr[str(t.id)].append(t.cpu_num)
+            else:
+                thr[str(t.id)] = [t.cpu_num]
+        pts[str(p.pid)]['threads'] = thr
+    return pts
 
 def argsparseintlist(txt):
     """
@@ -147,9 +180,11 @@ def main():
     rundate = datetime.now()
     hostname = os.uname()[1]
     datarun = ParsecData()
-    datarun.config = {'pkg': args.package, 'execdate': rundate,
-                   'command': command % (args.package, args.compiler,
-                                         args.input, args.c),
+    datarun.config = {'pkg': args.package,
+                      'execdate': rundate,
+                      'command': command % (args.package, args.compiler,
+                                            args.input, args.c),
+                      'thread_cpu': {},
                       'hostname': hostname}
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
@@ -159,28 +194,35 @@ def main():
                 print("\n*** Execution ",r+1)
                 try:
                     cmd = shlex.split(command % (args.package,
-                                                 args.compiler,i, c))
+                                                 args.compiler, i, c))
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                            stderr=subprocess.STDOUT)
-                    output, error = res.communicate()
-                    if output:
-                        attrs = datarun.contentextract(output.decode())
-                        datarun.measurebuild(attrs, c)
-                    if error:
-                        print("Error: Execution return error code = ",
-                              res.returncode)
-                        print("Error Message: ", error.strip())
-                    print("\n### Saida ###")
-                    print(output.decode())
+                    procs = None
+                    while res.poll() is None:
+                        try:
+                            procs = procs_list(args.package, procs)
+                        except:
+                            continue
+                    if res.returncode != 0:
+                        error = res.stdout.read()
+                        print('Error Code: ', res.returncode)
+                        print('Error Message: ', error.decode())
+                    else:
+                        datarun.config['thread_cpu'] = procs
+                        output = res.stdout.read()
+                        if output:
+                            attrs = datarun.contentextract(output.decode())
+                            datarun.measurebuild(attrs, c)
+                        print("\n\n***** Done! *****\n")
+                        print(datarun)
+                        print(datarun.times())
+                        datarun.savedata()
                 except OSError as e:
                     print("Error: Error from OS. Return Code = ",e.errno)
                     print("Error Message: ", e.strerror)
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
-    print("\n Resume: ")
-    print(datarun)
-    print(datarun.times())
-    datarun.savedata()
+
 
 if __name__ == '__main__':
     main()
