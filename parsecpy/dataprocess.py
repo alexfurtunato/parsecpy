@@ -102,11 +102,7 @@ class ParsecData:
                 if 'hostname' in datadict['config']:
                     self.config['hostname'] = datadict['config']['hostname']
                 if 'thread_cpu' in datadict['config']:
-                    tcpu = deepcopy(datadict['config']['thread_cpu'])
-                    for key, value in tcpu.items():
-                        for t, c in tcpu[key]['threads'].items():
-                            tcpu[key]['threads'][t] = json.loads(c)
-                    datadict['config']['thread_cpu'] = tcpu
+                    self.config['thread_cpu'] = datadict['config']['thread_cpu']
             else:
                 print('Warning: The config data not must read')
             if 'data' in datadict.keys():
@@ -129,11 +125,6 @@ class ParsecData:
                           + '.dat', 'w') as f:
             conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
-            if self.config['thread_cpu']:
-                tcpu = deepcopy(self.config['thread_cpu'])
-                for key,value in tcpu.items():
-                    for t,c in tcpu[key]['threads'].items():
-                        tcpu[key]['threads'][t] = json.dumps(c)
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return
