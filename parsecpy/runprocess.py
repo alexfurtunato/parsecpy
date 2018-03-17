@@ -217,7 +217,7 @@ def main():
                             procs = procs_list(args.package, procs)
                         except:
                             continue
-                    print('\nThreads:')
+                    print('\nCPUs Id per Thread:')
                     print(procs)
                     print('\n')
                     if res.returncode != 0:
