@@ -237,7 +237,8 @@ def main():
     print(datarun.times())
     print(datarun.threads())
     print("\n\n***** Done! *****\n")
-    datarun.savedata()
+    fn = datarun.savedata()
+    print('Running data saved on filename: %s' % fn)
 
 if __name__ == '__main__':
     main()

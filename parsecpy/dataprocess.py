@@ -116,13 +116,13 @@ class ParsecData:
         """
 
         filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
-        with open(self.config['pkg'] + '_datafile_' + filedatename \
-                          + '.dat', 'w') as f:
+        filename = self.config['pkg'] + '_datafile_' + filedatename + '.dat'
+        with open(filename, 'w') as f:
             conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
-        return
+        return filename
 
     def contentextract(self, txt):
         """
