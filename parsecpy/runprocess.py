@@ -77,18 +77,17 @@ def procs_list(name,prs=None):
     else:
         pts = prs
     for p in procs:
-        if not str(p.pid) in pts.keys():
-            pts[str(p.pid)] = {'pid': p.pid, 'name': p.name(), 'cpu': p.cpu_num(), 'threads': {}}
-            thr = {}
+        if p.pid in pts.keys():
+            thr = pts[p.pid]
         else:
-            thr = pts[str(p.pid)]['threads']
+            thr = {}
         for t in p.threads():
             if str(t.id) in thr.keys():
-                if thr[str(t.id)][-1] != t.cpu_num:
-                    thr[str(t.id)].append(t.cpu_num)
+                if thr[t.id][-1] != t.cpu_num:
+                    thr[t.id].append(t.cpu_num)
             else:
-                thr[str(t.id)] = [t.cpu_num]
-        pts[str(p.pid)]['threads'] = thr
+                thr[t.id] = [t.cpu_num]
+        pts[p.pid] = thr
     return pts
 
 
@@ -223,7 +222,7 @@ def main():
                         print('Error Code: ', res.returncode)
                         print('Error Message: ', error.decode())
                     else:
-                        datarun.threadcpubuild(procs, i, c, r)
+                        datarun.threadcpubuild(procs, i, c, r+1)
                         output = res.stdout.read()
                         if output:
                             attrs = datarun.contentextract(output.decode())

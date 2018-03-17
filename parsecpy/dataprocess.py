@@ -223,13 +223,13 @@ class ParsecData:
         :return:
         """
 
-        if input in self.config['thread_cpu'].keys():
-            if numberofcores in self.config['thread_cpu'][input].keys():
-                self.config['thread_cpu'][input][numberofcores][repetition] = source
+        if repetition in self.config['thread_cpu'].keys():
+            if input in self.config['thread_cpu'][repetition].keys():
+                self.config['thread_cpu'][repetition][input][numberofcores] = list(source.values())
             else:
-                self.config['thread_cpu'][input][numberofcores] = {repetition: source}
+                self.config['thread_cpu'][repetition][input] = {numberofcores: list(source.values())}
         else:
-            self.config['thread_cpu'][input] = {numberofcores: {repetition: source}}
+            self.config['thread_cpu'][repetition] = {input: {numberofcores: list(source.values())}}
         return
 
     def threads(self):
@@ -245,16 +245,19 @@ class ParsecData:
         :return: dataframe with median of measures times.
         """
 
-        df = DataFrame()
-        data = self.config['thread_cpu']
-        inputs = list(data.keys())
-        inputs.sort(reverse=True)
-        for inp in inputs:
-            df[inp] = Series([i for i in data[inp].values()],
-                             index=[int(j) for j in data[inp].keys()])
-        df.sort_index(inplace=True)
-        df.sort_index(axis=1,ascending=True,inplace=True)
-        return df
+        tdict = {}
+        for r in self.config['thread_cpu'].keys():
+            df = DataFrame()
+            data = self.config['thread_cpu'][r]
+            inputs = list(data.keys())
+            inputs.sort(reverse=True)
+            for inp in inputs:
+                df[inp] = Series([i for i in data[inp].values()],
+                                 index=[int(j) for j in data[inp].keys()])
+            df.sort_index(inplace=True)
+            df.sort_index(axis=1,ascending=True,inplace=True)
+            tdict[r] = df
+        return tdict
 
     def times(self):
         """
