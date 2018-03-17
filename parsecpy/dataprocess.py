@@ -73,7 +73,7 @@ class ParsecData:
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
         command = 'Command: '+ self.config['command']
         threads = '%10s %s' % ('Thread ID', 'CPUs') + '\n'
-        for v in self.thread_cpu.values():
+        for v in self.config['thread_cpu'].values():
             for t, c in v['threads'].items():
                 threads += '%10s %s' % (t, c) + '\n'
         threads = 'Threads: \n' + threads
