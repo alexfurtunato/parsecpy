@@ -46,7 +46,13 @@ from datetime import datetime
 from parsecpy.dataprocess import ParsecData
 
 def find_procs_by_name(name):
-    "Return a list of processes matching 'name'."
+    """
+    Return a list of processes ids with 'name' on command line.
+
+    :param name: Name to search on running process.
+    :return: list of processes ids
+    """
+
     ls = []
     for p in psutil.process_iter(attrs=["name", "exe", "cmdline"]):
         if name == p.info['name'] or \
@@ -56,6 +62,14 @@ def find_procs_by_name(name):
     return ls
 
 def procs_list(name,prs=None):
+    """
+    Buil a dictionary with running threads of a specific process.
+
+    :param name: Name to search on running process.
+    :param prs: threads processed before
+    :return: dictionary of processed threads.
+    """
+
     procs = find_procs_by_name(name)
 
     if prs is None:
@@ -76,6 +90,7 @@ def procs_list(name,prs=None):
                 thr[str(t.id)] = [t.cpu_num]
         pts[str(p.pid)]['threads'] = thr
     return pts
+
 
 def argsparseintlist(txt):
     """
@@ -189,7 +204,7 @@ def main():
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
         for c in args.c:
-            print("- Inputset: ", i, "with %s cores" % c)
+            print("\n- Inputset: ", i, "with %s cores" % c)
             for r in range(args.repititions):
                 print("\n*** Execution ",r+1)
                 try:
@@ -208,21 +223,21 @@ def main():
                         print('Error Code: ', res.returncode)
                         print('Error Message: ', error.decode())
                     else:
-                        datarun.config['thread_cpu'] = procs
+                        datarun.threadcpubuild(procs, i, c, r)
                         output = res.stdout.read()
                         if output:
                             attrs = datarun.contentextract(output.decode())
                             datarun.measurebuild(attrs, c)
-                        print("\n\n***** Done! *****\n")
-                        print(datarun)
-                        print(datarun.times())
-                        datarun.savedata()
                 except OSError as e:
                     print("Error: Error from OS. Return Code = ",e.errno)
                     print("Error Message: ", e.strerror)
                 except:
                     print("Error: Error on System Execution : ", sys.exc_info())
-
+    print(datarun)
+    print(datarun.times())
+    print(datarun.threads())
+    print("\n\n***** Done! *****\n")
+    datarun.savedata()
 
 if __name__ == '__main__':
     main()

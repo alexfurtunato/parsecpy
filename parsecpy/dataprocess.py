@@ -72,12 +72,7 @@ class ParsecData:
         pkg = 'Package: '+ self.config['pkg']
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
         command = 'Command: '+ self.config['command']
-        threads = '%10s %s' % ('Thread ID', 'CPUs') + '\n'
-        for v in self.config['thread_cpu'].values():
-            for t, c in v['threads'].items():
-                threads += '%10s %s' % (t, c) + '\n'
-        threads = 'Threads: \n' + threads
-        return pkg+'\n'+dt+'\n'+command+threads
+        return pkg+'\n'+dt+'\n'+command
 
     def loaddata(self,filename):
         """
@@ -214,10 +209,57 @@ class ParsecData:
             self.measures[attrs['input']] = {numberofcores: [ttime]}
         return
 
+    def threadcpubuild(self, source, input, numberofcores, repetition):
+        """
+        Resume all execution threads cpu numbers, grouped by input sizes and
+        number of cores and repetitions, on a dictionary.
+
+        Dictionary format
+            {'inputsize':{'numberofcores1':{'repetition1':['timevalue1', ... ], ... }}}
+        :param source: Attributes to insert into dictionary.
+        :param input: Input size used on execution.
+        :param numberofcores: Number of cores used on executed process.
+        :param repetition: Number of executed repetition.
+        :return:
+        """
+
+        if input in self.config['thread_cpu'].keys():
+            if numberofcores in self.config['thread_cpu'][input].keys():
+                self.config['thread_cpu'][input][numberofcores][repetition] = source
+            else:
+                self.config['thread_cpu'][input][numberofcores] = {repetition: source}
+        else:
+            self.config['thread_cpu'][input] = {numberofcores: {repetition: source}}
+        return
+
+    def threads(self):
+        """
+        Return a Pandas Dataframe with resume of all threads,
+        grouped by input size, number of cores and repetitions.
+
+        Dataframe format
+            row indexes=<number cores>
+            columns indexes=<input sizes>,
+            values=<dictionary of threads cpus>.
+
+        :return: dataframe with median of measures times.
+        """
+
+        df = DataFrame()
+        data = self.config['thread_cpu']
+        inputs = list(data.keys())
+        inputs.sort(reverse=True)
+        for inp in inputs:
+            df[inp] = Series([i for i in data[inp].values()],
+                             index=[int(j) for j in data[inp].keys()])
+        df.sort_index(inplace=True)
+        df.sort_index(axis=1,ascending=True,inplace=True)
+        return df
+
     def times(self):
         """
         Return a Pandas Dataframe with resume of all tests,
-        grouped by input size e number of cores.
+        grouped by input size and number of cores.
 
         Dataframe format
             row indexes=<number cores>
@@ -241,7 +283,7 @@ class ParsecData:
     def speedups(self):
         """
         Return a Pandas Dataframe with speedups,
-        grouped by input size e number of cores.
+        grouped by input size and number of cores.
 
         Dataframe format
             row indexes=<number cores>
@@ -268,7 +310,7 @@ class ParsecData:
     def efficiency(self):
         """
         Return a Pandas Dataframe with efficiency,
-        grouped by input size e number of cores.
+        grouped by input size and number of cores.
 
         Dataframe format
             row indexes=<number cores>
