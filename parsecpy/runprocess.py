@@ -82,7 +82,7 @@ def procs_list(name,prs=None):
         else:
             thr = {}
         for t in p.threads():
-            if str(t.id) in thr.keys():
+            if t.id in thr.keys():
                 if thr[t.id][-1] != t.cpu_num:
                     thr[t.id].append(t.cpu_num)
             else:
@@ -217,6 +217,9 @@ def main():
                             procs = procs_list(args.package, procs)
                         except:
                             continue
+                    print('\nThreads:')
+                    print(procs)
+                    print('\n')
                     if res.returncode != 0:
                         error = res.stdout.read()
                         print('Error Code: ', res.returncode)
@@ -234,7 +237,6 @@ def main():
                     print("Error: Error on System Execution : ", sys.exc_info())
     print(datarun)
     print(datarun.times())
-    print(datarun.threads())
     print("\n\n***** Done! *****\n")
     fn = datarun.savedata()
     print('Running data saved on filename: %s' % fn)
