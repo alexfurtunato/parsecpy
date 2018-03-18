@@ -188,6 +188,9 @@ def main():
 
     """
 
+    env = os.environ
+    env['PARSEC_CPU_BASE'] = str(2)
+
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
@@ -207,6 +210,7 @@ def main():
             for r in range(args.repititions):
                 print("\n*** Execution ",r+1)
                 try:
+                    env['PARSEC_CPU_NUM'] = str(c)
                     cmd = shlex.split(command % (args.package,
                                                  args.compiler, i, c))
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
