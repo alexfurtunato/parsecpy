@@ -179,6 +179,8 @@ def argsparsevalidation():
     parser.add_argument('-r','--repititions', type=int,
                         help='Number of repititions for a specific run. '
                              '(Default: %(default)s)', default=1)
+    parser.add_argument('-b','--cpubase', type=int,
+                        help='If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.', default=False)
     args = parser.parse_args()
     return args
 
@@ -187,9 +189,6 @@ def main():
     Main function executed from console run.
 
     """
-
-    env = os.environ
-    env['PARSEC_CPU_BASE'] = str(2)
 
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
@@ -203,6 +202,11 @@ def main():
                                             args.input, args.c),
                       'thread_cpu': {},
                       'hostname': hostname}
+
+    if args.cpubase:
+        env = os.environ
+        env['PARSEC_CPU_BASE'] = str(args.cpubase)
+
     print("Processing %s Repetitions: " % (args.repititions))
     for i in args.input:
         for c in args.c:
@@ -210,7 +214,8 @@ def main():
             for r in range(args.repititions):
                 print("\n*** Execution ",r+1)
                 try:
-                    env['PARSEC_CPU_NUM'] = str(c)
+                    if args.cpubase:
+                        env['PARSEC_CPU_NUM'] = str(c)
                     cmd = shlex.split(command % (args.package,
                                                  args.compiler, i, c))
                     res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
