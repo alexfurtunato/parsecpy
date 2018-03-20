@@ -82,22 +82,19 @@ def procs_list(name,prs=None):
         pts = prs
     for p in procs:
         if p.pid in pts.keys():
-            thr = pts[p.pid]
+            thr = copy(pts[p.pid])
         else:
             thr = {}
-        cpuchanged = False
-        thr_temp = copy(thr)
         for t in p.threads():
-            if t.id in thr_temp.keys():
-                if thr_temp[t.id][-1] != t.cpu_num:
+            if t.id in thr.keys():
+                if thr[t.id][-1] != t.cpu_num:
                     cpuchanged = True
-                thr_temp[t.id].append(t.cpu_num)
+                thr[t.id].append(t.cpu_num)
             else:
-                thr_temp[t.id] = [t.cpu_num]
+                thr[t.id] = [t.cpu_num]
                 cpuchanged = True
         if cpuchanged:
-            thr = copy(thr_temp)
-        pts[p.pid] = thr
+            pts[p.pid] = thr
     return pts
 
 
