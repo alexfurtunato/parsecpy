@@ -43,7 +43,7 @@ import shlex
 import subprocess
 import sys
 import os
-from copy import copy
+from copy import deepcopy
 import psutil
 from datetime import datetime
 
@@ -82,7 +82,7 @@ def procs_list(name,prs=None):
         pts = prs
     for p in procs:
         if p.pid in pts.keys():
-            thr = copy(pts[p.pid])
+            thr = deepcopy(pts[p.pid])
         else:
             thr = {}
         cpuchanged = False
@@ -95,7 +95,7 @@ def procs_list(name,prs=None):
                 thr[t.id] = [t.cpu_num]
                 cpuchanged = True
         if cpuchanged:
-            pts[p.pid] = copy(thr)
+            pts[p.pid] = deepcopy(thr)
     return pts
 
 
