@@ -31,6 +31,9 @@
             Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10
         -r REPITITIONS, --repititions REPITITIONS
             Number of repititions for a specific run. (Default: 1)
+        -b CPU_BASE, --cpubase CPU_BASE
+            If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.
+
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
 """
@@ -40,6 +43,7 @@ import shlex
 import subprocess
 import sys
 import os
+from copy import copy
 import psutil
 from datetime import datetime
 
@@ -81,12 +85,18 @@ def procs_list(name,prs=None):
             thr = pts[p.pid]
         else:
             thr = {}
+        cpuchanged = False
+        thr_temp = copy(thr)
         for t in p.threads():
-            if t.id in thr.keys():
-                if thr[t.id][-1] != t.cpu_num:
-                    thr[t.id].append(t.cpu_num)
+            if t.id in thr_temp.keys():
+                if thr_temp[t.id][-1] != t.cpu_num:
+                    cpuchanged = True
+                thr_temp[t.id].append(t.cpu_num)
             else:
-                thr[t.id] = [t.cpu_num]
+                thr_temp[t.id] = [t.cpu_num]
+                cpuchanged = True
+        if cpuchanged:
+            thr = copy(thr_temp)
         pts[p.pid] = thr
     return pts
 
@@ -180,7 +190,7 @@ def argsparsevalidation():
                         help='Number of repititions for a specific run. '
                              '(Default: %(default)s)', default=1)
     parser.add_argument('-b','--cpubase', type=int,
-                        help='If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.', default=False)
+                        help='If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.')
     args = parser.parse_args()
     return args
 

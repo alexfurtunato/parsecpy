@@ -10,7 +10,6 @@ import os
 from datetime import datetime
 import json
 import numpy as np
-from copy import deepcopy
 from pandas import DataFrame
 from pandas import Series
 
