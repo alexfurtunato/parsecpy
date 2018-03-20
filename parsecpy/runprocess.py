@@ -95,7 +95,7 @@ def procs_list(name,prs=None):
                 thr[t.id] = [t.cpu_num]
                 cpuchanged = True
         if cpuchanged:
-            pts[p.pid] = thr
+            pts[p.pid] = copy(thr)
     return pts
 
 
