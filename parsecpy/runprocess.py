@@ -85,6 +85,7 @@ def procs_list(name,prs=None):
             thr = copy(pts[p.pid])
         else:
             thr = {}
+        cpuchanged = False
         for t in p.threads():
             if t.id in thr.keys():
                 if thr[t.id][-1] != t.cpu_num:
