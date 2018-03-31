@@ -128,8 +128,8 @@ def fluidanimate_splitdiff(tfile, n, frmax):
     print('Replicating input file %s on %s files' % (tfile, n))
     lfrm = [int(frmax - (n-1-i)*frmax/n) for i in range(n)]
     for i, frm in enumerate(lfrm):
-        newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                      + '%02d' % (i+1) + '.tar')
+        newtarfilename = os.path.join(prefixfolder,
+                                      '%s_%02d.tar' % (tarfilename, (i+1)))
         print(i+1, newtarfilename)
         try:
             shutil.copy(tfile, newtarfilename)
@@ -189,8 +189,8 @@ def freqmine_splitequal(tfile, n, ms):
             fd = open(newfilename, 'w')
         elif line % splitlen == 0 and line < splitlen*n:
             fd.close()
-            newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                          + ('%02d' % partscount) + '.tar')
+            newtarfilename = os.path.join(prefixfolder, '%s_%02d.tar' %
+                                          (tarfilename, partscount))
             print(partscount, newtarfilename)
             tar2 = tarfile.open(newtarfilename, 'w')
             tar2.add(newfilename)
@@ -198,12 +198,12 @@ def freqmine_splitequal(tfile, n, ms):
             os.remove(newfilename)
             lfile.append((newtarfilename, newfilename))
             partscount += 1
-            newfilename = fm.name.split('.')[0] + '_' + str(partscount) + \
-                          '.' + fm.name.split('.')[1]
+            newfilename = fm.name.split('.')[0] + '_' + \
+                          str(partscount) + '.' + fm.name.split('.')[1]
             fd = open(newfilename, 'w')
         fd.write(linetxt.decode())
-    newtarfilename = os.path.join(prefixfolder, tarfilename + '_' +
-                                  ('%02d' % partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,
+                                  '%s_%02d.tar' % (tarfilename, partscount))
     print(partscount, newtarfilename)
     tar2 = tarfile.open(newtarfilename, 'w')
     tar2.add(newfilename)
@@ -271,8 +271,8 @@ def freqmine_splitdiff(tfile, n, ms):
                 fd = open(newfilename, 'w')
             elif line % splitlen == 0 and line <= splitlenbase*(n-1):
                 fd.close()
-                newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                              + ('%02d' % partscount) + '.tar')
+                newtarfilename = os.path.join(prefixfolder, '%s_%02d.tar' %
+                                              (tarfilename, partscount))
                 print(partscount, newtarfilename)
                 print(" line: ", line, " splitlen: ", splitlen)
                 tar2 = tarfile.open(newtarfilename, 'w')
@@ -284,12 +284,12 @@ def freqmine_splitdiff(tfile, n, ms):
                 splitlen = partscount*splitlenbase
                 break
             fd.write(linetxt.decode())
-        print("*** line: ", line, " splitlen: ", splitlen)
+        print("*** line: %02d splitlen: %02d" % (line, splitlen))
         if line >= numberoflines-1:
             fd.close()
             eof = True
-    newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                  + ('%02d' % partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder,
+                                  '%s_%02d.tar' % (tarfilename, partscount))
     print(partscount, newtarfilename)
     print(" line: ", line, " splitlen: ", splitlen)
     tar2 = tarfile.open(newtarfilename, 'w')
@@ -367,8 +367,9 @@ def dedup_splitdiff(tfile, n):
             print(partscount, " splitlen: ", splitlen, "filename: ",
                   newfilename)
             os.remove(fm.name)
-        newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                      + ('%02d' % partscount) + '.tar')
+        newtarfilename = os.path.join(prefixfolder,
+                                      '%s_%02d.tar' %
+                                      (tarfilename, partscount))
         print("  Tarfile: ", newtarfilename)
         tar2 = tarfile.open(newtarfilename, 'w')
         tar2.add(newfilename)
@@ -447,9 +448,8 @@ def x264_splitdiff(tfile, n):
                 else:
                     print(partscount, " splitlen: ", splitlen, "filename: ",
                       fm.name)
-                    newtarfilename = os.path.join(prefixfolder,
-                                            tarfilename + '_'
-                                            + ('%02d' % partscount) + '.tar')
+                    newtarfilename = os.path.join(prefixfolder, '%s_%02d.tar' %
+                                                  (tarfilename, partscount))
                     print("  Tarfile: ", newtarfilename)
                     tar2 = tarfile.open(newtarfilename, 'w')
                     tar2.add(fm.name)
@@ -462,8 +462,8 @@ def x264_splitdiff(tfile, n):
                 bs2 = bs[:bs.pos]
                 bs2.tofile(fd)
                 fd.close()
-                newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
-                                              + ('%02d' % partscount) + '.tar')
+                newtarfilename = os.path.join(prefixfolder, '%s_%02d.tar' %
+                                              (tarfilename, partscount))
                 print("  Tarfile: ", newtarfilename)
                 tar2 = tarfile.open(newtarfilename, 'w')
                 tar2.add(newfilename)
@@ -508,8 +508,8 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to split a parsec '
                                                  'input file on '
                                                  'specific parts')
-    parser.add_argument('-p', '--package', help='Package name to be '
-                                               'used on split.',
+    parser.add_argument('-p', '--package',
+                        help='Package name to be used on split.',
                         choices=packagechoice, required=True)
     parser.add_argument('-n', '--numberofparts', help='Number of split parts',
                         type=int, required=True)
