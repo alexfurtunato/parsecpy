@@ -27,7 +27,7 @@ from matplotlib import ticker
 support3d = True
 try:
     from mpl_toolkits.mplot3d import Axes3D
-except:
+except ImportError:
     support3d = False
 
 
@@ -125,13 +125,13 @@ class Particle:
                                  + c2*rg*(bestparticle.bestpos-self.pos))
         maskvl = self.vel < self.vxmin
         maskvh = self.vel > self.vxmax
-        self.vel = self.vel * (~np.logical_or(maskvl, maskvh)) + \
-                   self.vxmin*maskvl + self.vxmax*maskvh
+        self.vel = self.vel * (~np.logical_or(maskvl, maskvh)) \
+                   + self.vxmin*maskvl + self.vxmax*maskvh
         self.pos = self.pos + self.vel
         maskl = self.pos < self.lxmin
         maskh = self.pos > self.lxmax
-        self.pos = self.pos * (~np.logical_or(maskl, maskh)) + \
-                   self.lxmin*maskl + self.lxmax*maskh
+        self.pos = self.pos * (~np.logical_or(maskl, maskh)) \
+                   + self.lxmin*maskl + self.lxmax*maskh
 
 
 class Swarm:
@@ -254,7 +254,8 @@ class Swarm:
                 bestfpos[i] = p.setfpos(newfpos[i])
         self.bestparticle = deepcopy(self.particles[np.argmin(bestfpos)])
 
-    def _obj_wrapper(self, func, args, kwargs, x):
+    @staticmethod
+    def _obj_wrapper(func, args, kwargs, x):
         """
         Wrapper function that point to objective function.
 
@@ -267,7 +268,8 @@ class Swarm:
 
         return func(x.pos, *args, **kwargs)
 
-    def _constraint_wrapper(self, func, args, kwargs, x):
+    @staticmethod
+    def _constraint_wrapper(func, args, kwargs, x):
         """
         Wrapper function that point to constraint function.
 
@@ -455,7 +457,8 @@ class ModelSwarm:
                 self.error = bp.fpos
                 self.errorrel = 100*(self.error/self.y_measure.mean().mean())
 
-    def loadcode(self, codetext, modulename):
+    @staticmethod
+    def loadcode(codetext, modulename):
         """
         Load a python module stored on a string.
 
@@ -717,10 +720,10 @@ class ModelSwarm:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
-                                   edgecolor='k', linestyle='-',
-                                   vmin=(zmin - (zmax - zmin) / 10),
-                                   vmax=(zmax + (zmax - zmin) / 10))
+            ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
+                            edgecolor='k', linestyle='-',
+                            vmin=(zmin - (zmax - zmin) / 10),
+                            vmax=(zmax + (zmax - zmin) / 10))
             ax.set_xlabel('Input Size')
             ax.set_xlim(0, xc[-1])
             ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
@@ -803,7 +806,8 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
             print(y)
         return y
 
-    def see_score(self, y, y_pred, **kwargs):
+    @staticmethod
+    def see_score(y, y_pred, **kwargs):
         """
         method to caclculate the "Standard Error of Estimator" score to use
         on cross validation process.

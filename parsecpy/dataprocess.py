@@ -16,13 +16,11 @@ from pandas import Series
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import ticker
-from matplotlib.ticker import LinearLocator
-from matplotlib.ticker import FormatStrFormatter
 
 support3d = True
 try:
     from mpl_toolkits.mplot3d import Axes3D
-except:
+except ImportError:
     support3d = False
 
 
@@ -125,7 +123,8 @@ class ParsecData:
             json.dump(dictsave, f, ensure_ascii=False)
         return filename
 
-    def contentextract(self, txt):
+    @staticmethod
+    def contentextract(txt):
         """
         Extract times values from a parsec log file output and return a
         dictionary of data.
@@ -146,9 +145,9 @@ class ParsecData:
                 else:
                     benchmark = benchmark.strip()
             elif l.strip().startswith("[PARSEC] Unpacking benchmark input"):
-                input = l.strip().split("'")[1]
+                inputsize = l.strip().split("'")[1]
             elif l.strip().startswith("[PARSEC] No archive for input"):
-                input = l.strip().split("'")[1]
+                inputsize = l.strip().split("'")[1]
             elif l.strip().startswith("[HOOKS] Total time spent in ROI"):
                 roitime = l.strip().split(':')[-1]
             elif l.strip().startswith("real"):
@@ -177,7 +176,7 @@ class ParsecData:
         else:
             systime = None
 
-        return {'benchmark': benchmark, 'input': input, 'roitime': roitime,
+        return {'benchmark': benchmark, 'input': inputsize, 'roitime': roitime,
                 'realtime': realtime, 'usertime': usertime, 'systime': systime}
 
     def measurebuild(self, attrs, numberofcores=None):
@@ -209,7 +208,7 @@ class ParsecData:
             self.measures[attrs['input']] = {numberofcores: [ttime]}
         return
 
-    def threadcpubuild(self, source, input, numberofcores, repetition):
+    def threadcpubuild(self, source, inputsize, numberofcores, repetition):
         """
         Resume all execution threads cpu numbers, grouped by input sizes and
         number of cores and repetitions, on a dictionary.
@@ -218,22 +217,23 @@ class ParsecData:
             {'inputsize':{'numberofcores1':{'repetition1':['timevalue1', ... ]
             , ... }}}
         :param source: Attributes to insert into dictionary.
-        :param input: Input size used on execution.
+        :param inputsize: Input size used on execution.
         :param numberofcores: Number of cores used on executed process.
         :param repetition: Number of executed repetition.
         :return:
         """
 
-        if repetition in self.config['thread_cpu'].keys():
-            if input in self.config['thread_cpu'][repetition].keys():
-                self.config['thread_cpu'][repetition][input][numberofcores] =\
+        threadcpu = self.config['thread_cpu']
+        if repetition in threadcpu.keys():
+            if inputsize in threadcpu[repetition].keys():
+                threadcpu[repetition][inputsize][numberofcores] = \
                     list(source.values())
             else:
-                self.config['thread_cpu'][repetition][input] =\
+                threadcpu[repetition][inputsize] = \
                     {numberofcores: list(source.values())}
         else:
-            self.config['thread_cpu'][repetition] =\
-                {input: {numberofcores: list(source.values())}}
+            threadcpu[repetition] = \
+                {inputsize: {numberofcores: list(source.values())}}
         return
 
     def threads(self):
@@ -306,10 +306,10 @@ class ParsecData:
             print("Error: Do not possible calcule the speedup without "
                   "single core run")
             return
-        for input in data.columns:
+        for inputcol in data.columns:
             idx = data.index[1:]
-            darr = data.loc[1, input] / data[input][data.index != 1]
-            ds[input] = Series(darr, index=idx)
+            darr = data.loc[1, inputcol] / data[inputcol][data.index != 1]
+            ds[inputcol] = Series(darr, index=idx)
         ds.sort_index(inplace=True)
         ds.sort_index(axis=1, ascending=True, inplace=True)
         return ds
@@ -329,10 +329,10 @@ class ParsecData:
 
         de = DataFrame()
         data = self.speedups()
-        for input in data.columns:
+        for inputcol in data.columns:
             idx = data.index
-            darr = data.loc[:, input] / idx
-            de[input] = Series(darr, index=idx)
+            darr = data.loc[:, inputcol] / idx
+            de[inputcol] = Series(darr, index=idx)
         de.sort_index(inplace=True)
         de.sort_index(axis=1, ascending=True, inplace=True)
         return de
