@@ -47,7 +47,7 @@ class ParsecData:
     config = {}
     measures = {}
 
-    def __init__(self,filename=None):
+    def __init__(self, filename=None):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
@@ -68,12 +68,12 @@ class ParsecData:
 
         if not self.config:
             return 'No data'
-        pkg = 'Package: '+ self.config['pkg']
+        pkg = 'Package: ' + self.config['pkg']
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
-        command = 'Command: '+ self.config['command']
-        return pkg+'\n'+dt+'\n'+command
+        command = 'Command: ' + self.config['command']
+        return pkg + '\n' + dt + '\n' + command
 
-    def loaddata(self,filename):
+    def loaddata(self, filename):
         """
         Read a file previously saved with method savedata() and initialize
         the object class dictionaries.
@@ -96,7 +96,8 @@ class ParsecData:
                 if 'hostname' in datadict['config']:
                     self.config['hostname'] = datadict['config']['hostname']
                 if 'thread_cpu' in datadict['config']:
-                    self.config['thread_cpu'] = datadict['config']['thread_cpu']
+                    self.config['thread_cpu'] =\
+                        datadict['config']['thread_cpu']
             else:
                 print('Warning: The config data not must read')
             if 'data' in datadict.keys():
@@ -118,7 +119,8 @@ class ParsecData:
         filename = self.config['pkg'] + '_datafile_' + filedatename + '.dat'
         with open(filename, 'w') as f:
             conftxt = self.config.copy()
-            conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            conftxt['execdate'] = \
+                conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return filename
@@ -132,7 +134,7 @@ class ParsecData:
         :return: dict with extracted values.
         """
 
-        roitime =  ''
+        roitime = ''
         realtime = ''
         usertime = ''
         systime = ''
@@ -178,7 +180,6 @@ class ParsecData:
         return {'benchmark': benchmark, 'input': input, 'roitime': roitime,
                 'realtime': realtime, 'usertime': usertime, 'systime': systime}
 
-
     def measurebuild(self, attrs, numberofcores=None):
         """
         Resume all tests, grouped by input sizes and number of cores,
@@ -214,7 +215,8 @@ class ParsecData:
         number of cores and repetitions, on a dictionary.
 
         Dictionary format
-            {'inputsize':{'numberofcores1':{'repetition1':['timevalue1', ... ], ... }}}
+            {'inputsize':{'numberofcores1':{'repetition1':['timevalue1', ... ]
+            , ... }}}
         :param source: Attributes to insert into dictionary.
         :param input: Input size used on execution.
         :param numberofcores: Number of cores used on executed process.
@@ -224,11 +226,14 @@ class ParsecData:
 
         if repetition in self.config['thread_cpu'].keys():
             if input in self.config['thread_cpu'][repetition].keys():
-                self.config['thread_cpu'][repetition][input][numberofcores] = list(source.values())
+                self.config['thread_cpu'][repetition][input][numberofcores] =\
+                    list(source.values())
             else:
-                self.config['thread_cpu'][repetition][input] = {numberofcores: list(source.values())}
+                self.config['thread_cpu'][repetition][input] =\
+                    {numberofcores: list(source.values())}
         else:
-            self.config['thread_cpu'][repetition] = {input: {numberofcores: list(source.values())}}
+            self.config['thread_cpu'][repetition] =\
+                {input: {numberofcores: list(source.values())}}
         return
 
     def threads(self):
@@ -254,7 +259,7 @@ class ParsecData:
                 df[inp] = Series([i for i in data[inp].values()],
                                  index=[int(j) for j in data[inp].keys()])
             df.sort_index(inplace=True)
-            df.sort_index(axis=1,ascending=True,inplace=True)
+            df.sort_index(axis=1, ascending=True, inplace=True)
             tdict[r] = df
         return tdict
 
@@ -279,7 +284,7 @@ class ParsecData:
             df[inp] = Series([np.median(i) for i in data[inp].values()],
                              index=[int(j) for j in data[inp].keys()])
         df.sort_index(inplace=True)
-        df.sort_index(axis=1,ascending=True,inplace=True)
+        df.sort_index(axis=1, ascending=True, inplace=True)
         return df
 
     def speedups(self):
@@ -306,7 +311,7 @@ class ParsecData:
             darr = data.loc[1, input] / data[input][data.index != 1]
             ds[input] = Series(darr, index=idx)
         ds.sort_index(inplace=True)
-        ds.sort_index(axis=1,ascending=True,inplace=True)
+        ds.sort_index(axis=1, ascending=True, inplace=True)
         return ds
 
     def efficiency(self):
@@ -329,14 +334,15 @@ class ParsecData:
             darr = data.loc[:, input] / idx
             de[input] = Series(darr, index=idx)
         de.sort_index(inplace=True)
-        de.sort_index(axis=1,ascending=True,inplace=True)
+        de.sort_index(axis=1, ascending=True, inplace=True)
         return de
 
     def plot2D(self, data, title='', greycolor=False, filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
-        :param data: dataframe to plot, generate by speedups(), times() or efficiency().
+        :param data: dataframe to plot, generate by speedups(),
+                     times() or efficiency().
         :param title: Plot Title.
         :param greycolor: If set color of graph to grey colormap.
         :param filename: File name to save figure (eps format).
@@ -356,13 +362,13 @@ class ParsecData:
                 xs = data.index
                 ys = data[test]
                 line, = ax.plot(xs, ys, '-', linewidth=2, color=colors[i],
-                                label='Speedup for %s' % (test))
+                                label='Speedup for %s' % test)
             ax.legend(loc='lower right')
             ax.set_xlabel('Number of Cores')
-            ax.set_xlim(0,xs.max())
+            ax.set_xlim(0, xs.max())
             ax.xaxis.set_major_locator(ticker.MultipleLocator(2.0))
             ax.set_ylabel('Speedup')
-            ax.set_ylim(0,data.max().max()+1)
+            ax.set_ylim(0, data.max().max()+1)
             ax.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
             plt.title(title)
             if filename:
@@ -372,11 +378,13 @@ class ParsecData:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self, data, title='Speedup Surface', zlabel='speedup', greycolor=False, filename=''):
+    def plot3D(self, data, title='Speedup Surface', zlabel='speedup',
+               greycolor=False, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
-        :param data: dataframe to plot, generate by speedups(), times() or efficiency().
+        :param data: dataframe to plot, generate by speedups(),
+                     times() or efficiency().
         :param title: Plot Title.
         :param zlabel: Z Axis Label.
         :param greycolor: If set color of graph to grey colormap.
@@ -385,13 +393,14 @@ class ParsecData:
         """
 
         if not support3d:
-            print('Warning: No 3D plot support. Please install matplotlib with Axes3D toolkit')
+            print('Warning: No 3D plot support. Please install matplotlib '
+                  'with Axes3D toolkit')
             return
         if not data.empty:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             tests = data.columns.sort_values()
-            xc = [i+1 for (i,j) in enumerate(tests)]
+            xc = [i+1 for (i, j) in enumerate(tests)]
             yc = data.index
             X, Y = np.meshgrid(yc, xc)
             lz = []
@@ -405,19 +414,16 @@ class ParsecData:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth = 0.5,
-                                   edgecolor = 'k', linestyle = '-',
-                                   vmin = (zmin - (zmax-zmin)/10),
-                                   vmax = (zmax + (zmax-zmin)/10))
+            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
+                                   edgecolor='k', linestyle='-',
+                                   vmin=(zmin - (zmax-zmin)/10),
+                                   vmax=(zmax + (zmax-zmin)/10))
             ax.set_xlabel('Input Size')
-            ax.set_xlim(0,xc[-1])
-            #ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            ax.set_xlim(0, xc[-1])
             ax.set_ylabel('Number of Cores')
-            ax.set_ylim(0,yc.max())
-            #ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
+            ax.set_ylim(0, yc.max())
             ax.set_zlabel(zlabel)
-            ax.set_zlim(0,1.10*zmax)
-            #ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            ax.set_zlim(0, 1.10*zmax)
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
@@ -481,15 +487,15 @@ class ParsecLogsData(ParsecData):
                 + '\n '.join(self.runfiles)
         pkg = 'Package: ' + self.config['pkg']
         dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
-        command = 'Command: '+ self.config['command']
+        command = 'Command: ' + self.config['command']
         return folder + '\n' + files + '\n' + pkg+'\n' + dt + '\n' + command
 
-    def loaddata(self,foldername):
+    def loaddata(self, foldername):
         """
         Read all logs files that found in foldername and initialize
         the object class dictionaries.
 
-        :param filename: Filename with data dictionary of execution times.
+        :param foldername: Folder name within logs files data.
         """
 
         if os.path.isdir(foldername):
@@ -518,7 +524,8 @@ class ParsecLogsData(ParsecData):
         with open('logs_' + self.foldername + '_datafile_' + filedatename
                           + '.dat', 'w') as f:
             conftxt = self.config.copy()
-            conftxt['execdate'] = conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            conftxt['execdate'] =\
+                conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return

@@ -10,8 +10,8 @@
 
     usage: parsecpy_runmodel_pso [-h] -f PARSECPYFILENAME -l LOWERVALUES -u
                                  UPPERVALUES [-o OVERHEAD] [-x MAXITERATIONS]
-                                 [-p PARTICLES] [-t THREADS] [-r REPETITIONS] -m
-                                 MODELFILEABSPATH
+                                 [-p PARTICLES] [-t THREADS] [-r REPETITIONS]
+                                 -m MODELFILEABSPATH
 
     Script to run swarm modelling to predict aparsec application output
 
@@ -20,12 +20,14 @@
       -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
                             Input filename from Parsec specificated package.
       -l LOWERVALUES, --lowervalues LOWERVALUES
-                            List of minimum particles values used. Ex: -1,0,-2,0
+                            List of minimum particles values used.
+                            Ex: -1,0,-2,0
       -u UPPERVALUES, --uppervalues UPPERVALUES
-                            List of maximum particles values used. Ex: 5,2,1,10
+                            List of maximum particles values used.
+                            Ex: 5,2,1,10
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
-                            List of problem sizes to model used. Ex: native_01,
-                                native_05, native_08
+                            List of problem sizes to model used.
+                            Ex: native_01, native_05, native_08
       -o OVERHEAD, --overhead OVERHEAD
                             If it consider the overhead
       -x MAXITERATIONS, --maxiterations MAXITERATIONS
@@ -56,6 +58,7 @@ import numpy as np
 from parsecpy import ParsecData
 from parsecpy import Swarm
 
+
 def argsparselist(txt):
     """
     Validate the list of txt argument.
@@ -67,6 +70,7 @@ def argsparselist(txt):
     txt = txt.split(',')
     listarg = [i.strip() for i in txt]
     return listarg
+
 
 def argsparsefloatlist(txt):
     """
@@ -80,6 +84,7 @@ def argsparsefloatlist(txt):
     listarg = [float(i.strip()) for i in txt]
     return listarg
 
+
 def argsparsevalidation():
     """
     Validation of script arguments passed via console.
@@ -90,33 +95,38 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run swarm '
                                                  'modelling to predict a'
                                                  'parsec application output')
-    parser.add_argument('-f','--parsecpyfilename', required=True,
-                        help='Input filename from Parsec specificated package.')
-    parser.add_argument('-l', '--lowervalues', type=argsparsefloatlist, required=True,
+    parser.add_argument('-f', '--parsecpyfilename', required=True,
+                        help='Input filename from Parsec '
+                             'specificated package.')
+    parser.add_argument('-l', '--lowervalues', type=argsparsefloatlist,
+                        required=True,
                         help='List of minimum particles values '
                              'used. Ex: -1,0,-2,0')
-    parser.add_argument('-u', '--uppervalues', type=argsparsefloatlist, required=True,
-                        help='List of maximum particles values '
-                             'used. Ex: 5,2,1,10')
+    parser.add_argument('-u', '--uppervalues', type=argsparsefloatlist,
+                        required=True,
+                        help='List of maximum particles values used. '
+                             'Ex: 5,2,1,10')
     parser.add_argument('-n', '--problemsizes', type=argsparselist,
-                        help='List of problem sizes to model '
-                             'used. Ex: native_01,native_05,native_08')
-    parser.add_argument('-o','--overhead', type=bool,
+                        help='List of problem sizes to model used. '
+                             'Ex: native_01,native_05,native_08')
+    parser.add_argument('-o', '--overhead', type=bool,
                         help='If it consider the overhead', default=False)
-    parser.add_argument('-x','--maxiterations', type=int,
+    parser.add_argument('-x', '--maxiterations', type=int,
                         help='Number max of iterations', default=100)
-    parser.add_argument('-p','--particles', type=int,
+    parser.add_argument('-p', '--particles', type=int,
                         help='Number of particles', default=100)
-    parser.add_argument('-t','--threads', type=int,
+    parser.add_argument('-t', '--threads', type=int,
                         help='Number of Threads', default=1)
-    parser.add_argument('-r','--repetitions', type=int,
-                        help='Number of repetitions to algorithm execution', default=10)
-    parser.add_argument('-m','--modelfileabspath', required=True,
+    parser.add_argument('-r', '--repetitions', type=int,
+                        help='Number of repetitions to algorithm execution',
+                        default=10)
+    parser.add_argument('-m', '--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
-    parser.add_argument('-c','--crossvalidation', type=bool,
-                        help='If run the cross validation of modelling', default=False)
-    parser.add_argument('-v','--verbosity', type=int,
+    parser.add_argument('-c', '--crossvalidation', type=bool,
+                        help='If run the cross validation of modelling',
+                        default=False)
+    parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose', default=0)
     args = parser.parse_args()
     return args
@@ -140,24 +150,25 @@ def main():
     if os.path.isfile(args.modelfileabspath):
         modelcodepath = args.modelfileabspath
     else:
-        print('Error: You should inform the correct module of objective function to model')
+        print('Error: You should inform the correct module of '
+              'objective function to model')
         sys.exit()
 
     if not os.path.isfile(args.parsecpyfilename):
         print('Error: You should inform the correct parsecpy measures file')
         sys.exit()
 
-    l = args.lowervalues
-    u = args.uppervalues
+    lv = args.lowervalues
+    uv = args.uppervalues
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
 
-    N = y_measure.columns
+    n = y_measure.columns
     if args.problemsizes:
-        N_model = N.copy()
+        n_model = n.copy()
         for i in args.problemsizes:
-            if not i in N_model:
+            if i not in n_model:
                 print('Error: Measures not has especified problem sizes')
                 sys.exit()
         y_measure = y_measure[args.problemsizes]
@@ -166,7 +177,7 @@ def main():
     y = []
     for i, row in y_measure.iterrows():
         for c, v in row.iteritems():
-            x.append([i,int(c.split('_')[1])])
+            x.append([i, int(c.split('_')[1])])
             y.append(v)
     input_name = c.split('_')[0]
     x = np.array(x)
@@ -181,13 +192,14 @@ def main():
 
     starttime = time.time()
     for i in repetitions:
-        print('\nAlgorithm Execution: ',i+1)
+        print('\nAlgorithm Execution: ', i+1)
 
-        S = Swarm(l, u, args=argsswarm, threads=args.threads,
-                  size=args.particles, w=1, c1=1, c2=4,
-                  maxiter =args.maxiterations, modelcodepath=modelcodepath,
-                  parsecpydatapath=args.parsecpyfilename,verbosity=args.verbosity)
-        model = S.run()
+        sw = Swarm(lv, uv, args=argsswarm, threads=args.threads,
+                   size=args.particles, w=1, c1=1, c2=4,
+                   maxiter=args.maxiterations, modelcodepath=modelcodepath,
+                   parsecpydatapath=args.parsecpyfilename,
+                   verbosity=args.verbosity)
+        model = sw.run()
         computed_models.append(model)
         if i == 0:
             err_min = model.error
@@ -205,11 +217,11 @@ def main():
     print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
           (computed_models[best_model_idx].error,
            computed_models[best_model_idx].errorrel))
-    if args.verbosity>0:
-        print('Best Parameters: \n',computed_models[best_model_idx].params)
+    if args.verbosity > 0:
+        print('Best Parameters: \n', computed_models[best_model_idx].params)
     if args.verbosity > 1:
-        print('\nMeasured Speedup: \n',y_measure)
-        print('\nModeled Speedup: \n',computed_models[best_model_idx].y_model)
+        print('\nMeasured Speedup: \n', y_measure)
+        print('\nModeled Speedup: \n', computed_models[best_model_idx].y_model)
 
     print('\n***** Modelling Done! *****\n')
 
@@ -221,16 +233,18 @@ def main():
         print('\n  Cross Validation (K-fold, K=10) Metrics: ')
         if args.verbosity > 2:
             print('\n   Times: ')
-            for key,value in scores['times'].items():
+            for key, value in scores['times'].items():
                 print('     %s: %.8f' % (key, value.mean()))
                 print('     ', value)
         print('\n   Scores: ')
-        for key,value in scores['scores'].items():
+        for key, value in scores['scores'].items():
             if args.verbosity > 1:
-                print('     %s: %.8f' % (value['description'],value['value'].mean()))
-                print('     ',value['value'])
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
+                print('     ', value['value'])
             else:
-                print('     %s: %.8f' % (value['description'],value['value'].mean()))
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -241,7 +255,6 @@ def main():
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)
-
 
 
 if __name__ == '__main__':

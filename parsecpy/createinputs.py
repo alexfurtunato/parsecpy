@@ -6,8 +6,8 @@
     Actually it can create onle fluidanimate and fremine new inputs
 
 
-    parsecpy_createinputs [-h] -p {freqmine,fluidanimate,dedup, x264} -n NUMBEROFPARTS
-        [-t {equal,diff}] -x EXTRAARG inputfilename
+    parsecpy_createinputs [-h] -p {freqmine,fluidanimate,dedup, x264}
+        -n NUMBEROFPARTS [-t {equal,diff}] -x EXTRAARG inputfilename
 
         Script to split a parsec input file on specific parts
 
@@ -18,7 +18,8 @@
         optional arguments
             -h, --help
                 show this help message and exit
-            -p {freqmine,fluidanimate,dedup,x264}, --package {freqmine,fluidanimate, x264}
+            -p {freqmine,fluidanimate,dedup,x264},
+            --package {freqmine,fluidanimate, x264}
                 Package name to be used on split.
             -n NUMBEROFPARTS, --numberofparts NUMBEROFPARTS
                 Number of split parts
@@ -28,7 +29,8 @@
                 Specific argument: Freqmine=minimum support (11000),
                 Fluidanimate=Max number of frames
         Example
-            parsec_createinputs -p fluidanimate -n 10 -t diff -x 500 fluidanimate_native.tar
+            parsec_createinputs -p fluidanimate -n 10
+            -t diff -x 500 fluidanimate_native.tar
 """
 
 import os
@@ -50,7 +52,7 @@ pkg_cite="bienia11parsec"
 '''
 
 # Template with 3 arguments: filename.runconf, filename.dat, minimum support
-template_freqmine_inputconf =  '''#!/bin/bash
+template_freqmine_inputconf = '''#!/bin/bash
 # %s - file containing information necessary to run a specific
 #                    program of the PARSEC benchmark suite
 
@@ -65,7 +67,7 @@ run_args="%s %s"
 '''
 
 # Template with 2 arguments: filename.runconf and filename.dat
-template_fluidanimate_inputconf =  '''#!/bin/bash
+template_fluidanimate_inputconf = '''#!/bin/bash
 #
 # %s - file containing information necessary to run a specific
 #                  program of the PARSEC benchmark suite
@@ -79,7 +81,7 @@ run_args="${NTHREADS} %s in_500K.fluid out.fluid"
 '''
 
 # Template with 2 argument: filename.runconf, filename.iso
-template_dedup_inputconf =  '''#!/bin/bash
+template_dedup_inputconf = '''#!/bin/bash
 # %s - file containing information necessary to run a specific
 #                    program of the PARSEC benchmark suite
 
@@ -91,7 +93,7 @@ run_args="-c -p -v -t ${NTHREADS} -i %s -o output.dat.ddp"
 '''
 
 # Template with 2 argument: filename.runconf, filename.y4m
-template_x264_inputconf =  '''#!/bin/bash
+template_x264_inputconf = '''#!/bin/bash
 # %s - file containing information necessary to run a specific
 #                    program of the PARSEC benchmark suite
 
@@ -105,6 +107,7 @@ run_args="--quiet --qp 20 --partitions b8x8,i4x4 --ref 5 --direct auto
 %s"
 '''
 
+
 def fluidanimate_splitdiff(tfile, n, frmax):
     """
     Generate Fluidanimate Benchmark inputs tar file with sames equal sizes,
@@ -116,33 +119,34 @@ def fluidanimate_splitdiff(tfile, n, frmax):
     """
 
     prefixfolder = 'fluidanimate_inputfiles'
-    parsecconffolder = os.path.join(prefixfolder,'parsecconf')
-    pkgconffolder = os.path.join(prefixfolder,'pkgconf')
+    parsecconffolder = os.path.join(prefixfolder, 'parsecconf')
+    pkgconffolder = os.path.join(prefixfolder, 'pkgconf')
     os.mkdir(prefixfolder)
     os.mkdir(parsecconffolder)
     os.mkdir(pkgconffolder)
     tarfilename = os.path.basename(tfile).split('.')[0]
-    print('Replicating input file %s on %s files' % (tfile,n))
+    print('Replicating input file %s on %s files' % (tfile, n))
     lfrm = [int(frmax - (n-1-i)*frmax/n) for i in range(n)]
-    for i,frm in enumerate(lfrm):
+    for i, frm in enumerate(lfrm):
         newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
                                       + '%02d' % (i+1) + '.tar')
-        print(i+1,newtarfilename)
+        print(i+1, newtarfilename)
         try:
-            shutil.copy(tfile,newtarfilename)
+            shutil.copy(tfile, newtarfilename)
         except OSError as why:
             print(why)
         fnbase = os.path.basename(newtarfilename).split('.')[0]
         fnbase = '_'.join(fnbase.split('_')[1:])
-        fpath1 = os.path.join(parsecconffolder,fnbase+'.runconf')
-        fconf1 = open(fpath1,'w')
-        fconf1.write(template_parsecconf % (fnbase+'.runconf',fnbase))
+        fpath1 = os.path.join(parsecconffolder, fnbase+'.runconf')
+        fconf1 = open(fpath1, 'w')
+        fconf1.write(template_parsecconf % (fnbase+'.runconf', fnbase))
         fconf1.close()
-        fpath2 = os.path.join(pkgconffolder,fnbase+'.runconf')
-        fconf2 = open(fpath2,'w')
-        fconf2.write(template_fluidanimate_inputconf % (fnbase+'.runconf',frm))
+        fpath2 = os.path.join(pkgconffolder, fnbase+'.runconf')
+        fconf2 = open(fpath2, 'w')
+        fconf2.write(template_fluidanimate_inputconf %
+                     (fnbase+'.runconf', frm))
         fconf2.close()
-    print('Sucessful finished split operation. Total parts = ',i+1)
+    print('Sucessful finished split operation. Total parts = ', i+1)
 
 
 def freqmine_splitequal(tfile, n, ms):
@@ -156,8 +160,8 @@ def freqmine_splitequal(tfile, n, ms):
     """
 
     prefixfolder = 'inputfiles'
-    parsecconffolder = os.path.join(prefixfolder,'parsecconf')
-    pkgconffolder = os.path.join(prefixfolder,'pkgconf')
+    parsecconffolder = os.path.join(prefixfolder, 'parsecconf')
+    pkgconffolder = os.path.join(prefixfolder, 'pkgconf')
     os.mkdir(prefixfolder)
     os.mkdir(parsecconffolder)
     os.mkdir(pkgconffolder)
@@ -169,37 +173,37 @@ def freqmine_splitequal(tfile, n, ms):
     else:
         fm = fm[0]
     f = tar.extractfile(fm)
-    numberoflines = sum(1 for line in f)
-    splitlen = numberoflines // n
-    print('Splitting input file %s on %s files' % (tfile,n))
-    print('Original file total lines = ',numberoflines)
-    print('Split length = ',splitlen)
+    numberoflines = sum(1 for _ in f)
+    splitlen = numberoflines//n
+    print('Splitting input file %s on %s files' % (tfile, n))
+    print('Original file total lines = ', numberoflines)
+    print('Split length = ', splitlen)
     partscount = 1
     fd = None
     f = tar.extractfile(fm)
     lfile = []
-    for line,linetxt in enumerate(f):
+    for line, linetxt in enumerate(f):
         if line == 0:
             newfilename = fm.name.split('.')[0] + '_' + ('%02d' % partscount) \
                           + '.' + fm.name.split('.')[1]
-            fd = open(newfilename,'w')
-        elif line%splitlen == 0 and line<splitlen*n:
+            fd = open(newfilename, 'w')
+        elif line % splitlen == 0 and line < splitlen*n:
             fd.close()
-            newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+            newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
                                           + ('%02d' % partscount) + '.tar')
-            print(partscount,newtarfilename)
-            tar2 = tarfile.open(newtarfilename,'w')
+            print(partscount, newtarfilename)
+            tar2 = tarfile.open(newtarfilename, 'w')
             tar2.add(newfilename)
             tar2.close()
             os.remove(newfilename)
-            lfile.append((newtarfilename,newfilename))
+            lfile.append((newtarfilename, newfilename))
             partscount += 1
-            newfilename = fm.name.split('.')[0] + '_' + str(partscount) \
-                          + '.' + fm.name.split('.')[1]
-            fd = open(newfilename,'w')
+            newfilename = fm.name.split('.')[0] + '_' + str(partscount) + \
+                          '.' + fm.name.split('.')[1]
+            fd = open(newfilename, 'w')
         fd.write(linetxt.decode())
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
-                                  + ('%02d' % partscount) + '.tar')
+    newtarfilename = os.path.join(prefixfolder, tarfilename + '_' +
+                                  ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     tar2 = tarfile.open(newtarfilename, 'w')
     tar2.add(newfilename)
@@ -207,19 +211,20 @@ def freqmine_splitequal(tfile, n, ms):
     os.remove(newfilename)
     tar.close()
     lfile.append((newtarfilename, newfilename))
-    for ftn,fn in lfile:
+    for ftn, fn in lfile:
         print(fn)
         fnbase = os.path.basename(ftn).split('.')[0]
         fnbase = '_'.join(fnbase.split('_')[1:])
-        fpath1 = os.path.join(parsecconffolder,fnbase+'.runconf')
-        fconf1 = open(fpath1,'w')
-        fconf1.write(template_parsecconf % (fnbase+'.runconf',fnbase))
+        fpath1 = os.path.join(parsecconffolder, fnbase+'.runconf')
+        fconf1 = open(fpath1, 'w')
+        fconf1.write(template_parsecconf % (fnbase+'.runconf', fnbase))
         fconf1.close()
-        fpath2 = os.path.join(pkgconffolder,fnbase+'.runconf')
-        fconf2 = open(fpath2,'w')
-        fconf2.write(template_freqmine_inputconf % (fnbase+'.runconf',fn,ms))
+        fpath2 = os.path.join(pkgconffolder, fnbase+'.runconf')
+        fconf2 = open(fpath2, 'w')
+        fconf2.write(template_freqmine_inputconf % (fnbase+'.runconf', fn, ms))
         fconf2.close()
-    print('Sucessful finished split operation. Total parts = ',partscount)
+    print('Sucessful finished split operation. Total parts = ', partscount)
+
 
 def freqmine_splitdiff(tfile, n, ms):
     """
@@ -233,8 +238,8 @@ def freqmine_splitdiff(tfile, n, ms):
     """
 
     prefixfolder = 'inputfiles'
-    parsecconffolder = os.path.join(prefixfolder,'parsecconf')
-    pkgconffolder = os.path.join(prefixfolder,'pkgconf')
+    parsecconffolder = os.path.join(prefixfolder, 'parsecconf')
+    pkgconffolder = os.path.join(prefixfolder, 'pkgconf')
     os.mkdir(prefixfolder)
     os.mkdir(parsecconffolder)
     os.mkdir(pkgconffolder)
@@ -249,32 +254,32 @@ def freqmine_splitdiff(tfile, n, ms):
     numberoflines = sum(1 for line in f)
     splitlenbase = numberoflines // n
     splitlen = splitlenbase
-    print('Splitting input file %s on %s files' % (tfile,n))
-    print('Original file total lines = ',numberoflines)
-    print('Split length = ',splitlen)
+    print('Splitting input file %s on %s files' % (tfile, n))
+    print('Original file total lines = ', numberoflines)
+    print('Split length = ', splitlen)
     partscount = 1
     fd = None
     lfile = []
     eof = False
     while not eof:
         f = tar.extractfile(fm)
-        for line,linetxt in enumerate(f):
+        for line, linetxt in enumerate(f):
             if line == 0:
                 newfilename = fm.name.split('.')[0] + '_' \
                               + ('%02d' % partscount) + '.' \
                               + fm.name.split('.')[1]
-                fd = open(newfilename,'w')
-            elif line%splitlen == 0 and line<=splitlenbase*(n-1):
+                fd = open(newfilename, 'w')
+            elif line % splitlen == 0 and line <= splitlenbase*(n-1):
                 fd.close()
-                newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+                newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
                                               + ('%02d' % partscount) + '.tar')
-                print(partscount,newtarfilename)
-                print(" line: ", line," splitlen: ",splitlen)
-                tar2 = tarfile.open(newtarfilename,'w')
+                print(partscount, newtarfilename)
+                print(" line: ", line, " splitlen: ", splitlen)
+                tar2 = tarfile.open(newtarfilename, 'w')
                 tar2.add(newfilename)
                 tar2.close()
                 os.remove(newfilename)
-                lfile.append((newtarfilename,newfilename))
+                lfile.append((newtarfilename, newfilename))
                 partscount += 1
                 splitlen = partscount*splitlenbase
                 break
@@ -283,7 +288,7 @@ def freqmine_splitdiff(tfile, n, ms):
         if line >= numberoflines-1:
             fd.close()
             eof = True
-    newtarfilename = os.path.join(prefixfolder,tarfilename + '_'
+    newtarfilename = os.path.join(prefixfolder, tarfilename + '_'
                                   + ('%02d' % partscount) + '.tar')
     print(partscount, newtarfilename)
     print(" line: ", line, " splitlen: ", splitlen)
@@ -293,19 +298,20 @@ def freqmine_splitdiff(tfile, n, ms):
     os.remove(newfilename)
     tar.close()
     lfile.append((newtarfilename, newfilename))
-    for ftn,fn in lfile:
+    for ftn, fn in lfile:
         print(fn)
         fnbase = os.path.basename(ftn).split('.')[0]
         fnbase = '_'.join(fnbase.split('_')[1:])
-        fpath1 = os.path.join(parsecconffolder,fnbase+'.runconf')
-        fconf1 = open(fpath1,'w')
-        fconf1.write(template_parsecconf % (fnbase+'.runconf',fnbase))
+        fpath1 = os.path.join(parsecconffolder, fnbase+'.runconf')
+        fconf1 = open(fpath1, 'w')
+        fconf1.write(template_parsecconf % (fnbase+'.runconf', fnbase))
         fconf1.close()
-        fpath2 = os.path.join(pkgconffolder,fnbase+'.runconf')
-        fconf2 = open(fpath2,'w')
-        fconf2.write(template_freqmine_inputconf % (fnbase+'.runconf',fn,ms))
+        fpath2 = os.path.join(pkgconffolder, fnbase+'.runconf')
+        fconf2 = open(fpath2, 'w')
+        fconf2.write(template_freqmine_inputconf % (fnbase+'.runconf', fn, ms))
         fconf2.close()
-    print('Sucessful finished split operation. Total parts = ',partscount)
+    print('Sucessful finished split operation. Total parts = ', partscount)
+
 
 def dedup_splitdiff(tfile, n):
     """
@@ -318,8 +324,8 @@ def dedup_splitdiff(tfile, n):
     """
 
     prefixfolder = 'inputfiles'
-    parsecconffolder = os.path.join(prefixfolder,'parsecconf')
-    pkgconffolder = os.path.join(prefixfolder,'pkgconf')
+    parsecconffolder = os.path.join(prefixfolder, 'parsecconf')
+    pkgconffolder = os.path.join(prefixfolder, 'pkgconf')
     os.mkdir(prefixfolder)
     os.mkdir(parsecconffolder)
     os.mkdir(pkgconffolder)
@@ -330,19 +336,16 @@ def dedup_splitdiff(tfile, n):
         print('Error: Tar File with more then one file member!')
     else:
         fm = fm[0]
-    f = tar.extract(fm)
 
     from bitstring import ConstBitStream
     bs = ConstBitStream(filename=fm.name)
 
-    print('Splitting input file %s on %s files' % (tfile,n))
+    print('Splitting input file %s on %s files' % (tfile, n))
     partscount = 1
 
     nbytestotal = os.stat(fm.name).st_size
     splitlenbase = nbytestotal // n
-    splitlen = splitlenbase
 
-    fd = None
     lfile = []
     for parts in range(n):
         partscount = parts + 1
@@ -374,19 +377,19 @@ def dedup_splitdiff(tfile, n):
         lfile.append((newtarfilename, newfilename))
         bs.pos = 0
 
-    for ftn,fn in lfile:
+    for ftn, fn in lfile:
         print(fn)
         fnbase = os.path.basename(ftn).split('.')[0]
         fnbase = '_'.join(fnbase.split('_')[1:])
-        fpath1 = os.path.join(parsecconffolder,fnbase+'.runconf')
-        fconf1 = open(fpath1,'w')
-        fconf1.write(template_parsecconf % (fnbase+'.runconf',fnbase))
+        fpath1 = os.path.join(parsecconffolder, fnbase+'.runconf')
+        fconf1 = open(fpath1, 'w')
+        fconf1.write(template_parsecconf % (fnbase+'.runconf', fnbase))
         fconf1.close()
-        fpath2 = os.path.join(pkgconffolder,fnbase+'.runconf')
-        fconf2 = open(fpath2,'w')
-        fconf2.write(template_dedup_inputconf % (fnbase+'.runconf',fn))
+        fpath2 = os.path.join(pkgconffolder, fnbase+'.runconf')
+        fconf2 = open(fpath2, 'w')
+        fconf2.write(template_dedup_inputconf % (fnbase+'.runconf', fn))
         fconf2.close()
-    print('Sucessful finished split operation. Total parts = ',partscount)
+    print('Sucessful finished split operation. Total parts = ', partscount)
 
 
 def x264_splitdiff(tfile, n):
@@ -400,8 +403,8 @@ def x264_splitdiff(tfile, n):
     """
 
     prefixfolder = 'inputfiles'
-    parsecconffolder = os.path.join(prefixfolder,'parsecconf')
-    pkgconffolder = os.path.join(prefixfolder,'pkgconf')
+    parsecconffolder = os.path.join(prefixfolder, 'parsecconf')
+    pkgconffolder = os.path.join(prefixfolder, 'pkgconf')
     os.mkdir(prefixfolder)
     os.mkdir(parsecconffolder)
     os.mkdir(pkgconffolder)
@@ -412,12 +415,11 @@ def x264_splitdiff(tfile, n):
         print('Error: Tar File with more then one file member!')
     else:
         fm = fm[0]
-    f = tar.extract(fm)
 
     from bitstring import ConstBitStream
     bs = ConstBitStream(filename=fm.name)
 
-    print('Splitting input file %s on %s files' % (tfile,n))
+    print('Splitting input file %s on %s files' % (tfile, n))
     partscount = 1
 
     nframes = 0
@@ -435,9 +437,10 @@ def x264_splitdiff(tfile, n):
             if nframes == 1:
                 if partscount < n:
                     newfilenameparts = fm.name.split('_')
-                    newfilename = newfilenameparts[0] + '_' + newfilenameparts[1] \
-                              + '_' + ('%02d' % splitlen) + '.' \
-                              + fm.name.split('.')[1]
+                    newfilename = newfilenameparts[0] + '_' + \
+                                  newfilenameparts[1] + '_' + \
+                                  ('%02d' % splitlen) + '.' + \
+                                  fm.name.split('.')[1]
                     fd = open(newfilename, 'wb')
                     print(partscount, " splitlen: ", splitlen, "filename: ",
                       newfilename)
@@ -478,19 +481,19 @@ def x264_splitdiff(tfile, n):
             print("Erro: Frame %s não encontrado" % nframes)
             break
 
-    for ftn,fn in lfile:
+    for ftn, fn in lfile:
         print(fn)
         fnbase = os.path.basename(ftn).split('.')[0]
         fnbase = '_'.join(fnbase.split('_')[1:])
-        fpath1 = os.path.join(parsecconffolder,fnbase+'.runconf')
-        fconf1 = open(fpath1,'w')
-        fconf1.write(template_parsecconf % (fnbase+'.runconf',fnbase))
+        fpath1 = os.path.join(parsecconffolder, fnbase+'.runconf')
+        fconf1 = open(fpath1, 'w')
+        fconf1.write(template_parsecconf % (fnbase+'.runconf', fnbase))
         fconf1.close()
-        fpath2 = os.path.join(pkgconffolder,fnbase+'.runconf')
-        fconf2 = open(fpath2,'w')
-        fconf2.write(template_x264_inputconf % (fnbase+'.runconf',fn))
+        fpath2 = os.path.join(pkgconffolder, fnbase+'.runconf')
+        fconf2 = open(fpath2, 'w')
+        fconf2.write(template_x264_inputconf % (fnbase+'.runconf', fn))
         fconf2.close()
-    print('Sucessful finished split operation. Total parts = ',partscount)
+    print('Sucessful finished split operation. Total parts = ', partscount)
 
 
 def argsparsevalidation():
@@ -503,14 +506,15 @@ def argsparsevalidation():
     packagechoice = ['freqmine', 'fluidanimate', 'dedup', 'x264']
     splitchoice = ['equal', 'diff']
     parser = argparse.ArgumentParser(description='Script to split a parsec '
-                                                 'input file on specific parts')
-    parser.add_argument('-p','--package', help='Package name to be '
+                                                 'input file on '
+                                                 'specific parts')
+    parser.add_argument('-p', '--package', help='Package name to be '
                                                'used on split.',
                         choices=packagechoice, required=True)
-    parser.add_argument('-n','--numberofparts', help='Number of split parts',
+    parser.add_argument('-n', '--numberofparts', help='Number of split parts',
                         type=int, required=True)
-    parser.add_argument('-t','--typeofsplit', help='Split on equal or diferent '
-                                                   'size partes parts',
+    parser.add_argument('-t', '--typeofsplit', help='Split on equal or '
+                                                    'diferent size parts',
                         choices=splitchoice, default='diff')
     parser.add_argument('-x', '--extraarg', help='Specific argument: Freqmine='
                                                  'minimum support (11000), '
@@ -534,32 +538,33 @@ def main():
         if args.package == 'freqmine':
             if args.typeofsplit == 'diff':
                 freqmine_splitdiff(args.inputfilename,
-                                   args.numberofparts,args.extraarg)
+                                   args.numberofparts, args.extraarg)
             else:
                 freqmine_splitequal(args.inputfilename,
-                                    args.numberofparts,args.extraarg)
+                                    args.numberofparts, args.extraarg)
         elif args.package == 'fluidanimate':
             if args.typeofsplit == 'diff':
                 fluidanimate_splitdiff(args.inputfilename,
-                                       args.numberofparts,args.extraarg)
+                                       args.numberofparts, args.extraarg)
             else:
                 fluidanimate_splitdiff(args.inputfilename,
-                                       args.numberofparts,args.extraarg)
+                                       args.numberofparts, args.extraarg)
         elif args.package == 'dedup':
             if args.typeofsplit == 'diff':
                 dedup_splitdiff(args.inputfilename,
-                               args.numberofparts)
+                                args.numberofparts)
             else:
                 print("Error: 'diff' type of part split only on dedup app.")
         elif args.package == 'x264':
             if args.typeofsplit == 'diff':
                 x264_splitdiff(args.inputfilename,
-                                       args.numberofparts)
+                               args.numberofparts)
             else:
                 print("Error: 'diff' type of part split only on x264 app.")
     else:
         print("Error: File name not found.")
         exit(1)
+
 
 if __name__ == '__main__':
     main()

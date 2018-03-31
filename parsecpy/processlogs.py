@@ -27,6 +27,7 @@ import argparse
 
 from parsecpy.dataprocess import ParsecLogsData
 
+
 def argsparsevalidation():
     """
     Validation of script arguments passed via console.
@@ -36,10 +37,12 @@ def argsparsevalidation():
 
     parser = argparse.ArgumentParser(description='Script to parse a folder '
                                                  'with parsec log files and '
-                                                 'save measures to output file')
+                                                 'save measures to output '
+                                                 'file')
     parser.add_argument('foldername', help='Foldername with parsec log files.')
     args = parser.parse_args()
     return args
+
 
 def main():
     """
@@ -47,12 +50,11 @@ def main():
 
     """
 
-    runfiles = []
     args = argsparsevalidation()
     if os.path.isdir(args.foldername):
         logs = ParsecLogsData(args.foldername)
         print("\nProcessing folder: ", logs.foldername)
-        print(len(logs.runfiles),"files")
+        print(len(logs.runfiles), "files")
     else:
         print("Error: Folder name not found.")
         exit(1)
@@ -64,6 +66,7 @@ def main():
     else:
         print("Warning: Folder is empty")
         exit(1)
+
 
 if __name__ == '__main__':
     main()

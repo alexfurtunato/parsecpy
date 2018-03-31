@@ -10,8 +10,8 @@
 
     usage: parsecpy_runmodel_csa [-h] -f PARSECPYFILENAME [-o OVERHEAD]
                                  [-d DIMENSION] [-s STEPS] [-u UPDATE_INTERVAL]
-                                 [-a ANNEALERS] [-t THREADS] [-r REPETITIONS] -m
-                                 MODELFILEABSPATH [-v VERBOSE]
+                                 [-a ANNEALERS] [-t THREADS] [-r REPETITIONS]
+                                 -m MODELFILEABSPATH [-v VERBOSE]
 
     Script to run csa modelling to predict aparsec application output
 
@@ -40,21 +40,17 @@
                             If it shows output verbosily: Values: 0, 1, 2
 
     Example
-        parsecpy_runmodel_csa -f /var/myparsecsim.dat -m /var/mymodelfunc.py -d 5 -s 1000 -a 10
+        parsecpy_runmodel_csa -f /var/myparsecsim.dat -m /var/mymodelfunc.py
+        -d 5 -s 1000 -a 10
 """
 
 import os
-import sys
 import time
 import random
 import argparse
 from parsecpy import ParsecData
 from parsecpy import CoupledAnnealer
 
-try:
-    xrange
-except NameError:
-    xrange = range
 
 def argsparsefloatlist(txt):
     """
@@ -68,6 +64,7 @@ def argsparsefloatlist(txt):
     listarg = [float(i.strip()) for i in txt]
     return listarg
 
+
 def argsparsevalidation():
     """
     Validation of script arguments passed via console.
@@ -78,29 +75,34 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run csa '
                                                  'modelling to predict a'
                                                  'parsec application output')
-    parser.add_argument('-f','--parsecpyfilename', required=True,
-                        help='Input filename from Parsec specificated package.')
-    parser.add_argument('-o','--overhead', type=bool,
+    parser.add_argument('-f', '--parsecpyfilename', required=True,
+                        help='Input filename from Parsec '
+                             'specificated package.')
+    parser.add_argument('-o', '--overhead', type=bool,
                         help='If it consider the overhead', default=False)
-    parser.add_argument('-d','--dimension', type=int,
+    parser.add_argument('-d', '--dimension', type=int,
                         help='Number of parameters', default=5)
-    parser.add_argument('-s','--steps', type=int,
+    parser.add_argument('-s', '--steps', type=int,
                         help='Number max of iterations', default=100)
-    parser.add_argument('-u','--update_interval', type=int,
-                        help='Number steps to run cooling temperatures', default=1)
-    parser.add_argument('-a','--annealers', type=int,
+    parser.add_argument('-u', '--update_interval', type=int,
+                        help='Number steps to run cooling temperatures',
+                        default=1)
+    parser.add_argument('-a', '--annealers', type=int,
                         help='Number of annealers', default=10)
-    parser.add_argument('-t','--threads', type=int,
+    parser.add_argument('-t', '--threads', type=int,
                         help='Number of Threads', default=1)
-    parser.add_argument('-r','--repetitions', type=int,
-                        help='Number of repetitions to algorithm execution', default=10)
-    parser.add_argument('-m','--modelfileabspath', required=True,
+    parser.add_argument('-r', '--repetitions', type=int,
+                        help='Number of repetitions to algorithm execution',
+                        default=10)
+    parser.add_argument('-m', '--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
-    parser.add_argument('-v','--verbose', type=int,
-                        help='If it shows output verbosily: Values: 0, 1, 2', default=1)
+    parser.add_argument('-v', '--verbose', type=int,
+                        help='If it shows output verbosily: Values: 0, 1, 2',
+                        default=1)
     args = parser.parse_args()
     return args
+
 
 def main():
     """
@@ -115,14 +117,14 @@ def main():
     if os.path.isfile(args.modelfileabspath):
         modelpath = args.modelfileabspath
     else:
-        print('Error: You should inform the correct module of objective function to model')
-
+        print('Error: You should inform the correct module of objective '
+              'function to model')
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
-    N = [(col, int(col.split('_')[1])) for col in y_measure]
+    n = [(col, int(col.split('_')[1])) for col in y_measure]
     p = y_measure.index
-    argsanneal = (y_measure, args.overhead, p, N)
+    argsanneal = (y_measure, args.overhead, p, n)
 
     repititions = range(args.repetitions)
     err_min = 0
@@ -131,13 +133,13 @@ def main():
 
     starttime = time.time()
     for i in repititions:
-        print('Iteration: ',i+1)
+        print('Iteration: ', i+1)
 
         initial_state = [
-            tuple((random.normalvariate(0,5) for _ in xrange(args.dimension)))
-            for x in xrange(args.annealers)]
+            tuple((random.normalvariate(0, 5) for _ in range(args.dimension)))
+            for _ in range(args.annealers)]
 
-        A = CoupledAnnealer(
+        cann = CoupledAnnealer(
             modelpath,
             n_annealers=args.annealers,
             initial_state=initial_state,
@@ -149,7 +151,7 @@ def main():
             update_interval=args.update_interval,
             args=argsanneal
         )
-        model = A.run()
+        model = cann.run()
         computed_models.append(model)
         if i == 0:
             err_min = model.error
@@ -164,13 +166,15 @@ def main():
         starttime = endtime
 
     print('\n\n***** Done! *****\n')
-    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' % (err_min, 100*err_min/y_measure.mean().mean()))
-    print('Best Parameters: \n',computed_models[best_model_idx].params)
-    print('\nMeasured Speedups: \n',y_measure)
-    print('\nModeled Speedups: \n',computed_models[best_model_idx].y_model)
+    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' %
+          (err_min, 100*err_min/y_measure.mean().mean()))
+    print('Best Parameters: \n', computed_models[best_model_idx].params)
+    print('\nMeasured Speedups: \n', y_measure)
+    print('\nModeled Speedups: \n', computed_models[best_model_idx].y_model)
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)
+
 
 if __name__ == '__main__':
     main()

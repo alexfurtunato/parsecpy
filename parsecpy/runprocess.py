@@ -24,15 +24,17 @@
         -p PACKAGE, --package PACKAGE
             Package Name to run
         -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb},
-            --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
-            Compiler name to be used on run. (Default: gcc-hooks).
+            --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,
+            gcc-tbb}. Compiler name to be used on run. (Default: gcc-hooks).
         -i INPUT, --input INPUT
             Input name to be used on run. (Default: native).
-            Syntax: inputsetname[<initialnumber>:<finalnumber>]. Ex: native or native_1:10
+            Syntax: inputsetname[<initialnumber>:<finalnumber>].
+            Ex: native or native_1:10
         -r REPITITIONS, --repititions REPITITIONS
             Number of repititions for a specific run. (Default: 1)
         -b CPU_BASE, --cpubase CPU_BASE
-            If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.
+            If run with thread affinity(limiting the running cores to defined
+            number of cores), define the cpu base number.
 
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
@@ -48,6 +50,7 @@ import psutil
 from datetime import datetime
 
 from parsecpy.dataprocess import ParsecData
+
 
 def find_procs_by_name(name):
     """
@@ -65,7 +68,8 @@ def find_procs_by_name(name):
             ls.append(p)
     return ls
 
-def procs_list(name,prs=None):
+
+def procs_list(name, prs=None):
     """
     Buil a dictionary with running threads of a specific process.
 
@@ -110,6 +114,7 @@ def argsparseintlist(txt):
     txt = txt.split(',')
     listarg = [int(i) for i in txt]
     return listarg
+
 
 def argsparseinputlist(txt):
     """
@@ -165,8 +170,8 @@ def argsparsevalidation():
     :return: argparse object with validated arguments.
     """
 
-    compilerchoicebuilds=['gcc','gcc-serial','gcc-hooks','gcc-openmp',
-                          'gcc-pthreads', 'gcc-tbb']
+    compilerchoicebuilds = ['gcc', 'gcc-serial', 'gcc-hooks', 'gcc-openmp',
+                            'gcc-pthreads', 'gcc-tbb']
     helpinputtxt = 'Input name to be used on run. (Default: %(default)s). ' \
                    'Syntax: inputsetname[<initialnumber>:<finalnumber>]. ' \
                    'Ex: native or native_1:10'
@@ -176,21 +181,24 @@ def argsparsevalidation():
     parser.add_argument('c', type=argsparseintlist,
                         help='List of cores numbers to be '
                              'used. Ex: 1,2,4')
-    parser.add_argument('-p','--package', help='Package Name to run',
+    parser.add_argument('-p', '--package', help='Package Name to run',
                         required=True)
-    parser.add_argument('-c','--compiler',
+    parser.add_argument('-c', '--compiler',
                         help='Compiler name to be used on run. '
                              '(Default: %(default)s).',
                         choices=compilerchoicebuilds, default='gcc-hooks')
-    parser.add_argument('-i','--input', type=argsparseinputlist,
+    parser.add_argument('-i', '--input', type=argsparseinputlist,
                         help=helpinputtxt, default='native')
-    parser.add_argument('-r','--repititions', type=int,
+    parser.add_argument('-r', '--repititions', type=int,
                         help='Number of repititions for a specific run. '
                              '(Default: %(default)s)', default=1)
-    parser.add_argument('-b','--cpubase', type=int,
-                        help='If run with thread affinity(limiting the running cores to defined number of cores), define the cpu base number.')
+    parser.add_argument('-b', '--cpubase', type=int,
+                        help='If run with thread affinity(limiting the '
+                             'running cores to defined number of cores), '
+                             'define the cpu base number.')
     args = parser.parse_args()
     return args
+
 
 def main():
     """
@@ -215,12 +223,12 @@ def main():
         env = os.environ
         env['PARSEC_CPU_BASE'] = str(args.cpubase)
 
-    print("Processing %s Repetitions: " % (args.repititions))
+    print("Processing %s Repetitions: " % args.repititions)
     for i in args.input:
         for c in args.c:
             print("\n- Inputset: ", i, "with %s cores" % c)
             for r in range(args.repititions):
-                print("\n*** Execution ",r+1)
+                print("\n*** Execution ", r+1)
                 try:
                     if args.cpubase:
                         env['PARSEC_CPU_NUM'] = str(c)
@@ -248,15 +256,17 @@ def main():
                             attrs = datarun.contentextract(output.decode())
                             datarun.measurebuild(attrs, c)
                 except OSError as e:
-                    print("Error: Error from OS. Return Code = ",e.errno)
+                    print("Error: Error from OS. Return Code = ", e.errno)
                     print("Error Message: ", e.strerror)
                 except:
-                    print("Error: Error on System Execution : ", sys.exc_info())
+                    print("Error: Error on System Execution : ",
+                          sys.exc_info())
     print(datarun)
     print(datarun.times())
     print("\n\n***** Done! *****\n")
     fn = datarun.savedata()
     print('Running data saved on filename: %s' % fn)
+
 
 if __name__ == '__main__':
     main()
