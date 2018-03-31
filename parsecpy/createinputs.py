@@ -198,8 +198,8 @@ def freqmine_splitequal(tfile, n, ms):
             os.remove(newfilename)
             lfile.append((newtarfilename, newfilename))
             partscount += 1
-            newfilename = fm.name.split('.')[0] + '_' + \
-                          str(partscount) + '.' + fm.name.split('.')[1]
+            newfilename = '%s_%02d.%s' % (fm.name.split('.')[0],
+                                          partscount, fm.name.split('.')[1])
             fd = open(newfilename, 'w')
         fd.write(linetxt.decode())
     newtarfilename = os.path.join(prefixfolder,
@@ -350,9 +350,8 @@ def dedup_splitdiff(tfile, n):
     for parts in range(n):
         partscount = parts + 1
         splitlen = partscount * splitlenbase
-        newfilename = fm.name.split('.')[0] \
-                      + '_' + ('%02d' % partscount) + '.' \
-                      + fm.name.split('.')[1]
+        newfilename = '%s_%02d.%s' % (fm.name.split('.')[0],
+                                      partscount, fm.name.split('.')[1])
         if partscount < n:
             fd = open(newfilename, 'wb')
             print(partscount, " splitlen: ", splitlen, "filename: ",
@@ -438,16 +437,16 @@ def x264_splitdiff(tfile, n):
             if nframes == 1:
                 if partscount < n:
                     newfilenameparts = fm.name.split('_')
-                    newfilename = newfilenameparts[0] + '_' + \
-                                  newfilenameparts[1] + '_' + \
-                                  ('%02d' % splitlen) + '.' + \
-                                  fm.name.split('.')[1]
+                    newfilename = '%s_%s_%02d.%s' % (newfilenameparts[0],
+                                                     newfilenameparts[1],
+                                                     splitlen,
+                                                     fm.name.split('.')[1])
                     fd = open(newfilename, 'wb')
                     print(partscount, " splitlen: ", splitlen, "filename: ",
-                      newfilename)
+                          newfilename)
                 else:
                     print(partscount, " splitlen: ", splitlen, "filename: ",
-                      fm.name)
+                          fm.name)
                     newtarfilename = os.path.join(prefixfolder, '%s_%02d.tar' %
                                                   (tarfilename, partscount))
                     print("  Tarfile: ", newtarfilename)
