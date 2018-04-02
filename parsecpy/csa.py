@@ -22,22 +22,15 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from matplotlib import ticker
-from matplotlib.ticker import LinearLocator
-from matplotlib.ticker import FormatStrFormatter
 
 support3d = True
 try:
     from mpl_toolkits.mplot3d import Axes3D
-except:
+except ImportError:
     support3d = False
 
-try:
-    xrange
-except NameError:
-    xrange = range
-
 modelfunc = None
+
 
 class CoupledAnnealer(object):
     """
@@ -72,19 +65,21 @@ class CoupledAnnealer(object):
             The initial value of the generation temperature.
 
       - tgen_schedule: float
-            Determines the factor that tgen is multiplied by during each update.
+            Determines the factor that tgen is multiplied by during each
+            update.
 
       - tacc_initial: float
             The initial value of the acceptance temperature.
 
       - tacc_schedule: float
-            Determines the factor that `tacc` is multiplied by during each update.
+            Determines the factor that `tacc` is multiplied by during each
+            update.
 
       - desired_variance: float
-            The desired variance of the acceptance probabilities. If not specified,
-            `desired_variance` will be set to
+            The desired variance of the acceptance probabilities. If not
+            specified, `desired_variance` will be set to
 
-            :math:`0.99 * (\\text{max variance}) = 0.99 * \\frac{(m - 1)}{m^2}`,
+            :math:`0.99*(\\text{max variance}) = 0.99 * \\frac{(m - 1)}{m^2}`,
 
             where m is the number of annealing processes.
 
@@ -96,12 +91,13 @@ class CoupledAnnealer(object):
             The number of parallel processes. Defaults to a single process.
             If `threads` <= 0, then the number of processes will be set to the
             number of available CPUs. Note that this is different from the
-            `n_annealers`. If `objective_function` is costly to compute, it might
-            make sense to set `n_annealers` = `processes` = max number of CPUs.
+            `n_annealers`. If `objective_function` is costly to compute, it
+            might make sense to set `n_annealers` = `processes` = max number
+            of CPUs.
 
-            On the other hand, if `objective_function` is easy to compute, then the
-            CSA process will likely run a LOT faster with a single process due
-            to the overhead of using multiple processes.
+            On the other hand, if `objective_function` is easy to compute,
+            then the CSA process will likely run a LOT faster with a single
+            process due to the overhead of using multiple processes.
     """
 
     def __init__(self, modelpath,
@@ -109,7 +105,7 @@ class CoupledAnnealer(object):
                  initial_state=[],
                  steps=10000,
                  update_interval=100,
-                 tgen_initial=0.01,
+                 tgen_initial=0.1,
                  tacc_initial=0.9,
                  alpha=0.05,
                  desired_variance=None,
@@ -138,9 +134,13 @@ class CoupledAnnealer(object):
             sys.path.append(os.path.dirname(modelpath))
         modelfunc = importlib.import_module(pythonmodule)
 
-        self.probe_function = partial(self._probe_wrapper, modelfunc.probe_function, self.args, self.kwargs)
+        self.probe_function = partial(self._probe_wrapper,
+                                      modelfunc.probe_function,
+                                      self.args, self.kwargs)
 
-        self.objective_function = partial(self._obj_wrapper, modelfunc.objective_function, self.args, self.kwargs)
+        self.objective_function = partial(self._obj_wrapper,
+                                          modelfunc.objective_function,
+                                          self.args, self.kwargs)
 
         # Set desired_variance.
         if desired_variance is None:
@@ -195,7 +195,7 @@ class CoupledAnnealer(object):
 
         # Put the workers to work.
         results = []
-        for i in xrange(self.m):
+        for i in range(self.m):
             pool.apply_async(worker_probe, args=(self, i,),
                              callback=lambda x: results.append(x))
 
@@ -214,7 +214,7 @@ class CoupledAnnealer(object):
         Update the current state across all annealers sequentially.
         """
 
-        for i in xrange(self.m):
+        for i in range(self.m):
             i, energy, probe = worker_probe(self, i)
             self.probe_energies[i] = energy
             self.probe_states[i] = probe
@@ -229,15 +229,15 @@ class CoupledAnnealer(object):
         max_energy = max(self.current_energies)
         exp_terms = []
 
-        for i in xrange(self.m):
-            E = self.current_energies[i]
-            exp_terms.append(math.exp((E - max_energy) / self.tacc))
+        for i in range(self.m):
+            energy = self.current_energies[i]
+            exp_terms.append(math.exp((energy - max_energy) / self.tacc))
 
         gamma = sum(exp_terms)
         prob_accept = [x / gamma for x in exp_terms]
 
         # Determine whether to accept or reject probe.
-        for i in xrange(self.m):
+        for i in range(self.m):
             state_energy = self.current_energies[i]
             probe_energy = self.probe_energies[i]
             probe = self.probe_states[i]
@@ -249,9 +249,11 @@ class CoupledAnnealer(object):
         # Update temperatures according to schedule.
         if cool:
             # Update generation temp.
-            self.tgen = self.tgen_initial/k
+            #self.tgen = self.tgen_initial/k
+            self.tgen = 0.99999*self.tgen
 
-            sigma2 = np.var(prob_accept)
+            #sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
+            sigma2 = (sum(np.array(prob_accept)**2)/self.m) - (1/self.m**2)
             if sigma2 < self.desired_variance:
                 self.tacc *= (1 - self.alpha)
             else:
@@ -299,7 +301,7 @@ class CoupledAnnealer(object):
         self.current_energies = self.probe_energies[:]
 
         # Run for `steps` or until user interrupts.
-        for k in xrange(1, self.steps + 1):
+        for k in range(1, self.steps + 1):
             update_func()
             self.__step(k)
 
@@ -320,7 +322,8 @@ class CoupledAnnealer(object):
             oh = modelfunc.get_overhead(best_params, self.args[1:])
         else:
             oh = False
-        modelbest = ModelAnnealer(best_params, best_energy, y_measure,y_pred,pf,oh)
+        modelbest = ModelCoupledAnnealer(best_params, best_energy,
+                                         y_measure, y_pred, pf, oh)
         return modelbest
 
 
@@ -335,7 +338,8 @@ def worker_probe(annealer, i):
     energy = annealer.objective_function(probe)
     return i, energy, probe
 
-class ModelAnnealer:
+
+class ModelCoupledAnnealer:
     """
     Class that represent a speedup model of a parallel application using
     the CSA algorithm
@@ -358,7 +362,8 @@ class ModelAnnealer:
 
     """
 
-    def __init__(self, bp=None, error=None, ymeas=None,ypred=None, pf=None, oh=False):
+    def __init__(self, bp=None, error=None, ymeas=None,
+                 ypred=None, pf=None, oh=False):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
@@ -381,7 +386,7 @@ class ModelAnnealer:
         self.parallelfraction = pf
         self.overhead = oh
 
-    def savedata(self,parsecconfig):
+    def savedata(self, parsecconfig):
         """
         Write to file the caculated model information stored on object class
 
@@ -404,7 +409,8 @@ class ModelAnnealer:
             datatosave['data']['error'] = self.error
             datatosave['data']['parsecdata'] = self.y_measure.to_json()
             datatosave['data']['speedupmodel'] = self.y_model.to_json()
-            datatosave['data']['parallelfraction'] = self.parallelfraction.to_json()
+            datatosave['data']['parallelfraction'] = self.parallelfraction.\
+                to_json()
             if type(self.overhead) == bool:
                 datatosave['data']['overhead'] = False
             else:
@@ -440,7 +446,8 @@ class ModelAnnealer:
             if 'speedupmodel' in datadict.keys():
                 self.y_model = pd.read_json(datadict['speedupmodel'])
             if 'parallelfraction' in datadict.keys():
-                self.parallelfraction = pd.read_json(datadict['parallelfraction'])
+                self.parallelfraction = pd.\
+                    read_json(datadict['parallelfraction'])
             if 'overhead' in datadict.keys():
                 if not datadict['overhead']:
                     self.overhead = datadict['overhead']
@@ -465,7 +472,8 @@ class ModelAnnealer:
         """
 
         if not support3d:
-            print('Warning: No 3D plot support. Please install matplotlib with Axes3D toolkit')
+            print('Warning: No 3D plot support. Please install matplotlib '
+                  'with Axes3D toolkit')
             return
         data = self.y_model
         if not data.empty:
@@ -486,19 +494,16 @@ class ModelAnnealer:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
-                                   edgecolor='k', linestyle='-',
-                                   vmin=(zmin - (zmax - zmin) / 10),
-                                   vmax=(zmax + (zmax - zmin) / 10))
+            ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
+                            edgecolor='k', linestyle='-',
+                            vmin=(zmin - (zmax - zmin) / 10),
+                            vmax=(zmax + (zmax - zmin) / 10))
             ax.set_xlabel('Input Size')
             ax.set_xlim(0, xc[-1])
-            #ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
             ax.set_ylabel('Number of Cores')
-            #ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
             ax.set_ylim(0, yc.max())
             ax.set_zlabel('Speedup')
             ax.set_zlim(0, 1.10 * zmax)
-            #ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()

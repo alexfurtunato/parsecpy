@@ -45,6 +45,7 @@
 """
 
 import os
+import sys
 import time
 import random
 import argparse
@@ -119,6 +120,7 @@ def main():
     else:
         print('Error: You should inform the correct module of objective '
               'function to model')
+        sys.exit()
 
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
@@ -143,8 +145,8 @@ def main():
             modelpath,
             n_annealers=args.annealers,
             initial_state=initial_state,
-            tgen_initial=1,
-            tacc_initial=0.1,
+            tgen_initial=0.1,
+            tacc_initial=0.9,
             steps=args.steps,
             threads=args.threads,
             verbose=args.verbose,

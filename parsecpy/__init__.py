@@ -3,7 +3,7 @@ from .dataprocess import ParsecLogsData
 from .pso import Swarm
 from .pso import ModelSwarm
 from .csa import CoupledAnnealer
-from .csa import ModelAnnealer
+from .csa import ModelCoupledAnnealer
 from . import createinputs
 from . import processlogs
 from . import runprocess
