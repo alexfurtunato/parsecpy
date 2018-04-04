@@ -49,8 +49,22 @@ import sys
 import time
 import random
 import argparse
+import numpy as np
 from parsecpy import ParsecData
 from parsecpy import CoupledAnnealer
+
+
+def argsparselist(txt):
+    """
+    Validate the list of txt argument.
+
+    :param txt: argument of comma separated int strings.
+    :return: list of strings.
+    """
+
+    txt = txt.split(',')
+    listarg = [i.strip() for i in txt]
+    return listarg
 
 
 def argsparsefloatlist(txt):
@@ -90,6 +104,9 @@ def argsparsevalidation():
                         default=1)
     parser.add_argument('-a', '--annealers', type=int,
                         help='Number of annealers', default=10)
+    parser.add_argument('-n', '--problemsizes', type=argsparselist,
+                        help='List of problem sizes to model used. '
+                             'Ex: native_01,native_05,native_08')
     parser.add_argument('-t', '--threads', type=int,
                         help='Number of Threads', default=1)
     parser.add_argument('-r', '--repetitions', type=int,
@@ -98,9 +115,11 @@ def argsparsevalidation():
     parser.add_argument('-m', '--modelfileabspath', required=True,
                         help='Absolute path from Python file with the'
                              'objective function.')
-    parser.add_argument('-v', '--verbose', type=int,
-                        help='If it shows output verbosily: Values: 0, 1, 2',
-                        default=1)
+    parser.add_argument('-c', '--crossvalidation', type=bool,
+                        help='If run the cross validation of modelling',
+                        default=False)
+    parser.add_argument('-v', '--verbosity', type=int,
+                        help='verbosity level. 0 = No verbose', default=0)
     args = parser.parse_args()
     return args
 
@@ -116,63 +135,119 @@ def main():
     args = argsparsevalidation()
 
     if os.path.isfile(args.modelfileabspath):
-        modelpath = args.modelfileabspath
+        modelcodepath = args.modelfileabspath
     else:
         print('Error: You should inform the correct module of objective '
               'function to model')
         sys.exit()
 
+    if not os.path.isfile(args.parsecpyfilename):
+        print('Error: You should inform the correct parsecpy measures file')
+        sys.exit()
+
     parsec_exec = ParsecData(args.parsecpyfilename)
     y_measure = parsec_exec.speedups()
-    n = [(col, int(col.split('_')[1])) for col in y_measure]
-    p = y_measure.index
-    argsanneal = (y_measure, args.overhead, p, n)
 
-    repititions = range(args.repetitions)
+    n = y_measure.columns
+    if args.problemsizes:
+        n_model = n.copy()
+        for i in args.problemsizes:
+            if i not in n_model:
+                print('Error: Measures not has especified problem sizes')
+                sys.exit()
+        y_measure = y_measure[args.problemsizes]
+
+    x = []
+    y = []
+    for i, row in y_measure.iterrows():
+        for c, v in row.iteritems():
+            x.append([i, int(c.split('_')[1])])
+            y.append(v)
+    input_name = c.split('_')[0]
+    x = np.array(x)
+    y = np.array(y)
+
+    argsanneal = (args.overhead, {'x': x, 'y': y, 'input_name': input_name})
+
+    repetitions = range(args.repetitions)
     err_min = 0
     computed_models = []
     best_model_idx = 0
 
     starttime = time.time()
-    for i in repititions:
-        print('Iteration: ', i+1)
+    for i in repetitions:
+        print('\nAlgorithm Execution: ', i+1)
 
         initial_state = [
             tuple((random.normalvariate(0, 5) for _ in range(args.dimension)))
             for _ in range(args.annealers)]
 
         cann = CoupledAnnealer(
-            modelpath,
+            initial_state,
+            modelcodepath=modelcodepath,
             n_annealers=args.annealers,
-            initial_state=initial_state,
             tgen_initial=0.1,
             tacc_initial=0.9,
             steps=args.steps,
             threads=args.threads,
-            verbose=args.verbose,
+            verbosity=args.verbosity,
             update_interval=args.update_interval,
+            parsecpydatapath=args.parsecpyfilename,
             args=argsanneal
         )
         model = cann.run()
         computed_models.append(model)
         if i == 0:
             err_min = model.error
-            print('Error: ', err_min)
+            print('  Error: %.8f' % err_min)
         else:
             if model.error < err_min:
                 best_model_idx = i
-                print('Error: ', err_min, '->', model.error)
+                print('  Error: %.8f -> %.8f ' % (err_min,  model.error))
                 err_min = model.error
         endtime = time.time()
-        print('Execution time = %s seconds' % (endtime - starttime))
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('\n\n***** Done! *****\n')
-    print('Error: %.8f \nPercentual Error (Measured Mean): %.8f %%' %
-          (err_min, 100*err_min/y_measure.mean().mean()))
-    print('Best Parameters: \n', computed_models[best_model_idx].params)
-    print('\nMeasured Speedups: \n', y_measure)
-    print('\nModeled Speedups: \n', computed_models[best_model_idx].y_model)
+    print('\n\n***** Modelling Results! *****\n')
+    print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
+          (computed_models[best_model_idx].error,
+           computed_models[best_model_idx].errorrel))
+    if args.verbosity > 0:
+        print('Best Parameters: \n', computed_models[best_model_idx].params)
+    if args.verbosity > 1:
+        print('\nMeasured Speedup: \n', y_measure)
+        print('\nModeled Speedup: \n', computed_models[best_model_idx].y_model)
+
+    print('\n***** Modelling Done! *****\n')
+
+    if args.crossvalidation:
+        print('\n\n***** Starting cross validation! *****\n')
+        starttime = time.time()
+
+        scores = computed_models[best_model_idx].validate(kfolds=10)
+        print('\n  Cross Validation (K-fold, K=10) Metrics: ')
+        if args.verbosity > 2:
+            print('\n   Times: ')
+            for key, value in scores['times'].items():
+                print('     %s: %.8f' % (key, value.mean()))
+                print('     ', value)
+        print('\n   Scores: ')
+        for key, value in scores['scores'].items():
+            if args.verbosity > 1:
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
+                print('     ', value['value'])
+            else:
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
+
+        endtime = time.time()
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
+
+        print('\n***** Cross Validation Done! *****\n')
+
+    print('\n\n***** ALL DONE! *****\n')
 
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)

@@ -155,13 +155,14 @@ class Swarm:
             vxmin - Minimum particles velocity
             vxmax - Maximum particles velocity
             size - Size of swarm (number of particles)
-            particles - List within swarm particles objects
+            particles - List with swarm particles objects
             bestparticle - Swarm best particle object
 
         Methods
             _obj_wrapper()
             _constraint_wrapper()
             _swarm_med()
+            databuild()
             run()
 
     """
@@ -238,12 +239,13 @@ class Swarm:
                 exec(self.modelcodesource, self.modelfunc.__dict__)
 
         self.constr = partial(self._constraint_wrapper,
-                              self.modelfunc.constraint_function, self.args,
-                              self.kwargs)
+                              self.modelfunc.constraint_function,
+                              self.args, self.kwargs)
 
         self.obj = partial(self._obj_wrapper,
-                           self.modelfunc.objective_function, self.args,
-                           self.kwargs)
+                           self.modelfunc.objective_function,
+                           self.args, self.kwargs)
+
         bestfpos = np.ones(self.size)*np.inf
         newfpos = np.zeros(self.size)
         constraint = np.zeros(self.size)
@@ -444,6 +446,7 @@ class ModelSwarm:
             self.overhead = oh
             self.modelexecparams = modelexecparams
             self.modelcodesource = None
+            self.validation = None
             if modelcodepath is not None:
                 f = open(modelcodepath)
                 self.modelcodesource = f.read()
@@ -462,7 +465,7 @@ class ModelSwarm:
         """
         Load a python module stored on a string.
 
-        :param codetext: string within model alghorithm.
+        :param codetext: string with model alghorithm.
         :param modulename: name of module to load with python code.
         :return: return module object with model alghorithm
         """
@@ -479,7 +482,7 @@ class ModelSwarm:
 
         :param args: array with number of cores and input size
                      or array of array.
-        :return: return a array within speedup values.
+        :return: return a array with speedup values.
         """
 
         if self.params is None:
@@ -503,7 +506,7 @@ class ModelSwarm:
 
         :param kfolds: number of folds to divide for cross-validate run.
         :param scoring: dictionary with defined scores to calculate
-        :return: return dictionary within calculated scores.
+        :return: return dictionary with calculated scores.
         """
 
         kf = KFold(n_splits=kfolds, shuffle=True)
@@ -776,13 +779,13 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
         p = deepcopy(self.modeldata.modelexecparams)
         args = (p['args'][0], {'x': X, 'y': y,
                                'input_name': p['args'][1]['input_name']})
-        S = Swarm(p['pxmin'], p['pxmax'], args=args, threads=p['threads'],
+        sw = Swarm(p['pxmin'], p['pxmax'], args=args, threads=p['threads'],
                   size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
                   maxiter=p['maxiter'],
                   modelcodesource=self.modeldata.modelcodesource,
                   parsecpydatapath=p['parsecpydatapath'],
                   verbosity=self.verbosity)
-        self.modeldata = S.run()
+        self.modeldata = sw.run()
         self.X_ = X
         self.y_ = y
         return self

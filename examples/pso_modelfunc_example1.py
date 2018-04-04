@@ -23,7 +23,7 @@ def get_parallelfraction(param, x):
 
     :param param: Actual parameters values
     :param x: Inputs array
-    :return: Tuple within input array and predicted parallel fraction array
+    :return: Tuple with input array and predicted parallel fraction array
     """
 
     pf = []
@@ -38,7 +38,7 @@ def get_overhead(param, x):
 
     :param param: Actual parameters values
     :param x: Inputs array
-    :return: Tuple within input array and predicted overhead array
+    :return: Tuple with input array and predicted overhead array
     """
 
     oh = []
@@ -110,7 +110,7 @@ def model(par, x, oh):
     :param par: Actual parameters values
     :param x: inputs array
     :param oh: If should be considered the overhead
-    :return: Tuple within input array and predicted output array
+    :return: Tuple with input array and predicted output array
     """
 
     pred = []

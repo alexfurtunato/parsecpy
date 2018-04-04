@@ -151,7 +151,7 @@ def fluidanimate_splitdiff(tfile, n, frmax):
 
 def freqmine_splitequal(tfile, n, ms):
     """
-    Split Freqmine Benchmark input tar file within 'n' equal size
+    Split Freqmine Benchmark input tar file with 'n' equal size
     parts of new tar files with names like originalname_1 ... originalname_n.
 
     :param tfile: Freqmine input tar file name to split.
@@ -228,7 +228,7 @@ def freqmine_splitequal(tfile, n, ms):
 
 def freqmine_splitdiff(tfile, n, ms):
     """
-    Split Freqmine Benchmark input tar file within 'n' arithmetic progressive
+    Split Freqmine Benchmark input tar file with 'n' arithmetic progressive
     size parts of new tar files with names like originalname_1 ...
     originalname_n.
 
@@ -315,7 +315,7 @@ def freqmine_splitdiff(tfile, n, ms):
 
 def dedup_splitdiff(tfile, n):
     """
-    Split Dedup Benchmark input tar file within 'n' arithmetic progressive
+    Split Dedup Benchmark input tar file with 'n' arithmetic progressive
     size parts of new tar files with names like originalname_1 ...
     originalname_n.
 
@@ -394,7 +394,7 @@ def dedup_splitdiff(tfile, n):
 
 def x264_splitdiff(tfile, n):
     """
-    Split x264 Benchmark input tar file within 'n' arithmetic progressive
+    Split x264 Benchmark input tar file with 'n' arithmetic progressive
     size parts of new tar files with names like originalname_1 ...
     originalname_n.
 

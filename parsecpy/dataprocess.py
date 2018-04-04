@@ -495,7 +495,7 @@ class ParsecLogsData(ParsecData):
         Read all logs files that found in foldername and initialize
         the object class dictionaries.
 
-        :param foldername: Folder name within logs files data.
+        :param foldername: Folder name with logs files data.
         """
 
         if os.path.isdir(foldername):
@@ -551,7 +551,7 @@ class ParsecLogsData(ParsecData):
 
     def runlogfilesprocess(self):
         """
-        Process parsec log files within a folder and load data on
+        Process parsec log files with a folder and load data on
         object class attributes
 
         :return:

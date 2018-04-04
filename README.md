@@ -4,7 +4,7 @@ Python library to interface with PARSEC 2.1 and 3.0 Benchmark, controlling execu
 processing the output measures times data to calculate speedups. Further, the library can generate a 
 mathematical model of speedup of a parallel application, based on "Particles Swarm Optimization" or 
 "Coupled Simulating Annealing" algorithms to discover the parameters that minimize a "objective function".
-The objective function can be build within a module python passed as argument to library on execution script.
+The objective function can be build with a module python passed as argument to library on execution script.
 
 ## Features
 

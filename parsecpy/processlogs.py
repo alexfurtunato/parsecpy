@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 """
-    Module to process parsec logs files within a folder and generate
+    Module to process parsec logs files with a folder and generate
     a Pandas Dataframe with mesures times and speedups os runs.
 
     parsecpy_processlogs [-h] foldername outputfilename
