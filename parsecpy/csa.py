@@ -283,13 +283,13 @@ class CoupledAnnealer(object):
 
         if start_time:
             elapsed = time.time() - start_time
-            print("Step {:6d}, Energy {:,.8f}, Elapsed time {:,.2f} secs"
+            print("Step {:6d} - Error {:,.8f}, Elapsed time {:,.2f} secs"
                   .format(k, energy, elapsed))
         else:
-            print("Step {:6d}, Energy {:,.8f}".format(k, energy))
+            print("Step {:6d} - Error {:,.8f}".format(k, energy))
         if temps:
-            print("Updated acceptance temp {:,.6f}".format(temps[0]))
-            print("Updated generation temp {:,.6f}".format(temps[1]))
+            print("  Updated acceptance temp {:,.6f}".format(temps[0]))
+            print("  Updated generation temp {:,.6f}".format(temps[1]))
             print()
 
     def __get_best(self):
@@ -344,12 +344,12 @@ class CoupledAnnealer(object):
             update_func()
             self.__step(k)
 
-            if k % self.update_interval == 0 and self.verbosity >= 0:
+            if k % self.update_interval == 0 and self.verbosity > 2:
                 temps = (self.tacc, self.tgen)
                 self.__status_check(k, min(self.current_energies),
                                     temps=temps,
                                     start_time=start_time)
-            elif self.verbosity >= 1:
+            elif self.verbosity > 1:
                 self.__status_check(k, min(self.current_energies))
 
         best_energy, best_params = self.__get_best()
