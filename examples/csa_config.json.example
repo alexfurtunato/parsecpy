@@ -1,0 +1,19 @@
+{
+  "parsecpyfilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
+  "modelfilepath": "/home/userexample/csa_modelfunc.py",
+  "problemsizes": null,
+  "overhead": false,
+  "annealers": 10,
+  "dimension": 5,
+  "steps": 100,
+  "update_interval": 1,
+  "tgen_initial": 0.1,
+  "tgen_upd_factor": 0.999,
+  "tacc_initial": 0.1,
+  "alpha": 0.05,
+  "desired_variance": 0.99,
+  "threads": 1,
+  "repetitions": 1,
+  "crossvalidation": false,
+  "verbosity": 1
+}

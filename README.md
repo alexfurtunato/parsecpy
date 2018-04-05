@@ -86,30 +86,60 @@ The objective function can be build with a module python passed as argument to l
                     threads=10, steps=1000, update_interval=100, dimension=5, 
                     args=argscsa, modelpath=/root/mymodelfunc.py)
     >>> model = csa.run()
+    >>> model.validate()
     >>> print(model.params)
+    >>> print(model.validation)
     
 #### Requirements for model python module
 
 The python module file provided by user should has the following
     requirements:
 
- - Should has, at least, two function as following:
+ - To PSO model, should has the constraint function as following:
  
-        def constraint_function(p, *args):
+    def constraint_function(p, *args):
+        # your code
+        # arguments:
+        # par - particle object
+        # args - list of position arguments passed to function:
+        #   args[0] - boolean value (if overhead should be considerable)
+        #   args[1] - Dictionary with 3 elements:
+                   'x' - List of tuples with independet variable(s)
+                   'y' - List of dependent variable (target)
+                   'input_name' - name of input size of parsec
+        # analize the feasable of particles position (searched parameters)
+        # return True or False, depend of requirements
+        return boolean_value
+
+ - To CSA model, should has probe function as following:
+
+    def probe_function(par, tgen, *args):
+        # your code
+        # arguments:
+        # par - actual parameters values
+        # tgen - actual temperature of generation
+        # args - list of position arguments passed to function:
+        #   args[0] - boolean value (if overhead should be considerable)
+        #   args[1] - Dictionary with 3 elements:
+                      'x' - List of tuples with independet variable(s)
+                      'y' - List of dependent variable (target)
+                      'input_name' - name of input size of parsec
+        # generate a new probe solution
+        # return a list os parameters of probe solution
+        return probe_solution
+
+ - And the models files should has a objective function as following:
+
+        def objective_function(par, *args):
             # your code
-            # arguments: 
-            # p - particle object
+            # arguments:
+            # par - particle object
             # args - list of position arguments passed to function:
-            #   args[0] - Pandas Dataframe object of measured speedups (PasecData speedups)     
-            #   args[1] - boolean value (if overhead should be considerable)
-            #   args[2] - list of number of cores used on args[0] measured speedups
-            #   args[3] - list of number of problems sizes used on args[0] measured speedups
-            # analize the feasable of particles position (searched parameters)
-            # return True or False, depend of requirements
-            return boolean_value
-            
-        def objective_function(p, *args):
-            # your code
+            #   args[0] - boolean value (if overhead should be considerable)
+            #   args[1] - Dictionary with 3 elements:
+                       'x' - List of tuples with independet variable(s)
+                       'y' - List of dependent variable (target)
+                       'input_name' - name of input size of parsec
             # calculate the function with should be minimized
             # return the calculated value
             return float_value 
@@ -145,74 +175,96 @@ Script to run parsec app with repetitions and multiples inputs sizes
 
 ### Run PSO Modelling script
 
-Script to run swarm modelling to predict aparsec application output
+Script to run swarm modelling to predict a parsec application output. On examples folder, exists a template file of
+configurations parameters to use on execution of this script
 
-    parsecpy_runmodel_pso [-h] -f PARSECPYFILENAME -l LOWERVALUES -u
-                                 UPPERVALUES [-o OVERHEAD] [-x MAXITERATIONS]
-                                 [-p PARTICLES] [-t THREADS] [-r REPETITIONS] -m
-                                 MODELFILEABSPATH
-    
+    usage: parsecpy_runmodel_pso [-h] --config CONFIG -f PARSECPYFILEPATH
+                             [-p PARTICLES] [-x MAXITERATIONS]
+                             [-l LOWERVALUES] [-u UPPERVALUES]
+                             [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
+                             [-r REPETITIONS] [-c CROSSVALIDATION]
+                             [-v VERBOSITY]
+
+    Script to run swarm modelling to predict aparsec application output
+
     optional arguments:
       -h, --help            show this help message and exit
-      -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
-                            Input filename from Parsec specificated package.
+      --config CONFIG       Filepath from Configuration file configurations
+                            parameters
+      -f PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
+                            Path from input data file from Parsec specificated
+                            package.
+      -p PARTICLES, --particles PARTICLES
+                            Number of particles
+      -x MAXITERATIONS, --maxiterations MAXITERATIONS
+                            Number max of iterations
       -l LOWERVALUES, --lowervalues LOWERVALUES
                             List of minimum particles values used. Ex: -1,0,-2,0
       -u UPPERVALUES, --uppervalues UPPERVALUES
                             List of maximum particles values used. Ex: 5,2,1,10
+      -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
+                            List of problem sizes to model used. Ex:
+                            native_01,native_05,native_08
       -o OVERHEAD, --overhead OVERHEAD
                             If it consider the overhead
-      -x MAXITERATIONS, --maxiterations MAXITERATIONS
-                            Number max of iterations
-      -p PARTICLES, --particles PARTICLES
-                            Number of particles
       -t THREADS, --threads THREADS
                             Number of Threads
       -r REPETITIONS, --repetitions REPETITIONS
                             Number of repetitions to algorithm execution
-      -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
-                            Absolute path from Python file with theobjective
-                            function.
+      -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
+                            If run the cross validation of modelling
+      -v VERBOSITY, --verbosity VERBOSITY
+                            verbosity level. 0 = No verbose
     Example
-        parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10 
-            -f /var/myparsecsim.dat -m /var/mymodelfunc.py -x 1000 -p 10
+        parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10
+            -f /var/myparsecsim.dat --config /var/myconfig.json -x 1000 -p 10
 
   
 ### Run CSA Modelling script
 
-Script to run csa modelling to predict aparsec application output
+Script to run csa modelling to predict a parsec application output. On examples folder, exists a template file of
+configurations parameters to use on execution of this script
 
-    parsecpy_runmodel_csa [-h] -f PARSECPYFILENAME [-o OVERHEAD]
-                                 [-d DIMENSION] [-s STEPS] [-u UPDATE_INTERVAL]
-                                 [-a ANNEALERS] [-t THREADS] [-r REPETITIONS] -m
-                                 MODELFILEABSPATH [-v VERBOSE]
+    usage: parsecpy_runmodel_csa [-h] --config CONFIG -f PARSECPYFILENAME
+                             [-a ANNEALERS] [-s STEPS] [-u UPDATE_INTERVAL]
+                             [-d DIMENSION] [-n PROBLEMSIZES] [-o OVERHEAD]
+                             [-t THREADS] [-r REPETITIONS]
+                             [-c CROSSVALIDATION] [-v VERBOSITY]
+
+    Script to run csa modelling to predict aparsec application output
 
     optional arguments:
       -h, --help            show this help message and exit
+      --config CONFIG       Filepath from Configuration file configurations
+                            parameters
       -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
-                            Input filename from Parsec specificated package.
-      -o OVERHEAD, --overhead OVERHEAD
-                            If it consider the overhead
-      -d DIMENSION, --dimension DIMENSION
-                            Number of parameters
+                            Absolute path from Input filename from Parsec
+                            specificated package.
+      -a ANNEALERS, --annealers ANNEALERS
+                            Number of annealers
       -s STEPS, --steps STEPS
                             Number max of iterations
       -u UPDATE_INTERVAL, --update_interval UPDATE_INTERVAL
                             Number steps to run cooling temperatures
-      -a ANNEALERS, --annealers ANNEALERS
-                            Number of annealers
+      -d DIMENSION, --dimension DIMENSION
+                            Number of parameters
+      -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
+                            List of problem sizes to model used. Ex:
+                            native_01,native_05,native_08
+      -o OVERHEAD, --overhead OVERHEAD
+                            If it consider the overhead
       -t THREADS, --threads THREADS
                             Number of Threads
       -r REPETITIONS, --repetitions REPETITIONS
                             Number of repetitions to algorithm execution
-      -m MODELFILEABSPATH, --modelfileabspath MODELFILEABSPATH
-                            Absolute path from Python file with theobjective
-                            function.
-      -v VERBOSE, --verbose VERBOSE
-                            If it shows output verbosily: Values: 0, 1, 2
+      -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
+                            If run the cross validation of modelling
+      -v VERBOSITY, --verbosity VERBOSITY
+                            verbosity level. 0 = No verbose
 
     Example
-        parsecpy_runmodel_csa -f /var/myparsecsim.dat -m /var/mymodelfunc.py -d 5 -s 1000 -a 10
+        parsecpy_runmodel_csa -f /var/myparsecsim.dat
+        --config /var/myconfig.json -d 5 -s 1000 -a 10
   
     
 ### Logs process

@@ -41,7 +41,7 @@ class CoupledAnnealer(object):
     """
     Class for performing coupled simulated annealing process.
 
-    **Parameters**:
+        Attributes
 
       - objective_function: function
             A function which outputs a float.
@@ -106,18 +106,19 @@ class CoupledAnnealer(object):
     """
 
     def __init__(self, initial_state,
+                 parsecpydatapath=None,
                  modelcodepath=None,
                  modelcodesource=None,
                  n_annealers=10,
                  steps=10000,
                  update_interval=100,
                  tgen_initial=0.1,
+                 tgen_upd_factor=0.99999,
                  tacc_initial=0.9,
                  alpha=0.05,
                  desired_variance=None,
-                 verbosity=0,
                  threads=1,
-                 parsecpydatapath=None,
+                 verbosity=0,
                  args=(),
                  kwargs={}):
         self.steps = steps
@@ -126,6 +127,7 @@ class CoupledAnnealer(object):
         self.update_interval = update_interval
         self.verbosity = verbosity
         self.tgen = tgen_initial
+        self.tgen_upd_factor = tgen_upd_factor
         self.tacc = tacc_initial
         self.alpha = alpha
         self.args = args
@@ -266,8 +268,7 @@ class CoupledAnnealer(object):
         # Update temperatures according to schedule.
         if cool:
             # Update generation temp.
-            #self.tgen = self.tgen_initial/k
-            self.tgen = 0.99999*self.tgen
+            self.tgen = self.tgen_upd_factor*self.tgen
 
             #sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
             sigma2 = (sum(np.array(prob_accept)**2)/self.m) - (1/self.m**2)
@@ -370,6 +371,7 @@ class CoupledAnnealer(object):
                            'steps': self.steps, 'dimension': len(best_params),
                            'args': self.args, 'threads': self.threads,
                            'tgen': self.tgen_initial, 'tacc': self.tacc,
+                           'tgen_upd_factor': self.tgen_upd_factor,
                            'desired_variance': self.desired_variance,
                            'update_interval': self.update_interval,
                            'modelcodepath': self.modelcodepath,
@@ -577,7 +579,7 @@ class ModelCoupledAnnealer:
             mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
             mep['args'][1]['y'] = json.dumps(mep['args'][1]['y'].tolist())
             datatosave['config']['modelexecparams'] = mep
-            datatosave['data']['params'] = pd.Series(self.params).to_json()
+            datatosave['data']['params'] = str(list(self.params))
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_json()
@@ -649,7 +651,7 @@ class ModelCoupledAnnealer:
                                  dtype=value['type'])
                 self.validation = val
             if 'params' in datadict.keys():
-                self.params = pd.Series(eval(datadict['params']))
+                self.params = json.loads(datadict['params'])
             if 'error' in datadict.keys():
                 self.error = datadict['error']
             if 'errorrel' in datadict.keys():
@@ -780,16 +782,19 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
         args = (p['args'][0], {'x': X, 'y': y,
                                'input_name': p['args'][1]['input_name']})
         cann = CoupledAnnealer(initial_state,
-            args=args,
-            n_annealers=p['m'],
-            tgen_initial=p['tgen'],
-            tacc_initial=p['tacc'],
-            steps=p['steps'],
-            threads=p['threads'],
-            update_interval=p['update_interval'],
-            modelcodesource=self.modeldata.modelcodesource,
             parsecpydatapath=p['parsecpydatapath'],
-            verbosity = self.verbosity)
+            modelcodesource=self.modeldata.modelcodesource,
+            n_annealers=p['m'],
+            steps=p['steps'],
+            update_interval=p['update_interval'],
+            tgen_initial=p['tgen'],
+            tgen_upd_factor=p['tgen_upd_factor'],
+            tacc_initial=p['tacc'],
+            alpha=p['alpha'],
+            desired_variance=p['desired_variance'],
+            threads=p['threads'],
+            verbosity = self.verbosity,
+            args=args)
         self.modeldata = cann.run()
         self.X_ = X
         self.y_ = y

@@ -156,6 +156,11 @@ class Swarm:
             vxmax - Maximum particles velocity
             size - Size of swarm (number of particles)
             particles - List with swarm particles objects
+            modelcodepath -
+            modelcodesource -
+            modelbest -
+            parsecpydatapath -
+            verbosity -
             bestparticle - Swarm best particle object
 
         Methods
@@ -167,10 +172,10 @@ class Swarm:
 
     """
 
-    def __init__(self, lxmin, lxmax, modelcodepath=None,
-                 modelcodesource=None, size=100, w=0.5, c1=2, c2=2,
-                 maxiter=100, threads=1, verbosity=True,
-                 parsecpydatapath=None, args=(), kwargs={}):
+    def __init__(self, lxmin, lxmax, parsecpydatapath=None,
+                 modelcodepath=None, modelcodesource=None,
+                 size=100, w=0.5, c1=2, c2=2, maxiter=100,
+                 threads=1, verbosity=True, args=(), kwargs={}):
         """
         Initialize the particles swarm calculating the initial attribute
         values and find out the initial best particle. The objective and
@@ -580,7 +585,7 @@ class ModelSwarm:
             mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
             mep['args'][1]['y'] = json.dumps(mep['args'][1]['y'].tolist())
             datatosave['config']['modelexecparams'] = mep
-            datatosave['data']['params'] = pd.Series(self.params).to_json()
+            datatosave['data']['params'] = str(list(self.params))
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_json()
@@ -630,8 +635,8 @@ class ModelSwarm:
             if 'modelexecparams' in configdict.keys():
                 mep = deepcopy(configdict['modelexecparams'])
                 self.modelexecparams = deepcopy(mep)
-                self.modelexecparams['pxmin'] = eval(mep['pxmin'])
-                self.modelexecparams['pxmax'] = eval(mep['pxmax'])
+                self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
+                self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
                 self.modelexecparams['args'] = (mep['args'][0], {})
                 self.modelexecparams['args'][1]['input_name'] = \
                     mep['args'][1]['input_name']
@@ -654,7 +659,7 @@ class ModelSwarm:
                                  dtype=value['type'])
                 self.validation = val
             if 'params' in datadict.keys():
-                self.params = pd.Series(eval(datadict['params']))
+                self.params = json.loads(datadict['params'])
             if 'error' in datadict.keys():
                 self.error = datadict['error']
             if 'errorrel' in datadict.keys():
@@ -779,12 +784,13 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
         p = deepcopy(self.modeldata.modelexecparams)
         args = (p['args'][0], {'x': X, 'y': y,
                                'input_name': p['args'][1]['input_name']})
-        sw = Swarm(p['pxmin'], p['pxmax'], args=args, threads=p['threads'],
-                  size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
-                  maxiter=p['maxiter'],
-                  modelcodesource=self.modeldata.modelcodesource,
-                  parsecpydatapath=p['parsecpydatapath'],
-                  verbosity=self.verbosity)
+        sw = Swarm(p['pxmin'], p['pxmax'],
+                   parsecpydatapath=p['parsecpydatapath'],
+                   modelcodesource=self.modeldata.modelcodesource,
+                   size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
+                   maxiter=p['maxiter'], threads=p['threads'],
+                   verbosity=self.verbosity,
+                   args=args)
         self.modeldata = sw.run()
         self.X_ = X
         self.y_ = y
