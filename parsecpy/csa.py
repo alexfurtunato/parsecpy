@@ -153,14 +153,6 @@ class CoupledAnnealer(object):
                 self.modelfunc = types.ModuleType('psomodel')
                 exec(self.modelcodesource, self.modelfunc.__dict__)
 
-        self.probe_function = partial(self._probe_wrapper,
-                                      self.modelfunc.probe_function,
-                                      self.args, self.kwargs)
-
-        self.objective_function = partial(self._obj_wrapper,
-                                          self.modelfunc.objective_function,
-                                          self.args, self.kwargs)
-
         # Set desired_variance.
         if desired_variance is None:
             desired_variance = 0.99
@@ -176,6 +168,22 @@ class CoupledAnnealer(object):
         # Initialize energies.
         self.probe_energies = self.current_energies = [None] * self.m
 
+
+        self.probe_function = partial(self._probe_wrapper,
+                                      self.modelfunc.probe_function,
+                                      self.args, self.kwargs)
+
+        self.objective_function = partial(self._obj_wrapper,
+                                          self.modelfunc.objective_function,
+                                          self.args, self.kwargs)
+        self.worker = partial(self._worker_wrapper,
+                              self.modelfunc.objective_function,
+                              self.modelfunc.probe_function,
+                              self.args, self.kwargs,
+                              self.current_states,
+                              self.tgen)
+
+
     @staticmethod
     def _obj_wrapper(func, args, kwargs, x):
         """
@@ -184,7 +192,7 @@ class CoupledAnnealer(object):
         :param func: objective function.
         :param args: positional arguments to pass on to objective function
         :param kwargs: key arguments to pass on to objective function
-        :param x: particle used to calculate objective function
+        :param x: probe parameters used to calculate objective function
         :return: return the calculated objective function.
         """
 
@@ -198,11 +206,28 @@ class CoupledAnnealer(object):
         :param func: constraint function.
         :param args: positional arguments to pass on to constraint function
         :param kwargs: key arguments to pass on to constraint function
-        :param x: particle used to calculate constraint function
-        :return: If this particle is feasable or not.
+        :param x: annealer state used to calculate the probe parameters
+        :return: A new probe solution based on tgen and a random function
         """
 
         return func(x, tgen, *args, **kwargs)
+
+    @staticmethod
+    def _worker_wrapper(func1, func2, args, kwargs, cur, tgen, i):
+        """
+        This is the function that will spread across different processes in
+        parallel to compute the current energy at each probe.
+
+        :return: The params of 'ith' probe and calculated energy from it
+        """
+        state = cur[i]
+        probe = func2(state, tgen, *args, **kwargs)
+        energy = func1(probe, *args, **kwargs)
+        x = json.dumps({'i': i, 'energy': energy, 'probe': probe})
+        return x
+
+    def worker_2(self, i):
+        pass
 
     def __update_state(self):
         """
@@ -210,23 +235,26 @@ class CoupledAnnealer(object):
         """
 
         # Set up the mp pool.
-        pool = mp.Pool(processes=self.threads)
+        mpool = mp.Pool(processes=self.threads)
 
         # Put the workers to work.
-        results = []
-        for i in range(self.m):
-            pool.apply_async(worker_probe, args=(self, i,),
-                             callback=lambda x: results.append(x))
+        results = np.array(mpool.map(self.worker, range(self.m)))
+        #results = []
+        #for i in range(self.m):
+        #    mpool.apply_async(worker_probe, args=(self, i,),
+        #                     callback=lambda x: results.append(x))
 
         # Gather the results from the workers.
-        pool.close()
-        pool.join()
+        #mpool.close()
+        #mpool.join()
+
+        mpool.terminate()
 
         # Update the states and energies from each probe.
         for res in results:
-            i, energy, probe = res
-            self.probe_energies[i] = energy
-            self.probe_states[i] = probe
+            res = json.loads(res)
+            self.probe_energies[res['i']] = res['energy']
+            self.probe_states[res['i']] = res['probe']
 
     def __update_state_no_par(self):
         """
