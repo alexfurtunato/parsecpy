@@ -137,7 +137,6 @@ class CoupledAnnealer(object):
         self.modelcodepath = modelcodepath
         self.modelcodesource = modelcodesource
 
-
         if self.modelcodepath is not None:
             pythonfile = os.path.basename(modelcodepath)
             pythonmodule = pythonfile.split('.')[0]
@@ -168,21 +167,12 @@ class CoupledAnnealer(object):
         # Initialize energies.
         self.probe_energies = self.current_energies = [None] * self.m
 
-
         self.probe_function = partial(self._probe_wrapper,
                                       self.modelfunc.probe_function,
-                                      self.args, self.kwargs)
-
+                                      self.args, self.kwargs, self.tgen)
         self.objective_function = partial(self._obj_wrapper,
                                           self.modelfunc.objective_function,
                                           self.args, self.kwargs)
-        self.worker = partial(self._worker_wrapper,
-                              self.modelfunc.objective_function,
-                              self.modelfunc.probe_function,
-                              self.args, self.kwargs,
-                              self.current_states,
-                              self.tgen)
-
 
     @staticmethod
     def _obj_wrapper(func, args, kwargs, x):
@@ -199,7 +189,7 @@ class CoupledAnnealer(object):
         return func(x, *args, **kwargs)
 
     @staticmethod
-    def _probe_wrapper(func, args, kwargs, x, tgen):
+    def _probe_wrapper(func, args, kwargs, tgen, x):
         """
         Wrapper function that point to constraint function.
 
@@ -212,23 +202,6 @@ class CoupledAnnealer(object):
 
         return func(x, tgen, *args, **kwargs)
 
-    @staticmethod
-    def _worker_wrapper(func1, func2, args, kwargs, cur, tgen, i):
-        """
-        This is the function that will spread across different processes in
-        parallel to compute the current energy at each probe.
-
-        :return: The params of 'ith' probe and calculated energy from it
-        """
-        state = cur[i]
-        probe = func2(state, tgen, *args, **kwargs)
-        energy = func1(probe, *args, **kwargs)
-        x = json.dumps({'i': i, 'energy': energy, 'probe': probe})
-        return x
-
-    def worker_2(self, i):
-        pass
-
     def __update_state(self):
         """
         Update the current state across all annealers in parallel.
@@ -236,25 +209,12 @@ class CoupledAnnealer(object):
 
         # Set up the mp pool.
         mpool = mp.Pool(processes=self.threads)
-
         # Put the workers to work.
-        results = np.array(mpool.map(self.worker, range(self.m)))
-        #results = []
-        #for i in range(self.m):
-        #    mpool.apply_async(worker_probe, args=(self, i,),
-        #                     callback=lambda x: results.append(x))
-
-        # Gather the results from the workers.
-        #mpool.close()
-        #mpool.join()
-
+        self.probe_states = np.array(mpool.map(self.probe_function,
+                                            self.current_states))
+        self.probe_energies = np.array(mpool.map(self.objective_function,
+                                            self.probe_states))
         mpool.terminate()
-
-        # Update the states and energies from each probe.
-        for res in results:
-            res = json.loads(res)
-            self.probe_energies[res['i']] = res['energy']
-            self.probe_states[res['i']] = res['probe']
 
     def __update_state_no_par(self):
         """
@@ -262,9 +222,8 @@ class CoupledAnnealer(object):
         """
 
         for i in range(self.m):
-            i, energy, probe = worker_probe(self, i)
-            self.probe_energies[i] = energy
-            self.probe_states[i] = probe
+            self.probe_states[i] = self.probe_function(self.current_states[i])
+            self.probe_energies[i] = self.objective_function(self.probe_states[i])
 
     def __step(self, k):
         """
@@ -298,14 +257,15 @@ class CoupledAnnealer(object):
             # Update generation temp.
             self.tgen = self.tgen_upd_factor*self.tgen
 
-            #sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
+            # sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
             sigma2 = (sum(np.array(prob_accept)**2)/self.m) - (1/self.m**2)
             if sigma2 < self.desired_variance:
                 self.tacc *= (1 - self.alpha)
             else:
                 self.tacc *= (1 + self.alpha)
 
-    def __status_check(self, k, energy, temps=None, start_time=None):
+    @staticmethod
+    def __status_check(k, energy, temps=None, start_time=None):
         """
         Print updates to the user. Everybody is happy.
         """
@@ -413,20 +373,6 @@ class CoupledAnnealer(object):
                                               modelcodesource=self.modelcodesource,
                                               modelexecparams=modelexecparams)
         return self.modelbest
-
-
-def worker_probe(annealer, i):
-    """
-    This is the function that will spread across different processes in
-    parallel to compute the current energy at each probe.
-
-    :return: The params of 'ith' probe and calculated energy from it
-    """
-
-    state = annealer.current_states[i]
-    probe = annealer.probe_function(state, annealer.tgen)
-    energy = annealer.objective_function(probe)
-    return i, energy, probe
 
 
 class ModelCoupledAnnealer:
@@ -810,19 +756,19 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
         args = (p['args'][0], {'x': X, 'y': y,
                                'input_name': p['args'][1]['input_name']})
         cann = CoupledAnnealer(initial_state,
-            parsecpydatapath=p['parsecpydatapath'],
-            modelcodesource=self.modeldata.modelcodesource,
-            n_annealers=p['m'],
-            steps=p['steps'],
-            update_interval=p['update_interval'],
-            tgen_initial=p['tgen'],
-            tgen_upd_factor=p['tgen_upd_factor'],
-            tacc_initial=p['tacc'],
-            alpha=p['alpha'],
-            desired_variance=p['desired_variance'],
-            threads=p['threads'],
-            verbosity = self.verbosity,
-            args=args)
+                               parsecpydatapath=p['parsecpydatapath'],
+                               modelcodesource=self.modeldata.modelcodesource,
+                               n_annealers=p['m'],
+                               steps=p['steps'],
+                               update_interval=p['update_interval'],
+                               tgen_initial=p['tgen'],
+                               tgen_upd_factor=p['tgen_upd_factor'],
+                               tacc_initial=p['tacc'],
+                               alpha=p['alpha'],
+                               desired_variance=p['desired_variance'],
+                               threads=p['threads'],
+                               verbosity=self.verbosity,
+                               args=args)
         self.modeldata = cann.run()
         self.X_ = X
         self.y_ = y
