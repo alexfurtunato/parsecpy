@@ -211,9 +211,9 @@ class CoupledAnnealer(object):
         mpool = mp.Pool(processes=self.threads)
         # Put the workers to work.
         self.probe_states = np.array(mpool.map(self.probe_function,
-                                            self.current_states))
+                                               self.current_states))
         self.probe_energies = np.array(mpool.map(self.objective_function,
-                                            self.probe_states))
+                                                 self.probe_states))
         mpool.terminate()
 
     def __update_state_no_par(self):
@@ -222,8 +222,10 @@ class CoupledAnnealer(object):
         """
 
         for i in range(self.m):
-            self.probe_states[i] = self.probe_function(self.current_states[i])
-            self.probe_energies[i] = self.objective_function(self.probe_states[i])
+            self.probe_states[i] = self.probe_function(
+                self.current_states[i])
+            self.probe_energies[i] = self.objective_function(
+                self.probe_states[i])
 
     def __step(self, k):
         """
@@ -244,13 +246,12 @@ class CoupledAnnealer(object):
 
         # Determine whether to accept or reject probe.
         for i in range(self.m):
-            state_energy = self.current_energies[i]
-            probe_energy = self.probe_energies[i]
-            probe = self.probe_states[i]
-            p = prob_accept[i]
-            if (probe_energy < state_energy) or (random.uniform(0, 1) < p):
-                self.current_energies[i] = probe_energy
-                self.current_states[i] = probe
+            if (self.probe_energies[i] < self.current_energies[i]) \
+                    or (random.uniform(0, 1) < prob_accept[i]):
+                self.current_energies[i] = self.probe_energies[i]
+                self.current_states[i] = self.probe_states[i]
+            if self.verbosity > 2:
+                print('Annealer %s: %s' % (i,self.current_states[i]))
 
         # Update temperatures according to schedule.
         if cool:
@@ -272,10 +273,10 @@ class CoupledAnnealer(object):
 
         if start_time:
             elapsed = time.time() - start_time
-            print("Step {:6d} - Error {:,.8f}, Elapsed time {:,.2f} secs"
+            print("\nStep {:6d} - Error {:,.8f}, Elapsed time {:,.2f} secs"
                   .format(k, energy, elapsed))
         else:
-            print("Step {:6d} - Error {:,.8f}".format(k, energy))
+            print("\nStep {:6d} - Error {:,.8f}".format(k, energy))
         if temps:
             print("  Updated acceptance temp {:,.6f}".format(temps[0]))
             print("  Updated generation temp {:,.6f}".format(temps[1]))

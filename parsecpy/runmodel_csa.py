@@ -100,7 +100,7 @@ def argsparsevalidation():
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')
-    parser.add_argument('-f', '--parsecpyfilename',
+    parser.add_argument('-f', '--parsecpyfilepath',
                         help='Absolute path from Input filename from Parsec '
                              'specificated package.')
     parser.add_argument('-a', '--annealers', type=int,
