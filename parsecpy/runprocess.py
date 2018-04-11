@@ -39,7 +39,6 @@
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
 """
-# TODO Change psutil for simpler code to processes list
 
 import argparse
 import shlex
@@ -54,7 +53,7 @@ from datetime import datetime
 from parsecpy.dataprocess import ParsecData
 
 
-def thread_cpunum(proc_id, thread_id):
+def thread_cpu_num(proc_id, thread_id):
     fname = "/proc/%s/task/%s/stat" % (proc_id, thread_id)
     try:
         with open(fname, 'rb') as f:
@@ -110,7 +109,7 @@ def procs_list(name, prs=None):
             thr = {}
         cpuchanged = False
         for t in p.threads():
-            cpu_num = thread_cpunum(p.pid, t.id)
+            cpu_num = thread_cpu_num(p.pid, t.id)
             if t.id in thr.keys():
                 if thr[t.id][-1] != cpu_num:
                     cpuchanged = True
