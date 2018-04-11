@@ -218,7 +218,7 @@ def argsparsevalidation():
                              'running cores to defined number of cores), '
                              'define the cpu base number.')
     parser.add_argument('-v', '--verbosity', type=int,
-                        help='verbosity level. 0 = No verbose')
+                        help='verbosity level. 0 = No verbose', default=0)
     args = parser.parse_args()
     return args
 
