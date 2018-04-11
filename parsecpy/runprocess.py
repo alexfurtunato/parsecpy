@@ -35,6 +35,8 @@
         -b CPU_BASE, --cpubase CPU_BASE
             If run with thread affinity(limiting the running cores to defined
             number of cores), define the cpu base number.
+        -v VERBOSITY, --verbosity VERBOSITY
+            verbosity level. 0 = No verbose
 
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
@@ -215,6 +217,8 @@ def argsparsevalidation():
                         help='If run with thread affinity(limiting the '
                              'running cores to defined number of cores), '
                              'define the cpu base number.')
+    parser.add_argument('-v', '--verbosity', type=int,
+                        help='verbosity level. 0 = No verbose')
     args = parser.parse_args()
     return args
 
@@ -261,9 +265,10 @@ def main():
                             procs = procs_list(args.package, procs)
                         except:
                             continue
-                    print('\nCPUs Id per Thread:')
-                    print(procs)
-                    print('\n')
+                    if args.verbosity > 1:
+                        print('\nCPUs Id per Thread:')
+                        print(procs)
+                        print('\n')
                     if res.returncode != 0:
                         error = res.stdout.read()
                         print('Error Code: ', res.returncode)
@@ -272,6 +277,10 @@ def main():
                         datarun.threadcpubuild(procs, i, c, r+1)
                         output = res.stdout.read()
                         if output:
+                            if args.verbosity > 2:
+                                print('\nParsec Output:')
+                                print(output.decode())
+                                print('\n')
                             attrs = datarun.contentextract(output.decode())
                             datarun.measurebuild(attrs, c)
                 except OSError as e:
