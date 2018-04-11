@@ -39,17 +39,36 @@
     Example
         parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
 """
+# TODO Change psutil for simpler code to processes list
 
 import argparse
 import shlex
 import subprocess
 import sys
 import os
+import errno
 from copy import deepcopy
 import psutil
 from datetime import datetime
 
 from parsecpy.dataprocess import ParsecData
+
+
+def thread_cpunum(proc_id, thread_id):
+    fname = "/proc/%s/task/%s/stat" % (proc_id, thread_id)
+    try:
+        with open(fname, 'rb') as f:
+            st = f.read().strip()
+    except IOError as err:
+        if err.errno == errno.ENOENT:
+            # no such file or directory; it means thread
+            # disappeared on us
+            pass
+        raise
+    st = st[st.find(b')') + 2:]
+    values = st.split(b' ')
+    cpu_num = int(values[36])
+    return cpu_num
 
 
 def find_procs_by_name(name):
@@ -91,12 +110,13 @@ def procs_list(name, prs=None):
             thr = {}
         cpuchanged = False
         for t in p.threads():
+            cpu_num = thread_cpunum(p.pid, t.id)
             if t.id in thr.keys():
-                if thr[t.id][-1] != t.cpu_num:
+                if thr[t.id][-1] != cpu_num:
                     cpuchanged = True
-                thr[t.id].append(t.cpu_num)
+                thr[t.id].append(cpu_num)
             else:
-                thr[t.id] = [t.cpu_num]
+                thr[t.id] = [cpu_num]
                 cpuchanged = True
         if cpuchanged:
             pts[p.pid] = deepcopy(thr)

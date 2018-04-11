@@ -14,11 +14,13 @@ setup(name='parsecpy',
       packages=['parsecpy'],
       install_requires=[
           'pbr>=1.8',
+          'psutil',
           'numpy',
           'pandas',
           'matplotlib>=2.0.2',
           'scikit-learn>=0.19.1',
           'bitstring',
+          'scipy'
       ],
       long_description=read('README.rst'),
       classifiers=[
