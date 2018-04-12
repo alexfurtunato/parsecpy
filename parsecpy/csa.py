@@ -246,6 +246,12 @@ class CoupledAnnealer(object):
         gamma = sum(exp_terms)
         prob_accept = [x / gamma for x in exp_terms]
 
+        print("Prob: ", prob_accept, "Sum: ", sum(prob_accept))
+        for i in prob_accept:
+            if i<0 or i>1:
+                print(prob_accept)
+                exit()
+
         # Determine whether to accept or reject probe.
         for i in range(self.m):
             if min(self.probe_energies) < self.best_energy:
