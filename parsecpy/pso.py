@@ -729,7 +729,7 @@ class ModelSwarm:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
+            ax.plot_surface(Y, X, Z, label='Model', cmap=colormap, linewidth=0.5,
                             edgecolor='k', linestyle='-', alpha=alpha,
                             vmin=(zmin - (zmax - zmin) / 10),
                             vmax=(zmax + (zmax - zmin) / 10))
@@ -756,7 +756,7 @@ class ModelSwarm:
                 for i in tests_m:
                     for j in yc_m:
                         z.append(data_m[i][j])
-                ax.scatter(x, y, z, c='k')
+                ax.scatter(x, y, z, c='k', label='Measures')
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
