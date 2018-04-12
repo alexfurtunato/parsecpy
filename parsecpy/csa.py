@@ -248,7 +248,7 @@ class CoupledAnnealer(object):
 
         # Determine whether to accept or reject probe.
         for i in range(self.m):
-            if self.probe_energies[i] < self.best_energy[i]:
+            if self.probe_energies[i] < self.best_energies[i]:
                 self.best_energies[i] = self.probe_energies[i]
                 self.best_states[i] = self.probe_energies[i]
             if (self.probe_energies[i] < self.current_energies[i]) \
