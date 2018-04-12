@@ -136,8 +136,8 @@ class CoupledAnnealer(object):
         self.parsecpydatapath = parsecpydatapath
         self.modelcodepath = modelcodepath
         self.modelcodesource = modelcodesource
-        self.best_energy = None
-        self.best_state = []
+        self.best_energies = []
+        self.best_states = []
 
         if self.modelcodepath is not None:
             pythonfile = os.path.basename(modelcodepath)
@@ -246,23 +246,18 @@ class CoupledAnnealer(object):
         gamma = sum(exp_terms)
         prob_accept = [x / gamma for x in exp_terms]
 
-        print("Prob: ", prob_accept, "Sum: ", sum(prob_accept))
-        for i in prob_accept:
-            if i<0 or i>1:
-                print(prob_accept)
-                exit()
-
         # Determine whether to accept or reject probe.
         for i in range(self.m):
-            if min(self.probe_energies) < self.best_energy:
-                self.best_energy = min(self.probe_energies)
-            print("Best Energy: ", self.best_energy)
+            if self.probe_energies[i] < self.best_energy[i]:
+                self.best_energies[i] = self.probe_energies[i]
+                self.best_states[i] = self.probe_energies[i]
             if (self.probe_energies[i] < self.current_energies[i]) \
                     or (random.uniform(0, 1) < prob_accept[i]):
                 self.current_energies[i] = self.probe_energies[i]
                 self.current_states[i] = self.probe_states[i]
             if self.verbosity > 2:
                 print('Annealer %s: %s' % (i,self.current_states[i]))
+                print("Best Result: State %s - Error: %s " % (self.best_states[i], self.best_energies[i]))
 
         # Update temperatures according to schedule.
         if cool:
@@ -275,6 +270,8 @@ class CoupledAnnealer(object):
                 self.tacc *= (1 - self.alpha)
             else:
                 self.tacc *= (1 + self.alpha)
+            if self.verbosity > 2:
+                print("Variance: ",sigma2)
 
     @staticmethod
     def __status_check(k, energy, temps=None, start_time=None):
@@ -339,8 +336,8 @@ class CoupledAnnealer(object):
 
         update_func()
         self.current_energies = self.probe_energies[:]
-
-        self.best_energy = min(self.current_energies)
+        self.best_energies = self.current_energies[:]
+        self.best_states = self.current_states[:]
 
         # Run for `steps` or until user interrupts.
         for k in range(1, self.steps + 1):
