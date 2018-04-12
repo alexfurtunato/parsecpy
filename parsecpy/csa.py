@@ -250,14 +250,14 @@ class CoupledAnnealer(object):
         for i in range(self.m):
             if self.probe_energies[i] < self.best_energies[i]:
                 self.best_energies[i] = self.probe_energies[i]
-                self.best_states[i] = self.probe_energies[i]
+                self.best_states[i] = self.probe_states[i]
             if (self.probe_energies[i] < self.current_energies[i]) \
                     or (random.uniform(0, 1) < prob_accept[i]):
                 self.current_energies[i] = self.probe_energies[i]
                 self.current_states[i] = self.probe_states[i]
             if self.verbosity > 2:
                 print('Annealer %s: %s' % (i,self.current_states[i]))
-                print("Best Result: State %s - Error: %s " % (self.best_states[i], self.best_energies[i]))
+                print("Best Result %s: State %s - Error: %s " % (i, self.best_states[i], self.best_energies[i]))
 
         # Update temperatures according to schedule.
         if cool:
