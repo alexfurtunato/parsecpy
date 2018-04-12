@@ -695,7 +695,8 @@ class ModelSwarm:
             return
         return
 
-    def plot3D(self, title='Model Speedup', greycolor=False, filename=''):
+    def plot3D(self, title='Model Speedup', greycolor=False,
+               showmeasures=False, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
@@ -729,7 +730,7 @@ class ModelSwarm:
             else:
                 colormap = cm.coolwarm
             ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
-                            edgecolor='k', linestyle='-',
+                            edgecolor='k', linestyle='-', alpha=alpha,
                             vmin=(zmin - (zmax - zmin) / 10),
                             vmax=(zmax + (zmax - zmin) / 10))
             ax.set_xlabel('Input Size')
@@ -741,6 +742,21 @@ class ModelSwarm:
             ax.set_zlabel('Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
             ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
+            if showmeasures:
+                data_m = self.y_measure
+                tests_m = data_m.columns.sort_values()
+                xc_m = [i + 1 for (i, j) in enumerate(tests_m)]
+                yc_m = data_m.index
+                x = []
+                for i in xc_m:
+                    for j in range(len(yc_m)):
+                        x.append(i)
+                y = len(xc_m) * list(yc_m)
+                z = []
+                for i in tests_m:
+                    for j in yc_m:
+                        z.append(data_m[i][j])
+                ax.scatter(x, y, z, c='k')
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
