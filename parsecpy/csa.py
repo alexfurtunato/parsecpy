@@ -250,7 +250,7 @@ class CoupledAnnealer(object):
         for i in range(self.m):
             if min(self.probe_energies) < self.best_energy:
                 self.best_energy = min(self.probe_energies)
-                print("Best Energy: ",self.best_energy)
+            print("Best Energy: ", self.best_energy)
             if (self.probe_energies[i] < self.current_energies[i]) \
                     or (random.uniform(0, 1) < prob_accept[i]):
                 self.current_energies[i] = self.probe_energies[i]
