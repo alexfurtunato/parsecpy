@@ -301,7 +301,7 @@ class CoupledAnnealer(object):
         """
 
         energy = min(self.best_energies)
-        index = self.current_energies.index(energy)
+        index = self.best_energies.index(energy)
         state = self.current_states[index]
         return energy, state
 
