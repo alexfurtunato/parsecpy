@@ -543,7 +543,8 @@ class ModelCoupledAnnealer:
         #             'description': scoring['description'][key]
         #         }
         # return self.validation
-        self.validation = {'scores': scores}
+        self.validation = {'times': {'fit_time': 0, 'score_time': 0},
+                           'scores': scores}
         return self.validation
 
     def savedata(self, parsecconfig):
