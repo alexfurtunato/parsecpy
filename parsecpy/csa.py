@@ -713,7 +713,8 @@ class ModelCoupledAnnealer:
             Z = np.array(lz)
             zmin = Z.min()
             zmax = Z.max()
-            plt.title(title)
+            appname = self.modelexecparams['args'][1]['input_name']
+            plt.title('%s\n%s' % (appname, title))
             if greycolor:
                 colormap = cm.Greys
             else:
@@ -786,8 +787,9 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
             print(X)
             print('y :')
             print(y)
-
         p = deepcopy(self.modeldata.modelexecparams)
+        args = (p['args'][0], {'x': X, 'y': y,
+                               'input_name': p['args'][1]['input_name']})
         if p['pxmin'] is None or p['pxmax'] is None:
             initial_state = [tuple((random.normalvariate(0, 5) for _ in
                                     range(p['dimension'])))
@@ -798,9 +800,6 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
                 t = tuple([li+(ui-li)*random.random() for li,ui
                            in zip(p['pxmin'], p['pxmax'])])
                 initial_state.append(t)
-
-        args = (p['args'][0], {'x': X, 'y': y,
-                               'input_name': p['args'][1]['input_name']})
         cann = CoupledAnnealer(initial_state,
                                parsecpydatapath=p['parsecpydatapath'],
                                modelcodesource=self.modeldata.modelcodesource,

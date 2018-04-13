@@ -724,7 +724,8 @@ class ModelSwarm:
             Z = np.array(lz)
             zmin = Z.min()
             zmax = Z.max()
-            plt.title(title)
+            appname = self.modelexecparams['args'][1]['input_name']
+            plt.title('%s\n%s' % (appname, title))
             if greycolor:
                 colormap = cm.Greys
             else:
