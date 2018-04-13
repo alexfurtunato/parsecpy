@@ -127,7 +127,7 @@ def model(par, x, oh):
     return x, pred
 
 
-def probe_function(par, tgen, *args):
+def probe_function(par, tgen, pxmin, pxmax, *args):
     """
     Constraint function that would be considered on model.
 
@@ -139,10 +139,16 @@ def probe_function(par, tgen, *args):
     """
 
     probe_solution = []
-    for i, x in enumerate(par):
-        w = random.uniform(0, 1)
-        r = math.tan(math.pi*(w - 0.5))
-        ps = 2*np.mod((x + r*tgen + 1)/2, 1)-1
+    limits = True
+    if pxmin is None or pxmax is None:
+        limits = False
+    for i, p in enumerate(par):
+        r = random.uniform(0, 1)
+        t = math.tan(math.pi*(r - 0.5))
+        if limits:
+            ps = pxmin[i] + np.mod(p + t*tgen, pxmax[i]-pxmin[i])
+        else:
+            ps = np.mod(p + t*tgen, 10)
         probe_solution.append(ps)
     return probe_solution
 

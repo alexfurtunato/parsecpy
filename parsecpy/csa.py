@@ -117,6 +117,8 @@ class CoupledAnnealer(object):
                  tacc_initial=0.9,
                  alpha=0.05,
                  desired_variance=None,
+                 pxmin=None,
+                 pxmax=None,
                  threads=1,
                  verbosity=0,
                  args=(),
@@ -130,6 +132,8 @@ class CoupledAnnealer(object):
         self.tgen_upd_factor = tgen_upd_factor
         self.tacc = tacc_initial
         self.alpha = alpha
+        self.pxmin = pxmin
+        self.pxmax = pxmax
         self.args = args
         self.kwargs = kwargs
         self.tgen_initial = tgen_initial
@@ -171,7 +175,8 @@ class CoupledAnnealer(object):
 
         self.probe_function = partial(self._probe_wrapper,
                                       self.modelfunc.probe_function,
-                                      self.args, self.kwargs, self.tgen)
+                                      self.args, self.kwargs, self.tgen,
+                                      self.pxmin, self.pxmax)
         self.objective_function = partial(self._obj_wrapper,
                                           self.modelfunc.objective_function,
                                           self.args, self.kwargs)
@@ -257,7 +262,7 @@ class CoupledAnnealer(object):
                 self.current_states[i] = self.probe_states[i]
             if self.verbosity > 2:
                 print('Annealer %s: %s' % (i,self.current_states[i]))
-                print("Best Result %s: State %s - Error: %s " % (i, self.best_states[i], self.best_energies[i]))
+                print("Best Result: State %s \nError: %s " % (self.best_states[i], self.best_energies[i]))
 
         # Update temperatures according to schedule.
         if cool:
@@ -372,6 +377,8 @@ class CoupledAnnealer(object):
                            'tgen': self.tgen_initial, 'tacc': self.tacc,
                            'tgen_upd_factor': self.tgen_upd_factor,
                            'desired_variance': self.desired_variance,
+                           'pxmin': self.pxmin,
+                           'pxmax': self.pxmax,
                            'update_interval': self.update_interval,
                            'modelcodepath': self.modelcodepath,
                            'parsecpydatapath': self.parsecpydatapath,
@@ -559,6 +566,8 @@ class ModelCoupledAnnealer:
                 "%d-%m-%Y_%H:%M:%S")
             datatosave['config']['modelcodesource'] = self.modelcodesource
             mep = deepcopy(self.modelexecparams)
+            mep['pxmin'] = str(mep['pxmin'])
+            mep['pxmax'] = str(mep['pxmax'])
             mep['args'][1]['xtype'] = str(mep['args'][1]['x'].dtype)
             mep['args'][1]['x'] = json.dumps(mep['args'][1]['x'].tolist())
             mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
@@ -614,6 +623,8 @@ class ModelCoupledAnnealer:
             if 'modelexecparams' in configdict.keys():
                 mep = deepcopy(configdict['modelexecparams'])
                 self.modelexecparams = deepcopy(mep)
+                self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
+                self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
                 self.modelexecparams['args'] = (mep['args'][0], {})
                 self.modelexecparams['args'][1]['input_name'] = \
                     mep['args'][1]['input_name']
@@ -776,9 +787,16 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
             print(y)
 
         p = deepcopy(self.modeldata.modelexecparams)
-        initial_state = [
-            tuple((random.normalvariate(0, 5) for _ in range(p['dimension'])))
-            for _ in range(p['m'])]
+        if p['pxmin'] is None or p['pxmax'] is None:
+            initial_state = [tuple((random.normalvariate(0, 5) for _ in
+                                    range(p['dimension'])))
+                             for _ in range(p['m'])]
+        else:
+            initial_state = []
+            for j in range(p['m']):
+                t = tuple([li+(ui-li)*random.random() for li,ui
+                           in zip(p['pxmin'], p['pxmax'])])
+                initial_state.append(t)
 
         args = (p['args'][0], {'x': X, 'y': y,
                                'input_name': p['args'][1]['input_name']})

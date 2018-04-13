@@ -5,6 +5,8 @@
   "overhead": false,
   "annealers": 10,
   "dimension": 5,
+  "lowervalues": [0,0,0,0,0],
+  "uppervalues": [10,10,10,10,10],
   "steps": 100,
   "update_interval": 1,
   "tgen_initial": 0.1,

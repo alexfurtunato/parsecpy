@@ -149,6 +149,10 @@ def main():
                 config[i] = v
     else:
         config = vars(args)
+    if 'lowervalues' not in config.keys():
+        config['lowervalues'] = None
+    if 'uppervalues' not in config.keys():
+        config['uppervalues'] = None
 
     if not os.path.isfile(config['modelfilepath']):
         print('Error: You should inform the correct module of objective '
@@ -193,9 +197,16 @@ def main():
     for i in repetitions:
         print('\nAlgorithm Execution: ', i+1)
 
-        initial_state = [
-            tuple((random.normalvariate(0, 5) for _ in range(config['dimension'])))
-            for _ in range(config['annealers'])]
+        if config['lowervalues'] is None or config['uppervalues'] is None:
+            initial_state = [tuple((random.normalvariate(0, 5) for _ in
+                                    range(config['dimension'])))
+                             for _ in range(config['annealers'])]
+        else:
+            initial_state = []
+            for j in range(config['annealers']):
+                t = tuple([li+(ui-li)*random.random() for li,ui
+                           in zip(config['lowervalues'], config['uppervalues'])])
+                initial_state.append(t)
 
         cann = CoupledAnnealer(
             initial_state,
@@ -209,6 +220,8 @@ def main():
             tacc_initial=config['tacc_initial'],
             alpha=config['alpha'],
             desired_variance=config['desired_variance'],
+            pxmin=config['lowervalues'],
+            pxmax=config['uppervalues'],
             threads=config['threads'],
             verbosity=config['verbosity'],
             args=argsanneal
