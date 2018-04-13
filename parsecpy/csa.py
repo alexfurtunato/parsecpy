@@ -525,7 +525,7 @@ class ModelCoupledAnnealer:
                                 self.modelexecparams['args'][1]['x'],
                                 self.modelexecparams['args'][1]['y'],
                                 cv=kf, scoring=scoring['type'],
-                                return_train_score=False,
+                                return_train_score=True,
                                 verbose=self.modelexecparams['verbosity'])
         self.validation = {
             'times': {
