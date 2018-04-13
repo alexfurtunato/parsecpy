@@ -160,8 +160,9 @@ class CoupledAnnealer(object):
 
         # Set desired_variance.
         if desired_variance is None:
-            desired_variance = 0.99
-        self.desired_variance = desired_variance * (self.m - 1) / (self.m ** 2)
+            self.desired_variance = 0.99 * (self.m - 1) / (self.m ** 2)
+        else:
+            self.desired_variance = desired_variance
 
         # Initialize state.
         assert len(initial_state) == self.m
