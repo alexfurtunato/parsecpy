@@ -196,7 +196,7 @@ class CoupledAnnealer(object):
         return func(x, *args, **kwargs)
 
     @staticmethod
-    def _probe_wrapper(func, args, kwargs, tgen, x):
+    def _probe_wrapper(func, args, kwargs, tgen, pxmin, pxmax, x):
         """
         Wrapper function that point to constraint function.
 
@@ -207,7 +207,7 @@ class CoupledAnnealer(object):
         :return: A new probe solution based on tgen and a random function
         """
 
-        return func(x, tgen, *args, **kwargs)
+        return func(x, tgen, pxmin, pxmax, *args, **kwargs)
 
     def __update_state(self):
         """
