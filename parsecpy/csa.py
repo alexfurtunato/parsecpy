@@ -527,21 +527,23 @@ class ModelCoupledAnnealer:
                                 cv=kf, scoring=scoring['type'],
                                 return_train_score=True,
                                 verbose=self.modelexecparams['verbosity'])
-        self.validation = {
-            'times': {
-                'fit_time': scores['fit_time'],
-                'score_time': scores['score_time']
-            },
-            'scores': {}
-        }
-        for key, value in scores.items():
-            if key not in ['fit_time', 'score_time']:
-                if '_neg_' in key:
-                    value = np.negative(value)
-                self.validation['scores'][key] = {
-                    'value': value,
-                    'description': scoring['description'][key]
-                }
+        # self.validation = {
+        #     'times': {
+        #         'fit_time': scores['fit_time'],
+        #         'score_time': scores['score_time']
+        #     },
+        #     'scores': {}
+        # }
+        # for key, value in scores.items():
+        #     if key not in ['fit_time', 'score_time']:
+        #         if '_neg_' in key:
+        #             value = np.negative(value)
+        #         self.validation['scores'][key] = {
+        #             'value': value,
+        #             'description': scoring['description'][key]
+        #         }
+        # return self.validation
+        self.validation = {'scores': scores}
         return self.validation
 
     def savedata(self, parsecconfig):
