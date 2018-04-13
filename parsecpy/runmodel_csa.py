@@ -153,6 +153,8 @@ def main():
         config['lowervalues'] = None
     if 'uppervalues' not in config.keys():
         config['uppervalues'] = None
+    if 'desired_variance' not in config.keys():
+        config['desired_variance'] = None
 
     if not os.path.isfile(config['modelfilepath']):
         print('Error: You should inform the correct module of objective '
