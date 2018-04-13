@@ -260,21 +260,20 @@ def main():
 
         scores = computed_models[best_model_idx].validate(kfolds=10)
         print('\n  Cross Validation (K-fold, K=10) Metrics: ')
-        # if config['verbosity'] > 2:
-        #     print('\n   Times: ')
-        #     for key, value in scores['times'].items():
-        #         print('     %s: %.8f' % (key, value.mean()))
-        #         print('     ', value)
-        # print('\n   Scores: ')
-        # for key, value in scores['scores'].items():
-        #     if config['verbosity'] > 1:
-        #         print('     %s: %.8f' % (value['description'],
-        #                                  value['value'].mean()))
-        #         print('     ', value['value'])
-        #     else:
-        #         print('     %s: %.8f' % (value['description'],
-        #                                  value['value'].mean()))
-        print(scores)
+        if config['verbosity'] > 2:
+            print('\n   Times: ')
+            for key, value in scores['times'].items():
+                print('     %s: %.8f' % (key, value.mean()))
+                print('     ', value)
+        print('\n   Scores: ')
+        for key, value in scores['scores'].items():
+            if config['verbosity'] > 1:
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
+                print('     ', value['value'])
+            else:
+                print('     %s: %.8f' % (value['description'],
+                                         value['value'].mean()))
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
