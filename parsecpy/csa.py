@@ -811,6 +811,8 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
                                tacc_initial=p['tacc'],
                                alpha=p['alpha'],
                                desired_variance=p['desired_variance'],
+                               pxmin=p['pxmin'],
+                               pxmax=p['pxmax'],
                                threads=p['threads'],
                                verbosity=self.verbosity,
                                args=args)
