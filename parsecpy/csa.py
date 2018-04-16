@@ -713,16 +713,18 @@ class ModelCoupledAnnealer:
             Z = np.array(lz)
             zmin = Z.min()
             zmax = Z.max()
-            appname = self.modelexecparams['args'][1]['input_name']
-            plt.title('%s\n%s' % (appname, title))
+            appname = self.pkg
+            plt.title('%s\n%s' % (appname.capitalize() or None, title))
             if greycolor:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
+            surf1 = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
                             edgecolor='k', linestyle='-', alpha=alpha,
                             vmin=(zmin - (zmax - zmin) / 10),
-                            vmax=(zmax + (zmax - zmin) / 10))
+                            vmax=(zmax + (zmax - zmin) / 10), label='Model')
+            surf1._edgecolors2d = surf1._edgecolors3d
+            surf1._facecolors2d = surf1._facecolors3d
             ax.set_xlabel('Input Size')
             ax.set_xlim(0, xc[-1])
             ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
@@ -734,19 +736,29 @@ class ModelCoupledAnnealer:
             ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if showmeasures:
                 data_m = self.y_measure
-                tests_m = data_m.columns.sort_values()
-                xc_m = [i + 1 for (i, j) in enumerate(tests_m)]
-                yc_m = data_m.index
+                ax = fig.gca(projection='3d')
+                tests = data_m.columns.sort_values()
+                xc = [i + 1 for (i, j) in enumerate(tests)]
+                yc = data_m.index
+                X, Y = np.meshgrid(yc, xc)
+                lz = []
+                for i in tests:
+                    lz.append(data_m[i])
+                Z = np.array(lz)
+                surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,
+                                       edgecolor='k', label='Measures')
                 x = []
-                for i in xc_m:
-                    for j in range(len(yc_m)):
+                for i in xc:
+                    for j in range(len(yc)):
                         x.append(i)
-                y = len(xc_m) * list(yc_m)
+                y = len(xc) * list(yc)
                 z = []
-                for i in tests_m:
-                    for j in yc_m:
+                for i in tests:
+                    for j in yc:
                         z.append(data_m[i][j])
-                ax.scatter(x, y, z, c='k')
+                ax.scatter(x, y, z, c='k', s=6)
+                ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
+            ax.legend()
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
