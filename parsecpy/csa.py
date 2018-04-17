@@ -684,7 +684,7 @@ class ModelCoupledAnnealer:
             return
         return
 
-    def plot3D(self, title='Model Speedup', greycolor=False,
+    def plot3D(self, title='Speedup Model', greycolor=False,
                showmeasures=False, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
