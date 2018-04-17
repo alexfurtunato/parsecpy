@@ -56,6 +56,7 @@ import json
 import time
 import argparse
 import numpy as np
+from copy import deepcopy
 from parsecpy import ParsecData
 from parsecpy import Swarm
 
@@ -237,7 +238,8 @@ def main():
         print('\n\n***** Starting cross validation! *****\n')
         starttime = time.time()
 
-        scores = computed_models[best_model_idx].validate(kfolds=10)
+        validation_model = deepcopy(computed_models[best_model_idx])
+        scores = validation_model.validate(kfolds=10)
         print('\n  Cross Validation (K-fold, K=10) Metrics: ')
         if config['verbosity'] > 2:
             print('\n   Times: ')
@@ -261,6 +263,7 @@ def main():
 
     print('\n\n***** ALL DONE! *****\n')
 
+    computed_models[best_model_idx].validation = deepcopy(validation_model.validation)
     fn = computed_models[best_model_idx].savedata(parsec_exec.config)
     print('Model data saved on filename: %s' % fn)
 
