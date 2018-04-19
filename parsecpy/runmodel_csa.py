@@ -258,7 +258,6 @@ def main():
     if config['crossvalidation']:
         print('\n\n***** Starting cross validation! *****\n')
         starttime = time.time()
-
         validation_model = deepcopy(computed_models[best_model_idx])
         scores = validation_model.validate(kfolds=10)
         print('\n  Cross Validation (K-fold, K=10) Metrics: ')
@@ -276,16 +275,12 @@ def main():
             else:
                 print('     %s: %.8f' % (value['description'],
                                          value['value'].mean()))
-
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
-
-        print('\n***** Cross Validation Done! *****\n')
-
+        computed_models[best_model_idx].validation = scores
+        print('\n*****Cross Validation Done! *****\n')
     print('\n\n***** ALL DONE! *****\n')
-
-    computed_models[best_model_idx].validation = deepcopy(validation_model.validation)
-    fn = computed_models[best_model_idx].savedata(parsec_exec.config)
+    fn = computed_models[best_model_idx].savedata(parsec_exec.config, ' '.join(sys.argv))
     print('Model data saved on filename: %s' % fn)
 
 

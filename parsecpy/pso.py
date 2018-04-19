@@ -20,6 +20,8 @@ from sklearn.metrics import make_scorer, mean_squared_error
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
+from . import ParsecData
+
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import ticker
@@ -480,6 +482,19 @@ class ModelSwarm:
         exec(codetext, module.__dict__)
         return module
 
+    def get_parsecdata(self):
+        """
+        Return a ParsecData object with measures
+
+        :return: ParsecData object
+        """
+        if os.path.isfile(self.modelexecparams['parsecpydatapath']):
+            pd = ParsecData(self.modelexecparams['parsecpydatapath'])
+            return pd
+        else:
+            print('Parsecpy datarun file %s was not found')
+            return None
+
     def predict(self, args):
         """
         Predict the speedup using the input values
@@ -555,10 +570,12 @@ class ModelSwarm:
                 }
         return self.validation
 
-    def savedata(self, parsecconfig):
+    def savedata(self, parsecconfig, modelcommand):
         """
         Write to a file the model information stored on object class
 
+        :param parsecconfig: Configuration dictionary from parsecpy runprocess
+        :param modelcommand: string with model executed command
         :return: saved file name
         """
 
@@ -572,6 +589,7 @@ class ModelSwarm:
                 datatosave['config']['pkg'] = parsecconfig['pkg']
             if 'command' in parsecconfig:
                 datatosave['config']['command'] = parsecconfig['command']
+            datatosave['config']['modelcommand'] = modelcommand
             if 'hostname' in parsecconfig:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
             datatosave['config']['savedate'] = datetime.now().strftime(
@@ -628,6 +646,8 @@ class ModelSwarm:
                 self.pkg = configdict['pkg']
             if 'command' in configdict.keys():
                 self.command = configdict['command']
+            if 'modelcommand' in configdict.keys():
+                self.modelcommand = configdict['modelcommand']
             if 'hostname' in configdict.keys():
                 self.hostname = configdict['hostname']
             if 'modelcodesource' in configdict.keys():

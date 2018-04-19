@@ -469,6 +469,19 @@ class ModelCoupledAnnealer:
         exec(codetext, module.__dict__)
         return module
 
+    def get_parsecdata(self):
+        """
+        Return a ParsecData object with measures
+
+        :return: ParsecData object
+        """
+        if os.path.isfile(self.modelexecparams['parsecpydatapath']):
+            pd = ParsecData(self.modelexecparams['parsecpydatapath'])
+            return pd
+        else:
+            print('Parsecpy datarun file %s was not found')
+            return None
+
     def predict(self, args):
         """
         Predict the speedup using the input values
@@ -544,10 +557,12 @@ class ModelCoupledAnnealer:
                 }
         return self.validation
 
-    def savedata(self, parsecconfig):
+    def savedata(self, parsecconfig, modelcommand):
         """
         Write to a file the model information stored on object class
 
+        :param parsecconfig: Configuration dictionary from parsecpy runprocess
+        :param modelcommand: string with model executed command
         :return: saved file name
         """
 
@@ -561,6 +576,7 @@ class ModelCoupledAnnealer:
                 datatosave['config']['pkg'] = parsecconfig['pkg']
             if 'command' in parsecconfig:
                 datatosave['config']['command'] = parsecconfig['command']
+            datatosave['config']['modelcommand'] = modelcommand
             if 'hostname' in parsecconfig:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
             datatosave['config']['savedate'] = datetime.now().strftime(
@@ -617,6 +633,8 @@ class ModelCoupledAnnealer:
                 self.pkg = configdict['pkg']
             if 'command' in configdict.keys():
                 self.command = configdict['command']
+            if 'modelcommand' in configdict.keys():
+                self.modelcommand = configdict['modelcommand']
             if 'hostname' in configdict.keys():
                 self.hostname = configdict['hostname']
             if 'modelcodesource' in configdict.keys():

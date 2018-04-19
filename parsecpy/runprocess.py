@@ -222,7 +222,6 @@ def argsparsevalidation():
     args = parser.parse_args()
     return args
 
-
 def main():
     """
     Main function executed from console run.
@@ -237,8 +236,7 @@ def main():
     datarun = ParsecData()
     datarun.config = {'pkg': args.package,
                       'execdate': rundate,
-                      'command': command % (args.package, args.compiler,
-                                            args.input, args.c),
+                      'command': ' '.join(sys.argv),
                       'thread_cpu': {},
                       'hostname': hostname}
 
