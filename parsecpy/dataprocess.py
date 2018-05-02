@@ -12,6 +12,7 @@ import json
 import numpy as np
 from pandas import DataFrame
 from pandas import Series
+from xarray import DataArray
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -179,7 +180,7 @@ class ParsecData:
         return {'benchmark': benchmark, 'input': inputsize, 'roitime': roitime,
                 'realtime': realtime, 'usertime': usertime, 'systime': systime}
 
-    def measurebuild(self, attrs, numberofcores=None):
+    def measurebuild(self, attrs, numberofcores=None, frequency=0):
         """
         Resume all tests, grouped by input sizes and number of cores,
         on a dictionary.
@@ -189,6 +190,7 @@ class ParsecData:
 
         :param attrs: Attributes to insert into dictionary.
         :param numberofcores: Number of cores used on executed process.
+        :param frequency: Custom CPU frequency (Mhz) at execution moment.
         :return:
         """
 
@@ -199,13 +201,21 @@ class ParsecData:
         else:
             ttime = attrs['realtime']
 
-        if attrs['input'] in self.measures.keys():
-            if numberofcores in self.measures[attrs['input']].keys():
-                self.measures[attrs['input']][numberofcores].append(ttime)
+        if frequency in self.measures.keys():
+            if attrs['input'] in self.measures[frequency].keys():
+                if numberofcores in self.measures[frequency][attrs['input']].\
+                        keys():
+                    self.measures[frequency][attrs['input']][numberofcores].\
+                        append(ttime)
+                else:
+                    self.measures[frequency][attrs['input']][numberofcores] = \
+                        [ttime]
             else:
-                self.measures[attrs['input']][numberofcores] = [ttime]
+                self.measures[frequency][attrs['input']] = \
+                    {numberofcores: [ttime]}
         else:
-            self.measures[attrs['input']] = {numberofcores: [ttime]}
+            self.measures[frequency] = \
+                {attrs['input']: {numberofcores: [ttime]}}
         return
 
     def threadcpubuild(self, source, inputsize, numberofcores, repetition):
@@ -265,8 +275,9 @@ class ParsecData:
 
     def times(self):
         """
-        Return a Pandas Dataframe with resume of all tests,
-        grouped by input size and number of cores.
+        Return a Dictionary or Pandas Dataframe with resume of all tests. If
+        grouped by input size and number of cores. If a dictionary, the keys
+        are the execution cpu frequency.
 
         Dataframe format
             row indexes=<number cores>
@@ -276,21 +287,39 @@ class ParsecData:
         :return: dataframe with median of measures times.
         """
 
-        df = DataFrame()
-        data = self.measures
-        inputs = list(data.keys())
-        inputs.sort(reverse=True)
-        for inp in inputs:
-            df[inp] = Series([np.median(i) for i in data[inp].values()],
-                             index=[int(j) for j in data[inp].keys()])
-        df.sort_index(inplace=True)
-        df.sort_index(axis=1, ascending=True, inplace=True)
-        return df
+        timesdict = {}
+        freq = self.measures.keys()
+        for f in freq:
+            df = DataFrame()
+            data = self.measures[f]
+            inputs = list(data.keys())
+            inputs.sort(reverse=True)
+            for inp in inputs:
+                df[inp] = Series([np.median(i) for i in data[inp].values()],
+                                 index=[int(j) for j in data[inp].keys()])
+            df.sort_index(inplace=True)
+            df.sort_index(axis=1, ascending=True, inplace=True)
+            timesdict[f] = df
+        if len(timesdict.keys()) == 1:
+            return timesdict[f]
+        else:
+            return timesdict
+
+    def xtimes(self):
+        t = self.times()
+        if type(t) is DataFrame:
+            t = {0: t}
+        d = np.array([np.array(i) for i in t.values()])
+        x = DataArray(d, coords=[('frequency', list(t.keys())),
+                                 ('cores', t[0].index),
+                                 ('size', t[0].columns)])
+        return x
 
     def speedups(self):
         """
-        Return a Pandas Dataframe with speedups,
-        grouped by input size and number of cores.
+        Return a Dictionary or Pandas Dataframe with speedups,
+        grouped by input size and number of cores. If a dictionary, the keys
+        are the execution cpu frequency.
 
         Dataframe format
             row indexes=<number cores>
@@ -300,19 +329,38 @@ class ParsecData:
         :return: dataframe with calculated speedups.
         """
 
-        ds = DataFrame()
-        data = self.times()
-        if 1 not in data.index or len(data.index) < 2:
-            print("Error: Do not possible calcule the speedup without "
-                  "single core run")
-            return
-        for inputcol in data.columns:
-            idx = data.index[1:]
-            darr = data.loc[1, inputcol] / data[inputcol][data.index != 1]
-            ds[inputcol] = Series(darr, index=idx)
-        ds.sort_index(inplace=True)
-        ds.sort_index(axis=1, ascending=True, inplace=True)
-        return ds
+        if type(self.times()) is DataFrame:
+            dsdict = {0: self.times()}
+        else:
+            dsdict = self.times()
+        for f in dsdict.keys():
+            ds = DataFrame()
+            data = dsdict[f]
+            if 1 not in data.index or len(data.index) < 2:
+                print("Error: Do not possible calcule the speedup without "
+                      "single core run")
+                return
+            for inputcol in data.columns:
+                idx = data.index[1:]
+                darr = data.loc[1, inputcol] / data[inputcol][data.index != 1]
+                ds[inputcol] = Series(darr, index=idx)
+            ds.sort_index(inplace=True)
+            ds.sort_index(axis=1, ascending=True, inplace=True)
+            dsdict[f] = ds
+        if len(dsdict.keys()) == 1:
+            return dsdict[f]
+        else:
+            return dsdict
+
+    def xspeedups(self):
+        s = self.speedups()
+        if type(s) is DataFrame:
+            s = {0: s}
+        d = np.array([np.array(i) for i in s.values()])
+        x = DataArray(d, coords=[('frequency', list(s.keys())),
+                                 ('cores', s[0].index),
+                                 ('size', s[0].columns)])
+        return x
 
     def efficiency(self):
         """

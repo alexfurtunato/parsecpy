@@ -51,6 +51,7 @@ import errno
 from copy import deepcopy
 import psutil
 from datetime import datetime
+from cpufreq import CPUFreq, CPUFreqErrorInit
 
 from parsecpy.dataprocess import ParsecData
 
@@ -126,10 +127,10 @@ def procs_list(name, prs=None):
 
 def argsparseintlist(txt):
     """
-    Validate the list of cores argument.
+    Validate the list of int arguments.
 
-    :param txt: argument of comma separated number of cores list.
-    :return: list of integer converted number of cores.
+    :param txt: argument of comma separated numbers.
+    :return: list of integer converted numbers.
     """
 
     txt = txt.split(',')
@@ -208,6 +209,8 @@ def argsparsevalidation():
                         help='Compiler name to be used on run. '
                              '(Default: %(default)s).',
                         choices=compilerchoicebuilds, default='gcc-hooks')
+    parser.add_argument('-f', '--frequency', type=argsparseintlist,
+                        help='List of frequencies (KHz). Ex: 2000000, 2100000')
     parser.add_argument('-i', '--input', type=argsparseinputlist,
                         help=helpinputtxt, default='native')
     parser.add_argument('-r', '--repititions', type=int,
@@ -239,57 +242,105 @@ def main():
                       'command': ' '.join(sys.argv),
                       'thread_cpu': {},
                       'hostname': hostname}
+    if args.frequency:
+        try:
+            cf = CPUFreq()
+            freq_avail = [int(f) for f in cf.get_frequencies()[0]['data']]
+            if not set(args.frequency).issubset(set(freq_avail)):
+                print("ERROR: Available CPUs frequencies aren't compatibles "
+                      "with frequency list passed on execution frequeny "
+                      "argument (--frequency)")
+                exit(1)
+            else:
+                cf.change_governo("userspace")
+                freqs = args.frequency
+        except CPUFreqErrorInit as err:
+            print(err.message)
+            sys.exit(1)
+        except:
+            print("ERROR: Unknown error on frequencies list.")
+            sys.exit(1)
+    else:
+        freqs = [0]
+        try:
+            cf = CPUFreq()
+            cf.change_governo("ondemand")
+        except CPUFreqErrorInit as err:
+            print(err.message)
+            sys.exit(1)
+        except:
+            print("ERROR: Unknown error on frequencies list.")
+            sys.exit(1)
 
     if args.cpubase:
         env = os.environ
         env['PARSEC_CPU_BASE'] = str(args.cpubase)
 
     print("Processing %s Repetitions: " % args.repititions)
-    for i in args.input:
-        for c in args.c:
-            print("\n- Inputset: ", i, "with %s cores" % c)
-            for r in range(args.repititions):
-                print("\n*** Execution ", r+1)
-                try:
-                    if args.cpubase:
-                        env['PARSEC_CPU_NUM'] = str(c)
-                    cmd = shlex.split(command % (args.package,
-                                                 args.compiler, i, c))
-                    res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                           stderr=subprocess.STDOUT)
-                    procs = None
-                    while res.poll() is None:
-                        try:
-                            procs = procs_list(args.package, procs)
-                        except:
-                            continue
-                    if args.verbosity > 1:
-                        print('\nCPUs Id per Thread:')
-                        print(procs)
-                        print('\n')
-                    if res.returncode != 0:
-                        error = res.stdout.read()
-                        print('Error Code: ', res.returncode)
-                        print('Error Message: ', error.decode())
-                    else:
-                        datarun.threadcpubuild(procs, i, c, r+1)
-                        output = res.stdout.read()
-                        if output:
-                            if args.verbosity > 2:
-                                print('\nParsec Output:')
-                                print(output.decode())
-                                print('\n')
-                            attrs = datarun.contentextract(output.decode())
-                            datarun.measurebuild(attrs, c)
-                except OSError as e:
-                    print("Error: Error from OS. Return Code = ", e.errno)
-                    print("Error Message: ", e.strerror)
-                except:
-                    print("Error: Error on System Execution : ",
-                          sys.exc_info())
+    for f in freqs:
+        if not (len(freqs)==1 and f==0):
+            try:
+                cf = CPUFreq()
+                cf.change_frequency(str(f))
+            except CPUFreqErrorInit as err:
+                print(err.message)
+                sys.exit(1)
+            except:
+                print("ERROR: Unknown error on frequencies list.")
+        for i in args.input:
+            for c in args.c:
+                print("\n- Inputset: ", i, "with %s cores" % c)
+                for r in range(args.repititions):
+                    print("\n*** Execution ", r+1)
+                    try:
+                        if args.cpubase:
+                            env['PARSEC_CPU_NUM'] = str(c)
+                        cmd = shlex.split(command % (args.package,
+                                                     args.compiler, i, c))
+                        res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                               stderr=subprocess.STDOUT)
+                        procs = None
+                        while res.poll() is None:
+                            try:
+                                procs = procs_list(args.package, procs)
+                            except:
+                                continue
+                        if args.verbosity > 1:
+                            print('\nCPUs Id per Thread:')
+                            print(procs)
+                            print('\n')
+                        if res.returncode != 0:
+                            error = res.stdout.read()
+                            print('Error Code: ', res.returncode)
+                            print('Error Message: ', error.decode())
+                        else:
+                            datarun.threadcpubuild(procs, i, c, r+1)
+                            output = res.stdout.read()
+                            if output:
+                                if args.verbosity > 2:
+                                    print('\nParsec Output:')
+                                    print(output.decode())
+                                    print('\n')
+                                attrs = datarun.contentextract(output.decode())
+                                datarun.measurebuild(attrs, c)
+                    except OSError as e:
+                        print("Error: Error from OS. Return Code = ", e.errno)
+                        print("Error Message: ", e.strerror)
+                    except:
+                        print("Error: Error on System Execution : ",
+                              sys.exc_info())
     print(datarun)
     print(datarun.times())
     print("\n\n***** Done! *****\n")
+    try:
+        cf = CPUFreq()
+        cf.change_governo("ondemand")
+    except CPUFreqErrorInit as err:
+        print(err.message)
+        sys.exit(1)
+    except:
+        print("ERROR: Unknown error on frequencies list.")
+        sys.exit(1)
     fn = datarun.savedata()
     print('Running data saved on filename: %s' % fn)
 
