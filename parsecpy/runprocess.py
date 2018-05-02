@@ -291,7 +291,7 @@ def main():
                 print("ERROR: Unknown error on frequencies list.")
         for i in args.input:
             for c in args.c:
-                print("\n- %s Inputset: %d with %s cores" % (ftxt, i, c))
+                print("\n- %s Inputset: %s with %s cores" % (ftxt, i, c))
                 for r in range(args.repititions):
                     print("\n*** Execution ", r+1)
                     try:
