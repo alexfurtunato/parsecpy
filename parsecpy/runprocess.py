@@ -278,10 +278,12 @@ def main():
 
     print("Processing %s Repetitions: " % args.repititions)
     for f in freqs:
-        if not (len(freqs)==1 and f==0):
+        ftxt = None
+        if not (len(freqs) == 1 and f == 0):
             try:
                 cf = CPUFreq()
                 cf.change_frequency(str(f))
+                ftxt = "Frequency: %s," % f
             except CPUFreqErrorInit as err:
                 print(err.message)
                 sys.exit(1)
@@ -289,7 +291,7 @@ def main():
                 print("ERROR: Unknown error on frequencies list.")
         for i in args.input:
             for c in args.c:
-                print("\n- Inputset: ", i, "with %s cores" % c)
+                print("\n- %s Inputset: %d with %s cores" % (ftxt, i, c))
                 for r in range(args.repititions):
                     print("\n*** Execution ", r+1)
                     try:
@@ -322,7 +324,9 @@ def main():
                                     print(output.decode())
                                     print('\n')
                                 attrs = datarun.contentextract(output.decode())
-                                datarun.measurebuild(attrs, c)
+                                datarun.measurebuild(attrs=attrs,
+                                                     numberofcores=c,
+                                                     frequency=f)
                     except OSError as e:
                         print("Error: Error from OS. Return Code = ", e.errno)
                         print("Error Message: ", e.strerror)
