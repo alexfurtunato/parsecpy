@@ -245,9 +245,7 @@ def main():
     if args.frequency:
         try:
             cf = CPUFreq()
-            freqg = cf.get_frequencies()
-            print(freqg)
-            freq_avail = [int(f) for f in freqg[0]['data']]
+            freq_avail = [int(f) for f in cf.get_frequencies()[0]['data']]
             if not set(args.frequency).issubset(set(freq_avail)):
                 print("ERROR: Available CPUs frequencies aren't compatibles "
                       "with frequency list passed on execution frequeny "
@@ -257,7 +255,7 @@ def main():
                 cf.change_governo("userspace")
                 freqs = args.frequency
                 print("Running with governor 'userspace' and frequencies %s.\n"
-                      % ", ".join(freqs))
+                      % str(freqs))
         except CPUFreqErrorInit as err:
             print(err.message)
             sys.exit(1)
