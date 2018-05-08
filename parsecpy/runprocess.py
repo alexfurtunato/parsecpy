@@ -245,7 +245,9 @@ def main():
     if args.frequency:
         try:
             cf = CPUFreq()
-            freq_avail = [int(f) for f in cf.get_frequencies()[0]['data']]
+            freqg = cf.get_frequencies()
+            print(freqg)
+            freq_avail = [int(f) for f in freqg[0]['data']]
             if not set(args.frequency).issubset(set(freq_avail)):
                 print("ERROR: Available CPUs frequencies aren't compatibles "
                       "with frequency list passed on execution frequeny "
