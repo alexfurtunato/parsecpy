@@ -242,9 +242,9 @@ def main():
                       'command': ' '.join(sys.argv),
                       'thread_cpu': {},
                       'hostname': hostname}
-    cf = CPUFreq()
     if args.frequency:
         try:
+            cf = CPUFreq()
             freq_avail = [int(f) for f in cf.get_frequencies()[0]['data']]
             if not set(args.frequency).issubset(set(freq_avail)):
                 print("ERROR: Available CPUs frequencies aren't compatibles "
@@ -265,6 +265,7 @@ def main():
     else:
         freqs = [0]
         try:
+            cf = CPUFreq()
             cf.change_governo("ondemand")
             print("Running with governor 'ondemand'.\n")
         except CPUFreqErrorInit as err:
@@ -285,11 +286,9 @@ def main():
             try:
                 cf.change_frequency(str(f))
                 ftxt = "Frequency: %s," % f
-            except CPUFreqErrorInit as err:
-                print(err.message)
-                sys.exit(1)
             except:
                 print("ERROR: Unknown error on frequencies list.")
+                sys.exit(1)
         for i in args.input:
             for c in args.c:
                 print("\n- %s Inputset: %s with %s cores" % (ftxt, i, c))
@@ -340,9 +339,6 @@ def main():
     try:
         cf.change_governo("ondemand")
         print("Returning the governor to 'ondemand'.")
-    except CPUFreqErrorInit as err:
-        print(err.message)
-        sys.exit(1)
     except:
         print("ERROR: Unknown error on frequencies list.")
         sys.exit(1)
