@@ -261,6 +261,7 @@ def main():
             sys.exit(1)
         except:
             print("ERROR: Unknown error on frequencies list.")
+            print(sys.exc_info())
             sys.exit(1)
     else:
         freqs = [0]
@@ -272,7 +273,8 @@ def main():
             print(err.message)
             sys.exit(1)
         except:
-            print("ERROR: Unknown error on frequencies list.")
+            print("ERROR: Unknown error on governor.")
+            print(sys.exc_info())
             sys.exit(1)
 
     if args.cpubase:
@@ -288,6 +290,7 @@ def main():
                 ftxt = "Frequency: %s," % f
             except:
                 print("ERROR: Unknown error on frequencies list.")
+                print(sys.exc_info())
                 sys.exit(1)
         for i in args.input:
             for c in args.c:
@@ -340,7 +343,8 @@ def main():
         cf.change_governo("ondemand")
         print("Returning the governor to 'ondemand'.")
     except:
-        print("ERROR: Unknown error on frequencies list.")
+        print("ERROR: Unknown error on governor.")
+        print(sys.exc_info())
         sys.exit(1)
     fn = datarun.savedata()
     print('Running data saved on filename: %s' % fn)
