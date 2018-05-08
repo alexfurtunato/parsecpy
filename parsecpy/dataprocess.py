@@ -13,10 +13,12 @@ import numpy as np
 from pandas import DataFrame
 from pandas import Series
 from xarray import DataArray
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import ticker
+from matplotlib.widgets import Slider, RadioButtons
 
 support3d = True
 try:
@@ -274,116 +276,50 @@ class ParsecData:
         return tdict
 
     def times(self):
-        """
-        Return a Dictionary or Pandas Dataframe with resume of all tests. If
-        grouped by input size and number of cores. If a dictionary, the keys
-        are the execution cpu frequency.
-
-        Dataframe format
-            row indexes=<number cores>
-            columns indexes=<input sizes>,
-            values=<median of measures times>.
-
-        :return: dataframe with median of measures times.
-        """
-
-        timesdict = {}
-        freq = self.measures.keys()
-        for f in freq:
-            df = DataFrame()
-            data = self.measures[f]
-            inputs = list(data.keys())
-            inputs.sort(reverse=True)
-            for inp in inputs:
-                df[inp] = Series([np.median(i) for i in data[inp].values()],
-                                 index=[int(j) for j in data[inp].keys()])
-            df.sort_index(inplace=True)
-            df.sort_index(axis=1, ascending=True, inplace=True)
-            timesdict[f] = df
-        if len(timesdict.keys()) == 1:
-            return timesdict[f]
+        freq = []
+        times = []
+        for f in sorted(self.measures.keys()):
+            freq.append(int(f))
+            size = []
+            mf = self.measures[f]
+            for s in sorted(mf.keys()):
+                size.append(s)
+                cores = []
+                mfs = mf[s]
+                for c in sorted(mfs.keys(), key=int):
+                    cores.append(int(c))
+                    times.append(np.median(mfs[c]))
+        times = np.array(times)
+        if freq == [0]:
+            times = times.reshape((len(size), len(cores)))
+            coords = [('size', size), ('cores', cores)]
         else:
-            return timesdict
-
-    def xtimes(self):
-        t = self.times()
-        if type(t) is DataFrame:
-            t = {0: t}
-        d = np.array([np.array(i) for i in t.values()])
-        x = DataArray(d, coords=[('frequency', list(t.keys())),
-                                 ('cores', t[0].index),
-                                 ('size', t[0].columns)])
-        return x
+            times = times.reshape((len(freq), len(size), len(cores)))
+            coords = [('frequency', freq), ('size', size), ('cores', cores)]
+        xtimes = DataArray(times, coords=coords)
+        c = deepcopy(self.config)
+        c.pop('thread_cpu')
+        xtimes.attrs = deepcopy(c)
+        return xtimes
 
     def speedups(self):
-        """
-        Return a Dictionary or Pandas Dataframe with speedups,
-        grouped by input size and number of cores. If a dictionary, the keys
-        are the execution cpu frequency.
-
-        Dataframe format
-            row indexes=<number cores>
-            columns indexes=<input sizes>,
-            values=<calculated speedups>.
-
-        :return: dataframe with calculated speedups.
-        """
-
-        if type(self.times()) is DataFrame:
-            dsdict = {0: self.times()}
-        else:
-            dsdict = self.times()
-        for f in dsdict.keys():
-            ds = DataFrame()
-            data = dsdict[f]
-            if 1 not in data.index or len(data.index) < 2:
-                print("Error: Do not possible calcule the speedup without "
-                      "single core run")
-                return
-            for inputcol in data.columns:
-                idx = data.index[1:]
-                darr = data.loc[1, inputcol] / data[inputcol][data.index != 1]
-                ds[inputcol] = Series(darr, index=idx)
-            ds.sort_index(inplace=True)
-            ds.sort_index(axis=1, ascending=True, inplace=True)
-            dsdict[f] = ds
-        if len(dsdict.keys()) == 1:
-            return dsdict[f]
-        else:
-            return dsdict
-
-    def xspeedups(self):
-        s = self.speedups()
-        if type(s) is DataFrame:
-            s = {0: s}
-        d = np.array([np.array(i) for i in s.values()])
-        x = DataArray(d, coords=[('frequency', list(s.keys())),
-                                 ('cores', s[0].index),
-                                 ('size', s[0].columns)])
-        return x
+        times = self.times()
+        lcores = len(times.coords['cores'])
+        ldims = []
+        for c in times.dims:
+            ldims.append(len(times.coords[c]))
+        if len(ldims) == 2:
+            timesonecore = np.repeat(times.values[:, 0], lcores).reshape(tuple(ldims))
+            xspeedup = (timesonecore / times)[:,1:]
+        elif len(ldims) == 3:
+            timesonecore = np.repeat(times.values[:, :, 0], lcores).reshape(tuple(ldims))
+            xspeedup = (timesonecore / times)[:,:,1:]
+        return xspeedup
 
     def efficiency(self):
-        """
-        Return a Pandas Dataframe with efficiency,
-        grouped by input size and number of cores.
-
-        Dataframe format
-            row indexes=<number cores>
-            columns indexes=<input sizes>,
-            values=<calculated efficiency>.
-
-        :return: dataframe with calculated efficiency.
-        """
-
-        de = DataFrame()
-        data = self.speedups()
-        for inputcol in data.columns:
-            idx = data.index
-            darr = data.loc[:, inputcol] / idx
-            de[inputcol] = Series(darr, index=idx)
-        de.sort_index(inplace=True)
-        de.sort_index(axis=1, ascending=True, inplace=True)
-        return de
+        speedups = self.speedups()
+        xefficency = speedups/speedups.coords['cores']
+        return xefficency
 
     def plot2D(self, data, title='', greycolor=False, filename=''):
         """
@@ -397,7 +333,7 @@ class ParsecData:
         :return:
         """
 
-        if not data.empty:
+        if not data.size == 0:
             fig, ax = plt.subplots()
             if greycolor:
                 colors = plt.cm.Greys(
@@ -409,6 +345,16 @@ class ParsecData:
             for i, test in enumerate(data.columns):
                 xs = data.index
                 ys = data[test]
+                if data.columns.name is 'frequency':
+                    test = float(test)*1000
+                    if test >= 1e9:
+                        test = "%.2f GHz" % (test/1e9)
+                    elif test >= 1e6:
+                        test = "%.2f MHz" % (test/1e6)
+                    elif test >= 1e3:
+                        test = "%.2f KHz" % (test/1e3)
+                    else:
+                        test = "%.2f Hz" % test
                 line, = ax.plot(xs, ys, '-', linewidth=2, color=colors[i],
                                 label='Speedup for %s' % test)
             ax.legend(loc='lower right')
@@ -426,7 +372,7 @@ class ParsecData:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self, data, title='Speedup Surface', zlabel='speedup',
+    def plot3D(self, data, slidername=None, title='Speedup Surface', zlabel='speedup',
                greycolor=False, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
@@ -440,38 +386,86 @@ class ParsecData:
         :return:
         """
 
+        def update_plot3D(idx):
+            ax.clear()
+            if idx is None:
+                dataplot = data
+                if 'size' in data.dims:
+                    xc = [i + 1 for (i, j) in
+                          enumerate(data.coords['size'].values)]
+                    xc_label = 'Input Size'
+                elif 'frequency':
+                    xc = [i*1000 for i in data.coords['frequency'].values]
+                    xc_label = 'Frequency'
+            else:
+                if slidername is 'size':
+                    dataplot = data.sel(size=idx)
+                    xc = [i*1000 for i in dataplot.coords['frequency'].values]
+                    xc_label = 'Frequency'
+                elif slidername is 'frequency':
+                    dataplot = data.sel(frequency=float(idx))
+                    xc = [i + 1 for (i, j) in
+                           enumerate(dataplot.coords['size'].values)]
+                    xc_label = 'Input Size'
+            yc = dataplot.coords['cores'].values
+            X, Y = np.meshgrid(yc, xc)
+            Z = dataplot.values
+            zmin = data.values.min()
+            zmax = data.values.max()
+            surfspeedupu = ax.plot_surface(Y, X, Z, cmap=colormap,
+                                           linewidth=0.5, edgecolor='k',
+                                           linestyle='-',
+                                           vmin=(zmin - (zmax - zmin) / 10),
+                                           vmax=(zmax + (zmax - zmin) / 10))
+            ax.tick_params(labelsize='small')
+            ax.set_xlabel(xc_label)
+            ax.set_xlim(0, xc[-1])
+            if xc_label is 'Frequency':
+                ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
+            ax.set_ylabel('Number of Cores')
+            ax.set_ylim(0, yc.max())
+            ax.set_zlabel(zlabel)
+            ax.set_zlim(0, 1.10 * zmax)
+            fig.canvas.draw_idle()
+
+
         if not support3d:
             print('Warning: No 3D plot support. Please install matplotlib '
                   'with Axes3D toolkit')
             return
-        if not data.empty:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            tests = data.columns.sort_values()
-            xc = [i+1 for (i, j) in enumerate(tests)]
-            yc = data.index
-            X, Y = np.meshgrid(yc, xc)
-            lz = []
-            for i in tests:
-                lz.append(data[i])
-            Z = np.array(lz)
-            zmin = Z.min()
-            zmax = Z.max()
-            plt.title(title)
-            if greycolor:
-                colormap = cm.Greys
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        plt.title(title)
+        if greycolor:
+            colormap = cm.Greys
+        else:
+            colormap = cm.coolwarm
+
+        if not data.size == 0:
+            if len(data.dims) == 2:
+                idx = None
+            elif len(data.dims) == 3:
+                if slidername in ('size','frequency'):
+                    rax = plt.axes([0.01, 0.01, 0.17,
+                                    len(data.coords[slidername].values)*0.04],
+                                   facecolor='lightgoldenrodyellow')
+                    raxtxt = [str(i) for i in
+                              data.coords[slidername].values]
+                    idx = str(data.coords[slidername].values[0])
+                    radio = RadioButtons(rax, tuple(raxtxt))
+                    for circle in radio.circles:
+                        circle.set_radius(0.03)
+                    radio.on_clicked(update_plot3D)
+                else:
+                    print('Error: Do not possible plot data with wrong '
+                          'axis names')
+                    return
             else:
-                colormap = cm.coolwarm
-            surf = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
-                                   edgecolor='k', linestyle='-',
-                                   vmin=(zmin - (zmax-zmin)/10),
-                                   vmax=(zmax + (zmax-zmin)/10))
-            ax.set_xlabel('Input Size')
-            ax.set_xlim(0, xc[-1])
-            ax.set_ylabel('Number of Cores')
-            ax.set_ylim(0, yc.max())
-            ax.set_zlabel(zlabel)
-            ax.set_zlim(0, 1.10*zmax)
+                print('Error: Do not possible plot data with wrong '
+                      'number of axis')
+                return
+            update_plot3D(idx)
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
