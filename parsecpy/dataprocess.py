@@ -295,8 +295,8 @@ class ParsecData:
         times = []
         size = []
         cores = []
-        c = deepcopy(self.config)
-        c.pop('thread_cpu')
+        config = deepcopy(self.config)
+        config.pop('thread_cpu')
         for f in sorted(self.measures.keys()):
             freq.append(int(f))
             size = []
@@ -313,19 +313,19 @@ class ParsecData:
             times = times.reshape((len(size), len(cores)))
             coords = [('size', size), ('cores', cores)]
             if freq[0] == 0:
-                c['frequency'] = 'dynamic'
+                config['frequency'] = 'dynamic'
             else:
-                c['frequency'] = 'static: %s' % (freq[0])
+                config['frequency'] = 'static: %s' % (freq[0])
         else:
             if len(size) == 1:
                 times = times.reshape((len(freq), len(cores)))
                 coords = [('frequency', freq), ('cores', cores)]
-                c['size'] = 'static: %s' % (size[0])
+                config['size'] = 'static: %s' % (size[0])
             else:
                 times = times.reshape((len(freq), len(size), len(cores)))
                 coords = [('frequency', freq), ('size', size), ('cores', cores)]
         xtimes = xr.DataArray(times, coords=coords)
-        xtimes.attrs = deepcopy(c)
+        xtimes.attrs = deepcopy(config)
         return xtimes
 
     def speedups(self):
