@@ -350,6 +350,7 @@ class ParsecData:
         elif len(ldims) == 3:
             timesonecore = np.repeat(times.values[:, :, 0], lcores).reshape(tuple(ldims))
             xspeedup = (timesonecore / times)[:,:,1:]
+        xspeedup.attrs = times.attrs
         return xspeedup
 
     def efficiency(self):
@@ -365,6 +366,7 @@ class ParsecData:
 
         speedups = self.speedups()
         xefficency = speedups/speedups.coords['cores']
+        xefficency.attrs = speedups.attrs
         return xefficency
 
     def plot2D(self, data, title='', greycolor=False, filename=''):
