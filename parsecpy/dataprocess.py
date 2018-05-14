@@ -304,7 +304,7 @@ class ParsecData:
             for s in sorted(mf.keys(), key=int):
                 size.append(int(s))
                 cores = []
-                mfs = mf[int(s)]
+                mfs = mf[s]
                 for c in sorted(mfs.keys(), key=int):
                     cores.append(int(c))
                     times.append(np.median(mfs[c]))
