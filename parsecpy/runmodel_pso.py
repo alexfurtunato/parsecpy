@@ -170,7 +170,7 @@ def main():
 
     parsec_exec = ParsecData(config['parsecpyfilepath'])
     y_measure = parsec_exec.speedups()
-    input_sizes = y_measure.config['input_sizes']
+    input_sizes = y_measure.attrs['input_sizes']
 
     input_ord = []
     if config['problemsizes']:
