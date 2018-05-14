@@ -248,12 +248,13 @@ class Swarm:
 
         self.constr = partial(self._constraint_wrapper,
                               self.modelfunc.constraint_function,
-                              self.args,
+                              (self.args[0], data_detach(self.args[1])),
                               self.kwargs)
 
         self.obj = partial(self._obj_wrapper,
                            self.modelfunc.objective_function,
-                           self.args, self.kwargs)
+                           (self.args[0], data_detach(self.args[1])),
+                           self.kwargs)
 
         bestfpos = np.ones(self.size)*np.inf
         newfpos = np.zeros(self.size)
