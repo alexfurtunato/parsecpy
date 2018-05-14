@@ -345,13 +345,14 @@ def main():
     print(datarun)
     print(datarun.times())
     print("\n\n***** Done! *****\n")
-    try:
-        cf.change_governo("ondemand")
-        print("Returning the governor to 'ondemand'.")
-    except:
-        print("ERROR: Unknown error on governor.")
-        print(sys.exc_info())
-        sys.exit(1)
+    if args.frequency:
+        try:
+            cf.change_governo("ondemand")
+            print("Returning the governor to 'ondemand'.")
+        except:
+            print("ERROR: Unknown error on governor.")
+            print(sys.exc_info())
+            sys.exit(1)
     fn = datarun.savedata()
     print('Running data saved on filename: %s' % fn)
 
