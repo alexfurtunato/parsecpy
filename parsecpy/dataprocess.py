@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    Module with Classes that generates Pandas Dataframes
+    Module with Classes that generates xArray DataArray
     with processed data from Parsec applications execution.
 
 
@@ -10,9 +10,9 @@ import os
 from datetime import datetime
 import json
 import numpy as np
+import xarray as xr
 from pandas import DataFrame
 from pandas import Series
-from xarray import DataArray
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -94,6 +94,8 @@ class ParsecData:
                                               "%d-%m-%Y_%H:%M:%S")
                 if 'command' in datadict['config']:
                     self.config['command'] = datadict['config']['command']
+                if 'input_sizes' in datadict['config']:
+                    self.config['input_sizes'] = datadict['config']['input_sizes']
                 if 'hostname' in datadict['config']:
                     self.config['hostname'] = datadict['config']['hostname']
                 if 'thread_cpu' in datadict['config']:
@@ -182,7 +184,8 @@ class ParsecData:
         return {'benchmark': benchmark, 'input': inputsize, 'roitime': roitime,
                 'realtime': realtime, 'usertime': usertime, 'systime': systime}
 
-    def measurebuild(self, attrs, numberofcores=None, frequency=0):
+    def measurebuild(self, attrs, frequency=0,
+                     inputsize=None, numberofcores=None):
         """
         Resume all tests, grouped by input sizes and number of cores,
         on a dictionary.
@@ -191,35 +194,36 @@ class ParsecData:
             {'inputsize':{'numberofcores1':['timevalue1', ... ], ... }, ...}
 
         :param attrs: Attributes to insert into dictionary.
-        :param numberofcores: Number of cores used on executed process.
         :param frequency: Custom CPU frequency (Mhz) at execution moment.
+        :param inputsize: Input size index used on execution.
+        :param numberofcores: Number of cores used on executed process.
         :return:
         """
 
-        if not numberofcores:
-            numberofcores = attrs['cores']
+        if numberofcores is None:
+            return None
+        if inputsize is None:
+            inputsize = attrs['input']
         if attrs['roitime']:
             ttime = attrs['roitime']
         else:
             ttime = attrs['realtime']
 
         if frequency in self.measures.keys():
-            if attrs['input'] in self.measures[frequency].keys():
-                if numberofcores in self.measures[frequency][attrs['input']].\
-                        keys():
-                    self.measures[frequency][attrs['input']][numberofcores].\
+            if inputsize in self.measures[frequency].keys():
+                if numberofcores in self.measures[frequency][inputsize].keys():
+                    self.measures[frequency][inputsize][numberofcores].\
                         append(ttime)
                 else:
-                    self.measures[frequency][attrs['input']][numberofcores] = \
+                    self.measures[frequency][inputsize][numberofcores] = \
                         [ttime]
             else:
-                self.measures[frequency][attrs['input']] = \
-                    {numberofcores: [ttime]}
+                self.measures[frequency][inputsize] = {numberofcores: [ttime]}
         else:
-            self.measures[frequency] = \
-                {attrs['input']: {numberofcores: [ttime]}}
+            self.measures[frequency] = {inputsize: {numberofcores: [ttime]}}
         return
 
+#TODO Refactoring to Include Frquencies on Dictionary
     def threadcpubuild(self, source, inputsize, numberofcores, repetition):
         """
         Resume all execution threads cpu numbers, grouped by input sizes and
@@ -248,6 +252,7 @@ class ParsecData:
                 {inputsize: {numberofcores: list(source.values())}}
         return
 
+#TODO: Change Dataframe to DataArray
     def threads(self):
         """
         Return a Pandas Dataframe with resume of all threads,
@@ -276,33 +281,64 @@ class ParsecData:
         return tdict
 
     def times(self):
+        """
+        Return DataArray (xarray) with resume of all tests.
+
+        DataArray format
+            dims(frequency, size, cores)
+            data=numpy array with median of measures times.
+
+        :return: DataArray with median of measures times.
+        """
+
         freq = []
         times = []
+        size = []
+        cores = []
+        c = deepcopy(self.config)
+        c.pop('thread_cpu')
         for f in sorted(self.measures.keys()):
             freq.append(int(f))
             size = []
             mf = self.measures[f]
-            for s in sorted(mf.keys()):
-                size.append(s)
+            for s in sorted(mf.keys(), key=int):
+                size.append(int(s))
                 cores = []
-                mfs = mf[s]
+                mfs = mf[int(s)]
                 for c in sorted(mfs.keys(), key=int):
                     cores.append(int(c))
                     times.append(np.median(mfs[c]))
         times = np.array(times)
-        if freq == [0]:
+        if len(freq) == 1:
             times = times.reshape((len(size), len(cores)))
             coords = [('size', size), ('cores', cores)]
+            if freq[0] == 0:
+                c['frequency'] = 'dynamic'
+            else:
+                c['frequency'] = 'static: %s' % (freq[0])
         else:
-            times = times.reshape((len(freq), len(size), len(cores)))
-            coords = [('frequency', freq), ('size', size), ('cores', cores)]
-        xtimes = DataArray(times, coords=coords)
-        c = deepcopy(self.config)
-        c.pop('thread_cpu')
+            if len(size) == 1:
+                times = times.reshape((len(freq), len(cores)))
+                coords = [('frequency', freq), ('cores', cores)]
+                c['size'] = 'static: %s' % (size[0])
+            else:
+                times = times.reshape((len(freq), len(size), len(cores)))
+                coords = [('frequency', freq), ('size', size), ('cores', cores)]
+        xtimes = xr.DataArray(times, coords=coords)
         xtimes.attrs = deepcopy(c)
         return xtimes
 
     def speedups(self):
+        """
+        Return DataArray (xarray) with resume of all speedups.
+
+        DataArray format
+            dims(frequency, size, cores)
+            data=numpy array with calculated speedups.
+
+        :return: DataArray with calculated speedups.
+        """
+
         times = self.times()
         lcores = len(times.coords['cores'])
         ldims = []
@@ -317,6 +353,16 @@ class ParsecData:
         return xspeedup
 
     def efficiency(self):
+        """
+        Return DataArray (xarray) with resume of all efficiencies.
+
+        DataArray format
+            dims(frequency, size, cores)
+            data=numpy array with calculated efficiencies.
+
+        :return: DataArray with calculated efficiencies.
+        """
+
         speedups = self.speedups()
         xefficency = speedups/speedups.coords['cores']
         return xefficency
@@ -325,7 +371,7 @@ class ParsecData:
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
-        :param data: dataframe to plot, generate by speedups(),
+        :param data: DataArray to plot, generate by speedups(),
                      times() or efficiency().
         :param title: Plot Title.
         :param greycolor: If set color of graph to grey colormap.
@@ -377,8 +423,9 @@ class ParsecData:
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
-        :param data: dataframe to plot, generate by speedups(),
+        :param data: DataArray to plot, generate by speedups(),
                      times() or efficiency().
+        :param slidername: name of dimension of DataArray to use on slider.
         :param title: Plot Title.
         :param zlabel: Z Axis Label.
         :param greycolor: If set color of graph to grey colormap.
@@ -391,8 +438,7 @@ class ParsecData:
             if idx is None:
                 dataplot = data
                 if 'size' in data.dims:
-                    xc = [i + 1 for (i, j) in
-                          enumerate(data.coords['size'].values)]
+                    xc = data.coords['size'].values
                     xc_label = 'Input Size'
                 elif 'frequency':
                     xc = [i*1000 for i in data.coords['frequency'].values]
@@ -404,8 +450,7 @@ class ParsecData:
                     xc_label = 'Frequency'
                 elif slidername is 'frequency':
                     dataplot = data.sel(frequency=float(idx))
-                    xc = [i + 1 for (i, j) in
-                           enumerate(dataplot.coords['size'].values)]
+                    xc = dataplot.coords['size'].values
                     xc_label = 'Input Size'
             yc = dataplot.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)

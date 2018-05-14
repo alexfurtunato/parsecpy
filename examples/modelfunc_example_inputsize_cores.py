@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
     Model function example to use with parsecpy runmodel script.
+    Model for variation of input size (n) and number of cores (p).
 
     Speedup:
         S = 1 / ( ( 1-f(p,n) ) + f(p,n)/p + Q(p,n) )
@@ -13,6 +14,8 @@
 
 """
 
+import random
+import math
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
@@ -74,7 +77,7 @@ def _func_overhead(q, p, n):
     return q[0]+(q[1]*p)/pow(q[2], n)
 
 
-def _func_speedup(fparam, p, n):
+def _func_speedup(param, p, n, oh):
     """
     Model function to calculate the speedup without overhead.
 
@@ -84,22 +87,12 @@ def _func_speedup(fparam, p, n):
     :return: calculated speedup value
     """
 
-    f = _func_parallelfraction(fparam, p, n)
-    return 1/((1-f)+f/p)
-
-
-def _func_speedup_with_overhead(fparam, p, n):
-    """
-    Model function to calculate the speedup with overhead.
-
-    :param fparam: Actual parameters values
-    :param p: Numbers of cores used on model data
-    :param n: Problems size used on model data
-    :return: calculated speedup value
-    """
-
-    f = _func_parallelfraction(fparam[:4], p, n)
-    q = _func_overhead(fparam[4:], p, n)
+    if oh:
+        f = _func_parallelfraction(param[:4], p, n)
+        q = _func_overhead(param[4:], p, n)
+    else:
+        f = _func_parallelfraction(param[:], p, n)
+        q = 0
     return 1/((1-f)+f/p+q)
 
 
@@ -115,14 +108,35 @@ def model(par, x, oh):
 
     pred = []
     for p, n in x:
-        if oh:
-            param = par[:]
-            y_model = _func_speedup_with_overhead(param, p, n)
-        else:
-            param = par[:4]
-            y_model = _func_speedup(param, p, n)
+        y_model = _func_speedup(par, p, n, oh)
         pred.append(y_model)
     return x, pred
+
+
+def probe_function(par, tgen, pxmin, pxmax, *args):
+    """
+    Constraint function that would be considered on model.
+
+    :param par: Actual parameters values
+    :param tgen: Temperature of generation
+    :param args: Positional arguments passed for objective
+                 and constraint functions
+    :return: A new probe solution based on tgen and a random function
+    """
+
+    probe_solution = []
+    limits = True
+    if pxmin is None or pxmax is None:
+        limits = False
+    for i, p in enumerate(par):
+        r = random.uniform(0, 1)
+        t = math.tan(math.pi * (r - 0.5))
+        if limits:
+            ps = pxmin[i] + np.mod(p + t * tgen, pxmax[i] - pxmin[i])
+        else:
+            ps = np.mod(p + t * tgen, 10)
+        probe_solution.append(ps)
+    return probe_solution
 
 
 def constraint_function(par, *args):
@@ -155,5 +169,7 @@ def objective_function(par, *args):
     """
 
     measure = args[1]
+    if measure.dims != ('size', 'cores'):
+        return None
     pred = model(par, measure['x'], args[0])
     return mean_squared_error(measure['y'], pred[1])

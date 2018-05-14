@@ -6,7 +6,7 @@
     Its possible use a loop to repeat the same single parsec application
     run on specific number of times; And, also, its possible to refer
     differents input sizes to generate executions and resume all on a
-    Pandas Dataframe with times and speedups.
+    DataArray (xArray module) with times, speedups or efficiency.
 
     parsecpy_runprocess [-h] -p PACKAGE
         [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
@@ -26,6 +26,8 @@
         -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb},
             --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,
             gcc-tbb}. Compiler name to be used on run. (Default: gcc-hooks).
+        -f FREQUENCY, --frequency FREQUENCY
+            List of frequencies (KHz). Ex: 2000000, 2100000
         -i INPUT, --input INPUT
             Input name to be used on run. (Default: native).
             Syntax: inputsetname[<initialnumber>:<finalnumber>].
@@ -196,7 +198,7 @@ def argsparsevalidation():
                             'gcc-pthreads', 'gcc-tbb']
     helpinputtxt = 'Input name to be used on run. (Default: %(default)s). ' \
                    'Syntax: inputsetname[<initialnumber>:<finalnumber>]. ' \
-                   'Ex: native or native_1:10'
+                   'From lowest to highest size. Ex: native or native_1:10'
     parser = argparse.ArgumentParser(description='Script to run parsec app '
                                                  'with repetitions and '
                                                  'multiples inputs sizes')
@@ -225,6 +227,7 @@ def argsparsevalidation():
     args = parser.parse_args()
     return args
 
+
 def main():
     """
     Main function executed from console run.
@@ -240,6 +243,7 @@ def main():
     datarun.config = {'pkg': args.package,
                       'execdate': rundate,
                       'command': ' '.join(sys.argv),
+                      'input_sizes': args.input,
                       'thread_cpu': {},
                       'hostname': hostname}
     if args.frequency:
@@ -271,7 +275,6 @@ def main():
             print("Running with governor 'ondemand'.\n")
         except CPUFreqErrorInit as err:
             print(err.message)
-            sys.exit(1)
         except:
             print("ERROR: Unknown error on governor.")
             print(sys.exc_info())
@@ -292,16 +295,18 @@ def main():
                 print("ERROR: Unknown error on frequencies list.")
                 print(sys.exc_info())
                 sys.exit(1)
-        for i in args.input:
+        for i,inputsize in enumerate(args.input):
             for c in args.c:
-                print("\n- %s Inputset: %s with %s cores" % (ftxt, i, c))
+                print("\n- %s Inputset: %s with %s cores"
+                      % (ftxt, inputsize, c))
                 for r in range(args.repititions):
                     print("\n*** Execution ", r+1)
                     try:
                         if args.cpubase:
                             env['PARSEC_CPU_NUM'] = str(c)
                         cmd = shlex.split(command % (args.package,
-                                                     args.compiler, i, c))
+                                                     args.compiler,
+                                                     inputsize, c))
                         res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                                stderr=subprocess.STDOUT)
                         procs = None
@@ -319,7 +324,7 @@ def main():
                             print('Error Code: ', res.returncode)
                             print('Error Message: ', error.decode())
                         else:
-                            datarun.threadcpubuild(procs, i, c, r+1)
+                            datarun.threadcpubuild(procs, inputsize, c, r+1)
                             output = res.stdout.read()
                             if output:
                                 if args.verbosity > 2:
@@ -328,8 +333,9 @@ def main():
                                     print('\n')
                                 attrs = datarun.contentextract(output.decode())
                                 datarun.measurebuild(attrs=attrs,
-                                                     numberofcores=c,
-                                                     frequency=f)
+                                                     frequency=f,
+                                                     inputsize = i+1,
+                                                     numberofcores=c)
                     except OSError as e:
                         print("Error: Error from OS. Return Code = ", e.errno)
                         print("Error Message: ", e.strerror)

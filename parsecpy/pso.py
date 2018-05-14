@@ -10,7 +10,7 @@ import os
 import importlib
 import json
 import numpy as np
-import pandas as pd
+import xarray as xr
 from datetime import datetime
 from copy import deepcopy
 from functools import partial
@@ -21,6 +21,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 from . import ParsecData
+from ._common import data_attach, data_detach
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -247,7 +248,8 @@ class Swarm:
 
         self.constr = partial(self._constraint_wrapper,
                               self.modelfunc.constraint_function,
-                              self.args, self.kwargs)
+                              self.args,
+                              self.kwargs)
 
         self.obj = partial(self._obj_wrapper,
                            self.modelfunc.objective_function,
@@ -264,32 +266,32 @@ class Swarm:
         self.bestparticle = deepcopy(self.particles[np.argmin(bestfpos)])
 
     @staticmethod
-    def _obj_wrapper(func, args, kwargs, x):
+    def _obj_wrapper(func, args, kwargs, p):
         """
         Wrapper function that point to objective function.
 
         :param func: objective function.
         :param args: positional arguments to pass on to objective function
         :param kwargs: key arguments to pass on to objective function
-        :param x: particle used to calculate objective function
+        :param p: particle used to calculate objective function
         :return: return the calculated objective function.
         """
 
-        return func(x.pos, *args, **kwargs)
+        return func(p.pos, *args, **kwargs)
 
     @staticmethod
-    def _constraint_wrapper(func, args, kwargs, x):
+    def _constraint_wrapper(func, args, kwargs, p):
         """
         Wrapper function that point to constraint function.
 
         :param func: constraint function.
         :param args: positional arguments to pass on to constraint function
         :param kwargs: key arguments to pass on to constraint function
-        :param x: particle used to calculate constraint function
+        :param p: particle used to calculate constraint function
         :return: If this particle is feasable or not.
         """
 
-        return func(x.pos, *args, **kwargs)
+        return func(p.pos, *args, **kwargs)
 
     def _swarm_med(self):
         """
@@ -305,25 +307,54 @@ class Swarm:
         else:
             return abs(1 - med/self.bestparticle.fpos)
 
-    def data_build(self, data):
-        """
-        Build a Dataframe data argument.
+    # def data_detach(self, data):
+    #     """
+    #     Detach the independent and dependent variables from DataArray.
+    #
+    #     :param data: A xarray DataArray with data to detach
+    #     :return: Tuple with the variables x and y.
+    #     """
+    #
+    #     x = []
+    #     y = []
+    #     data_serie = data.to_series()
+    #     for i in data_serie.iteritems():
+    #         x.append(i[0])
+    #         y.append(i[1])
+    #     xnp = np.array(x)
+    #     ynp = np.array(y)
+    #     return {'x': xnp, 'y': ynp, 'dims': data.dims}
 
-        :param data: A tuple of two lists: input values and output values
-        :return: Dataframe of data.
-        """
-
-        data_dict = {}
-        for x, y in zip(data[0], data[1]):
-            sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
-            if sizename in data_dict:
-                data_dict[sizename][x[0]] = y
-            else:
-                data_dict[sizename] = {x[0]: y}
-        df = pd.DataFrame(data_dict)
-        df.sort_index(inplace=True)
-        df.sort_index(axis=1, ascending=True, inplace=True)
-        return df
+    # def data_attach(self, data, dims):
+    #     """
+    #     Build a xarray DataArray from tuple with independent
+    #     and dependent variables.
+    #
+    #     :param data: A tuple of two lists: input values and output values
+    #     :param dims: Tuple of strings with dimensions
+    #     :return: DataArray of data.
+    #     """
+    #
+    #     xnp = np.array(data[0])
+    #     ynp = np.array(data[1])
+    #     coords = []
+    #     shape = []
+    #     for i,d in enumerate(dims):
+    #         x = sorted(np.unique(xnp[:, i]), key=int)
+    #         coords.append((d, x))
+    #         shape.append(len(x))
+    #     data_da = xr.DataArray(ynp.reshape(tuple(shape)), coords=coords)
+    #     # data_dict = {}
+    #     # for x, y in zip(data[0], data[1]):
+    #     #     sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
+    #     #     if sizename in data_dict:
+    #     #         data_dict[sizename][x[0]] = y
+    #     #     else:
+    #     #         data_dict[sizename] = {x[0]: y}
+    #     # df = pd.DataFrame(data_dict)
+    #     # df.sort_index(inplace=True)
+    #     # df.sort_index(axis=1, ascending=True, inplace=True)
+    #     return data_da
 
     def run(self):
         """
@@ -375,22 +406,26 @@ class Swarm:
         if self.threads > 1:
             mpool.terminate()
 
-        y_measure = self.data_build((self.args[1]['x'], self.args[1]['y']))
-        y_pred = self.data_build(self.modelfunc.model(self.bestparticle.pos,
-                                                      self.args[1]['x'],
-                                                      self.args[0]))
+        y_measure = self.args[1]
+        y_measure_detach = data_detach(y_measure)
+        y_pred = data_attach(self.modelfunc.model(self.bestparticle.pos,
+                                                  y_measure_detach['x'],
+                                                  self.args[0]),
+                                  y_measure_detach['dims'])
 
-        pf = self.data_build(self.modelfunc.get_parallelfraction(
-            self.bestparticle.pos, self.args[1]['x']))
+        pf = data_attach(self.modelfunc.get_parallelfraction(
+            self.bestparticle.pos, y_measure_detach['x']),
+            y_measure_detach['dims'])
         if self.args[0]:
-            oh = self.data_build(self.modelfunc.get_overhead(
-                self.bestparticle.pos, self.args[1]['x']))
+            oh = data_attach(self.modelfunc.get_overhead(
+                self.bestparticle.pos, y_measure_detach['x']),
+                y_measure_detach['dims'])
         else:
             oh = False
 
         modelexecparams = {'pxmin': list(self.pxmin),
                            'pxmax': list(self.pxmax),
-                           'args': self.args, 'threads': self.threads,
+                           'threads': self.threads,
                            'size': self.size, 'w': self.w, 'c1': self.c1,
                            'c2': self.c2, 'maxiter': self.maxiter,
                            'modelcodepath': self.modelcodepath,
@@ -495,12 +530,12 @@ class ModelSwarm:
             print('Parsecpy datarun file %s was not found')
             return None
 
-    def predict(self, args):
+    def predict(self, x):
         """
         Predict the speedup using the input values
         and based on mathematical model.
 
-        :param args: array with number of cores and input size
+        :param x: array with number of cores and input size
                      or array of array.
         :return: return a array with speedup values.
         """
@@ -509,15 +544,15 @@ class ModelSwarm:
             print('Error: You should run or load the model data '
                   'before make predictions!')
             return None
-        if not isinstance(args, np.ndarray):
+        if not isinstance(x, np.ndarray):
             print('Error: The inputs should be a array (number of cores, '
                   'input size) or a array of array')
             return None
-        if len(args.shape) == 1:
-            args = args.reshape((1, args.shape[0]))
+        if len(x.shape) == 1:
+            x = x.reshape((1, x.shape[0]))
         psomodel = self.loadcode(self.modelcodesource, 'psomodel')
         oh = not (type(self.overhead) is bool)
-        y = psomodel.model(self.params, args, oh)
+        y = psomodel.model(self.params, x, oh)
         return y
 
     def validate(self, kfolds=3, scoring=None):
@@ -546,10 +581,11 @@ class ModelSwarm:
                                                  self.params))
                 }
             }
+        y_measure_detach = data_detach(self.y_measure)
         scores = cross_validate(SwarmEstimator(self,
                                 verbosity=self.modelexecparams['verbosity']),
-                                self.modelexecparams['args'][1]['x'],
-                                self.modelexecparams['args'][1]['y'],
+                                y_measure_detach['x'],
+                                y_measure_detach['y'],
                                 cv=kf, scoring=scoring['type'],
                                 return_train_score=False,
                                 verbose=self.modelexecparams['verbosity'])
@@ -598,22 +634,18 @@ class ModelSwarm:
             mep = deepcopy(self.modelexecparams)
             mep['pxmin'] = str(mep['pxmin'])
             mep['pxmax'] = str(mep['pxmax'])
-            mep['args'][1]['xtype'] = str(mep['args'][1]['x'].dtype)
-            mep['args'][1]['x'] = json.dumps(mep['args'][1]['x'].tolist())
-            mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
-            mep['args'][1]['y'] = json.dumps(mep['args'][1]['y'].tolist())
             datatosave['config']['modelexecparams'] = mep
             datatosave['data']['params'] = str(list(self.params))
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
-            datatosave['data']['parsecdata'] = self.y_measure.to_json()
-            datatosave['data']['speedupmodel'] = self.y_model.to_json()
+            datatosave['data']['parsecdata'] = self.y_measure.to_dict()
+            datatosave['data']['speedupmodel'] = self.y_model.to_dict()
             datatosave['data']['parallelfraction'] = \
-                self.parallelfraction.to_json()
+                self.parallelfraction.to_dict()
             if type(self.overhead) == bool:
                 datatosave['data']['overhead'] = False
             else:
-                datatosave['data']['overhead'] = self.overhead.to_json()
+                datatosave['data']['overhead'] = self.overhead.to_dict()
             if self.validation:
                 val = deepcopy(self.validation)
                 for key, value in val['scores'].items():
@@ -657,15 +689,6 @@ class ModelSwarm:
                 self.modelexecparams = deepcopy(mep)
                 self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
                 self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
-                self.modelexecparams['args'] = (mep['args'][0], {})
-                self.modelexecparams['args'][1]['input_name'] = \
-                    mep['args'][1]['input_name']
-                self.modelexecparams['args'][1]['x'] = \
-                    np.array(json.loads(mep['args'][1]['x']),
-                             dtype=mep['args'][1]['xtype'])
-                self.modelexecparams['args'][1]['y'] = \
-                    np.array(json.loads(mep['args'][1]['y']),
-                             dtype=mep['args'][1]['ytype'])
             if 'validation' in datadict.keys():
                 val = deepcopy(datadict['validation'])
                 for key, value in val['scores'].items():
@@ -685,28 +708,18 @@ class ModelSwarm:
             if 'errorrel' in datadict.keys():
                 self.errorrel = datadict['errorrel']
             if 'parsecdata' in datadict.keys():
-                self.y_measure = pd.read_json(datadict['parsecdata'])
-                self.y_measure.sort_index(inplace=True)
-                self.y_measure.sort_index(axis=1, ascending=True,
-                                          inplace=True)
+                self.y_measure = xr.DataArray.from_dict(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():
-                self.y_model = pd.read_json(datadict['speedupmodel'])
-                self.y_model.sort_index(inplace=True)
-                self.y_model.sort_index(axis=1, ascending=True, inplace=True)
+                self.y_model = xr.DataArray.from_dict(datadict['speedupmodel'])
             if 'parallelfraction' in datadict.keys():
-                self.parallelfraction = pd.read_json(
+                self.parallelfraction = xr.DataArray.from_dict(
                     datadict['parallelfraction'])
-                self.parallelfraction.sort_index(inplace=True)
-                self.parallelfraction.sort_index(axis=1, ascending=True,
-                                                 inplace=True)
             if 'overhead' in datadict.keys():
                 if not datadict['overhead']:
                     self.overhead = datadict['overhead']
                 else:
-                    self.overhead = pd.read_json(datadict['overhead'])
-                    self.overhead.sort_index(inplace=True)
-                    self.overhead.sort_index(axis=1, ascending=True,
-                                             inplace=True)
+                    self.overhead = xr.DataArray.from_dict(
+                        datadict['overhead'])
             if 'savedate' in configdict.keys():
                 self.savedate = datetime.strptime(
                     configdict['savedate'], "%d-%m-%Y_%H:%M:%S")
@@ -734,14 +747,15 @@ class ModelSwarm:
         if not data.empty:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            tests = data.columns.sort_values()
-            xc = [i + 1 for (i, j) in enumerate(tests)]
-            yc = data.index
+            if 'size' in data.dims:
+                xc = data.coords['size'].values
+                xc_label = 'Input Size'
+            elif 'frequency':
+                xc = [i * 1000 for i in data.coords['frequency'].values]
+                xc_label = 'Frequency'
+            yc = data.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)
-            lz = []
-            for i in tests:
-                lz.append(data[i])
-            Z = np.array(lz)
+            Z = data.values
             zmin = Z.min()
             zmax = Z.max()
             appname = self.pkg
@@ -756,7 +770,7 @@ class ModelSwarm:
                             vmax=(zmax + (zmax - zmin) / 10))
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
-            ax.set_xlabel('Input Size')
+            ax.set_xlabel(xc_label)
             ax.set_xlim(0, xc[-1])
             ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
             ax.set_ylabel('Number of Cores')
@@ -768,25 +782,15 @@ class ModelSwarm:
             if showmeasures:
                 data_m = self.y_measure
                 ax = fig.gca(projection='3d')
-                tests = data_m.columns.sort_values()
-                xc = [i + 1 for (i, j) in enumerate(tests)]
-                yc = data_m.index
+                xc = data_m.coords['size'].values
+                yc = data_m.coords['cores'].value
                 X, Y = np.meshgrid(yc, xc)
-                lz = []
-                for i in tests:
-                    lz.append(data_m[i])
-                Z = np.array(lz)
+                Z = data_m.values
                 surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,
                                           edgecolor='k', label='Measures')
-                x = []
-                for i in xc:
-                    for j in range(len(yc)):
-                        x.append(i)
-                y = len(xc) * list(yc)
-                z = []
-                for i in tests:
-                    for j in yc:
-                        z.append(data_m[i][j])
+                x = np.repeat(xc, len(yc))
+                y = np.resize(yc, len(xc)*len(yc))
+                z = Z.flatten()
                 ax.scatter(x, y, z, c='k', s=6)
                 ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
             ax.legend()
@@ -831,8 +835,9 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.modeldata.modelexecparams)
-        args = (p['args'][0], {'x': X, 'y': y,
-                               'input_name': p['args'][1]['input_name']})
+        y_measure = data_attach((X, y), self.modeldata.y_measure.dims)
+        oh = not (type(self.modeldata.overhead) is bool)
+        args = (oh, y_measure)
         sw = Swarm(p['pxmin'], p['pxmax'],
                    parsecpydatapath=p['parsecpydatapath'],
                    modelcodesource=self.modeldata.modelcodesource,
