@@ -21,7 +21,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 from . import ParsecData
-from ._common import data_attach, data_detach
+from parsecpy import data_attach, data_detach
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -330,6 +330,9 @@ class Swarm:
             if self.verbosity > 1:
                 print('Iteration: ', iteration+1, ' - Error: ',
                       self.bestparticle.bestfpos)
+                ####
+                print(self.bestparticle)
+                ###
             for p in self.particles:
                 p.update(self.bestparticle, self.w, self.c1, self.c2)
             if self.threads > 1:

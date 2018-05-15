@@ -1,4 +1,4 @@
-from . import _common
+from ._common import data_detach, data_attach
 from .dataprocess import ParsecData
 from .dataprocess import ParsecLogsData
 from .pso import Swarm

@@ -58,7 +58,7 @@ import argparse
 from copy import deepcopy
 from parsecpy import ParsecData
 from parsecpy import Swarm
-from ._common import data_detach
+from parsecpy import data_detach
 
 
 def argsparselist(txt):
