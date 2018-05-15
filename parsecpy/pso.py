@@ -501,7 +501,7 @@ class ModelSwarm:
             else:
                 self.params = bp.pos
                 self.error = bp.fpos
-                self.errorrel = 100*(self.error/self.y_measure.mean().mean())
+                self.errorrel = 100*(self.error/self.y_measure.values.mean())
 
     @staticmethod
     def loadcode(codetext, modulename):
