@@ -248,13 +248,11 @@ class Swarm:
 
         self.constr = partial(self._constraint_wrapper,
                               self.modelfunc.constraint_function,
-                              (self.args[0], data_detach(self.args[1])),
-                              self.kwargs)
+                              self.args, self.kwargs)
 
         self.obj = partial(self._obj_wrapper,
                            self.modelfunc.objective_function,
-                           (self.args[0], data_detach(self.args[1])),
-                           self.kwargs)
+                           self.args, self.kwargs)
 
         bestfpos = np.ones(self.size)*np.inf
         newfpos = np.zeros(self.size)
@@ -308,55 +306,6 @@ class Swarm:
         else:
             return abs(1 - med/self.bestparticle.fpos)
 
-    # def data_detach(self, data):
-    #     """
-    #     Detach the independent and dependent variables from DataArray.
-    #
-    #     :param data: A xarray DataArray with data to detach
-    #     :return: Tuple with the variables x and y.
-    #     """
-    #
-    #     x = []
-    #     y = []
-    #     data_serie = data.to_series()
-    #     for i in data_serie.iteritems():
-    #         x.append(i[0])
-    #         y.append(i[1])
-    #     xnp = np.array(x)
-    #     ynp = np.array(y)
-    #     return {'x': xnp, 'y': ynp, 'dims': data.dims}
-
-    # def data_attach(self, data, dims):
-    #     """
-    #     Build a xarray DataArray from tuple with independent
-    #     and dependent variables.
-    #
-    #     :param data: A tuple of two lists: input values and output values
-    #     :param dims: Tuple of strings with dimensions
-    #     :return: DataArray of data.
-    #     """
-    #
-    #     xnp = np.array(data[0])
-    #     ynp = np.array(data[1])
-    #     coords = []
-    #     shape = []
-    #     for i,d in enumerate(dims):
-    #         x = sorted(np.unique(xnp[:, i]), key=int)
-    #         coords.append((d, x))
-    #         shape.append(len(x))
-    #     data_da = xr.DataArray(ynp.reshape(tuple(shape)), coords=coords)
-    #     # data_dict = {}
-    #     # for x, y in zip(data[0], data[1]):
-    #     #     sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
-    #     #     if sizename in data_dict:
-    #     #         data_dict[sizename][x[0]] = y
-    #     #     else:
-    #     #         data_dict[sizename] = {x[0]: y}
-    #     # df = pd.DataFrame(data_dict)
-    #     # df.sort_index(inplace=True)
-    #     # df.sort_index(axis=1, ascending=True, inplace=True)
-    #     return data_da
-
     def run(self):
         """
         Run the iterations of swarm algorithm.
@@ -407,12 +356,12 @@ class Swarm:
         if self.threads > 1:
             mpool.terminate()
 
-        y_measure = self.args[1]
+        y_measure = ParsecData(self.parsecpydatapath).speedups()
         y_measure_detach = data_detach(y_measure)
         y_pred = data_attach(self.modelfunc.model(self.bestparticle.pos,
                                                   y_measure_detach['x'],
                                                   self.args[0]),
-                                  y_measure_detach['dims'])
+                             y_measure_detach['dims'])
 
         pf = data_attach(self.modelfunc.get_parallelfraction(
             self.bestparticle.pos, y_measure_detach['x']),
@@ -835,9 +784,11 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.modeldata.modelexecparams)
-        y_measure = data_attach((X, y), self.modeldata.y_measure.dims)
         oh = not (type(self.modeldata.overhead) is bool)
-        args = (oh, y_measure)
+        args = (oh, {'x': X,
+                     'y': y,
+                     'dims': self.modeldata.y_measure.dims,
+                     'input_sizes': None})
         sw = Swarm(p['pxmin'], p['pxmax'],
                    parsecpydatapath=p['parsecpydatapath'],
                    modelcodesource=self.modeldata.modelcodesource,

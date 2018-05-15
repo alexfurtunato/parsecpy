@@ -58,6 +58,7 @@ import argparse
 from copy import deepcopy
 from parsecpy import ParsecData
 from parsecpy import Swarm
+from ._common import data_detach
 
 
 def argsparselist(txt):
@@ -180,7 +181,11 @@ def main():
                 input_ord.append(input_sizes.index(i)+1)
             y_measure = y_measure.sel(size=sorted(input_ord))
 
-    argsswarm = (config['overhead'], y_measure)
+    y_measure_detach = data_detach(y_measure)
+    argsswarm = (config['overhead'], {'x': y_measure_detach['x'],
+                                      'y': y_measure_detach['y'],
+                                      'dims': y_measure.dims,
+                                      'input_sizes': input_sizes})
 
     repetitions = range(config['repetitions'])
     err_min = 0
