@@ -237,7 +237,7 @@ def main():
     command = 'parsecmgmt -a run -p %s -c %s -i %s -n %s'
 
     args = argsparsevalidation()
-    rundate = datetime.now()
+    rundate = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
     hostname = os.uname()[1]
     datarun = ParsecData()
     datarun.config = {'pkg': args.package,

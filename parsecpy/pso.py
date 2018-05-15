@@ -722,8 +722,7 @@ class ModelSwarm:
                     self.overhead = xr.DataArray.from_dict(
                         datadict['overhead'])
             if 'savedate' in configdict.keys():
-                self.savedate = datetime.strptime(
-                    configdict['savedate'], "%d-%m-%Y_%H:%M:%S")
+                self.savedate = configdict['savedate']
         else:
             print('Error: File not found')
             return

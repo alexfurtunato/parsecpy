@@ -169,7 +169,5 @@ def objective_function(par, *args):
     """
 
     measure = args[1]
-    if measure.dims != ('size', 'cores'):
-        return None
     pred = model(par, measure['x'], args[0])
     return mean_squared_error(measure['y'], pred[1])

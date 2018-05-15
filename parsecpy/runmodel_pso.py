@@ -136,7 +136,6 @@ def main():
     """
 
     print("\n***** Processing the Model *****")
-
     # adjust list of arguments to avoid negative number values error
     for i, arg in enumerate(sys.argv):
         if (arg[0] == '-') and arg[1].isdigit():
@@ -180,15 +179,6 @@ def main():
                     sys.exit()
                 input_ord.append(input_sizes.index(i)+1)
             y_measure = y_measure.sel(size=sorted(input_ord))
-
-    # x = []
-    # y = []
-    # y_measure_serie = y_measure.to_series()
-    # for i in y_measure_serie.iteritems():
-    #     x.append(i[0])
-    #     y.append(i[1])
-    # x = np.array(x)
-    # y = np.array(y)
 
     argsswarm = (config['overhead'], y_measure)
 

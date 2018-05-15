@@ -89,9 +89,7 @@ class ParsecData:
                 if 'pkg' in datadict['config']:
                     self.config['pkg'] = datadict['config']['pkg']
                 if 'execdate' in datadict['config']:
-                    self.config['execdate'] = datetime.strptime(
-                                              datadict['config']['execdate'],
-                                              "%d-%m-%Y_%H:%M:%S")
+                    self.config['execdate'] = datadict['config']['execdate']
                 if 'command' in datadict['config']:
                     self.config['command'] = datadict['config']['command']
                 if 'input_sizes' in datadict['config']:
@@ -122,8 +120,7 @@ class ParsecData:
         filename = self.config['pkg'] + '_datafile_' + filedatename + '.dat'
         with open(filename, 'w') as f:
             conftxt = self.config.copy()
-            conftxt['execdate'] = \
-                conftxt['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+            conftxt['execdate'] = conftxt['execdate']
             dictsave = {'config': conftxt, 'data': self.measures}
             json.dump(dictsave, f, ensure_ascii=False)
         return filename
