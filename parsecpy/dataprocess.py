@@ -11,9 +11,9 @@ from datetime import datetime
 import json
 import numpy as np
 import xarray as xr
-from pandas import DataFrame
-from pandas import Series
 from copy import deepcopy
+
+from ._common import freq_hz
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -109,15 +109,17 @@ class ParsecData:
             print('Error: File not found')
         return
 
-    def savedata(self):
+    def savedata(self, filename=None):
         """
         Write to file the measures information stored on object class
 
+        :param filename: Filename to save on.
         :return:
         """
 
-        filedatename = self.config['execdate'].strftime("%Y-%m-%d_%H:%M:%S")
-        filename = self.config['pkg'] + '_datafile_' + filedatename + '.dat'
+        if filename is None:
+            filedatename = self.config['execdate']
+            filename = self.config['pkg'] + '_datafile_' + filedatename + '.dat'
         with open(filename, 'w') as f:
             conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate']
@@ -220,16 +222,16 @@ class ParsecData:
             self.measures[frequency] = {inputsize: {numberofcores: [ttime]}}
         return
 
-#TODO Refactoring to Include Frquencies on Dictionary
-    def threadcpubuild(self, source, inputsize, numberofcores, repetition):
+    def threadcpubuild(self, source, frequency, inputsize, numberofcores):
         """
-        Resume all execution threads cpu numbers, grouped by input sizes and
-        number of cores and repetitions, on a dictionary.
+        Resume all execution threads cpu numbers, grouped by frequencies,
+        input sizes and number of cores and repetitions, on a dictionary.
 
         Dictionary format
-            {'inputsize':{'numberofcores1':{'repetition1':['timevalue1', ... ]
+            {'frequency':{'inputsize':{'numberofcores1':['cpusdict1', ... ]
             , ... }}}
         :param source: Attributes to insert into dictionary.
+        :param frequency: Frequency used on execution (0 if don't fixed).
         :param inputsize: Input size used on execution.
         :param numberofcores: Number of cores used on executed process.
         :param repetition: Number of executed repetition.
@@ -237,45 +239,63 @@ class ParsecData:
         """
 
         threadcpu = self.config['thread_cpu']
-        if repetition in threadcpu.keys():
-            if inputsize in threadcpu[repetition].keys():
-                threadcpu[repetition][inputsize][numberofcores] = \
-                    list(source.values())
+        if frequency in threadcpu.keys():
+            if inputsize in threadcpu[frequency].keys():
+                if numberofcores in threadcpu[frequency][inputsize].keys():
+                    inputdict = threadcpu[frequency][inputsize]
+                    inputdict[numberofcores].append(source.values())
+                else:
+                    threadcpu[frequency][inputsize][numberofcores] = \
+                        [source.values()]
             else:
-                threadcpu[repetition][inputsize] = \
-                    {numberofcores: list(source.values())}
+                threadcpu[frequency][inputsize] = \
+                    {numberofcores: [source.values()]}
         else:
-            threadcpu[repetition] = \
-                {inputsize: {numberofcores: list(source.values())}}
+            threadcpu[frequency] = \
+                {inputsize: {numberofcores: [source.values()]}}
         return
 
-#TODO: Change Dataframe to DataArray
     def threads(self):
         """
-        Return a Pandas Dataframe with resume of all threads,
-        grouped by input size, number of cores and repetitions.
-
-        Dataframe format
-            row indexes=<number cores>
-            columns indexes=<input sizes>,
-            values=<dictionary of threads cpus>.
+        Return a xArray DataArray with resume of all threads,
+        grouped by frequency, input size and number of cores.
 
         :return: dataframe with median of measures times.
         """
 
-        tdict = {}
-        for r in self.config['thread_cpu'].keys():
-            df = DataFrame()
-            data = self.config['thread_cpu'][r]
-            inputs = list(data.keys())
-            inputs.sort(reverse=True)
-            for inp in inputs:
-                df[inp] = Series([i for i in data[inp].values()],
-                                 index=[int(j) for j in data[inp].keys()])
-            df.sort_index(inplace=True)
-            df.sort_index(axis=1, ascending=True, inplace=True)
-            tdict[r] = df
-        return tdict
+        freq = []
+        cpus = []
+        size = []
+        cores = []
+        for f in sorted(self.config['thread_cpu'].keys(), key=int):
+            freq.append(int(f))
+            size = []
+            mf = self.config['thread_cpu'][f]
+            for s in sorted(mf.keys()):
+                size.append(s)
+                cores = []
+                mfs = mf[s]
+                for c in sorted(mfs.keys(), key=int):
+                    cores.append(int(c))
+                    cpus.append(mfs[c])
+        repetitions = range(1,len(mfs[c])+1)
+        cpus = np.array(cpus)
+        if len(freq) == 1:
+            cpus = cpus.reshape((len(size), len(cores), len(repetitions)))
+            coords = [('size', size), ('cores', cores),
+                      ('repetitions', repetitions)]
+        else:
+            if len(size) == 1:
+                cpus = cpus.reshape((len(freq), len(cores), len(repetitions)))
+                coords = [('frequency', freq), ('cores', cores),
+                          ('repetitions', repetitions)]
+            else:
+                cpus = cpus.reshape((len(freq), len(size), len(cores),
+                                     len(repetitions)))
+                coords = [('frequency', freq), ('size', size),
+                          ('cores', cores), ('repetitions', repetitions)]
+        xcpus = xr.DataArray(cpus, coords=coords)
+        return xcpus
 
     def times(self):
         """
@@ -366,7 +386,8 @@ class ParsecData:
         xefficency.attrs = speedups.attrs
         return xefficency
 
-    def plot2D(self, data, title='', greycolor=False, filename=''):
+    @staticmethod
+    def plot2D(data, title='', greycolor=False, filename=''):
         """
         Plot the 2D (Speedup x Cores) lines graph.
 
@@ -379,30 +400,36 @@ class ParsecData:
         """
 
         if not data.size == 0:
+            if len(data.dims) != 2:
+                print('Error: Do not possible plot 3-dimensions data')
+                return
             fig, ax = plt.subplots()
+            xs = data.coords['cores'].values
+            if 'size' in data.dims:
+                datalines = data.coords['size'].values
+                #xc_label = 'Input Size'
+            elif 'frequency' in data.dims:
+                datalines = data.coords['frequency'].values
+                #xc_label = 'Frequency'
             if greycolor:
                 colors = plt.cm.Greys(
-                    np.linspace(0, 1, len(data.columns) + 10))
+                    np.linspace(0, 1, len(datalines) + 10))
                 colors = colors[::-1]
                 colors = colors[:-5]
             else:
-                colors = plt.cm.jet(np.linspace(0, 1, len(data.columns)))
-            for i, test in enumerate(data.columns):
-                xs = data.index
-                ys = data[test]
-                if data.columns.name is 'frequency':
-                    test = float(test)*1000
-                    if test >= 1e9:
-                        test = "%.2f GHz" % (test/1e9)
-                    elif test >= 1e6:
-                        test = "%.2f MHz" % (test/1e6)
-                    elif test >= 1e3:
-                        test = "%.2f KHz" % (test/1e3)
-                    else:
-                        test = "%.2f Hz" % test
+                colors = plt.cm.jet(np.linspace(0, 1, len(datalines)))
+            for i, d in enumerate(datalines):
+                if 'size' in data.dims:
+                    ys = data.sel(size=d)
+                    legendtitle= 'Sizes'
+                    legendlabel = d
+                elif 'frequency' in data.dims:
+                    ys = data.sel(frequency=d)
+                    legendtitle= 'Frequencies'
+                    legendlabel = freq_hz(d*1000)
                 line, = ax.plot(xs, ys, '-', linewidth=2, color=colors[i],
-                                label='Speedup for %s' % test)
-            ax.legend(loc='lower right')
+                                label='Speedup for %s' % legendlabel)
+            ax.legend(loc='lower right', title=legendtitle)
             ax.set_xlabel('Number of Cores')
             ax.set_xlim(0, xs.max())
             ax.xaxis.set_major_locator(ticker.MultipleLocator(2.0))
@@ -417,7 +444,8 @@ class ParsecData:
             print('Error: Do not possible plot data without '
                   'speedups information')
 
-    def plot3D(self, data, slidername=None, title='Speedup Surface', zlabel='speedup',
+    @staticmethod
+    def plot3D(data, slidername=None, title='Speedup Surface', zlabel='speedup',
                greycolor=False, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
@@ -439,7 +467,7 @@ class ParsecData:
                 if 'size' in data.dims:
                     xc = data.coords['size'].values
                     xc_label = 'Input Size'
-                elif 'frequency':
+                elif 'frequency' in data.dims:
                     xc = [i*1000 for i in data.coords['frequency'].values]
                     xc_label = 'Frequency'
             else:

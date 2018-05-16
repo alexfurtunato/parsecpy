@@ -16,15 +16,18 @@ import os
 import importlib
 from functools import partial
 import numpy as np
+import xarray as xr
 import json
 from copy import deepcopy
 from datetime import datetime
-import pandas as pd
 
 from sklearn.model_selection import cross_validate, KFold
 from sklearn.metrics import make_scorer, mean_squared_error
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+
+from . import ParsecData
+from parsecpy import data_attach, data_detach
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -183,32 +186,32 @@ class CoupledAnnealer(object):
                                           self.args, self.kwargs)
 
     @staticmethod
-    def _obj_wrapper(func, args, kwargs, x):
+    def _obj_wrapper(func, args, kwargs, p):
         """
         Wrapper function that point to objective function.
 
         :param func: objective function.
         :param args: positional arguments to pass on to objective function
         :param kwargs: key arguments to pass on to objective function
-        :param x: probe parameters used to calculate objective function
+        :param p: probe parameters used to calculate objective function
         :return: return the calculated objective function.
         """
 
-        return func(x, *args, **kwargs)
+        return func(p, *args, **kwargs)
 
     @staticmethod
-    def _probe_wrapper(func, args, kwargs, tgen, pxmin, pxmax, x):
+    def _probe_wrapper(func, args, kwargs, tgen, pxmin, pxmax, p):
         """
         Wrapper function that point to constraint function.
 
         :param func: constraint function.
         :param args: positional arguments to pass on to constraint function
         :param kwargs: key arguments to pass on to constraint function
-        :param x: annealer state used to calculate the probe parameters
+        :param p: annealer state used to calculate the probe parameters
         :return: A new probe solution based on tgen and a random function
         """
 
-        return func(x, tgen, pxmin, pxmax, *args, **kwargs)
+        return func(p, tgen, pxmin, pxmax, *args, **kwargs)
 
     def __update_state(self):
         """
@@ -306,26 +309,6 @@ class CoupledAnnealer(object):
         state = self.current_states[index]
         return energy, state
 
-    def data_build(self, data):
-        """
-        Build a Dataframe data argument.
-
-        :param data: A tuple of two lists: input values and output values
-        :return: Dataframe of data.
-        """
-
-        data_dict = {}
-        for x, y in zip(data[0], data[1]):
-            sizename = self.args[1]['input_name']+'_'+('%02d' % x[1])
-            if sizename in data_dict:
-                data_dict[sizename][x[0]] = y
-            else:
-                data_dict[sizename] = {x[0]: y}
-        df = pd.DataFrame(data_dict)
-        df.sort_index(inplace=True)
-        df.sort_index(axis=1, ascending=True, inplace=True)
-        return df
-
     def run(self):
         """
         Run the CSA annealing process.
@@ -359,22 +342,26 @@ class CoupledAnnealer(object):
                 self.__status_check(k, min(self.best_energies))
 
         best_energy, best_params = self.__get_best()
-        y_measure = self.data_build((self.args[1]['x'], self.args[1]['y']))
-        y_pred = self.data_build(self.modelfunc.model(best_params,
-                                                      self.args[1]['x'],
-                                                      self.args[0]))
+        y_measure = ParsecData(self.parsecpydatapath).speedups()
+        y_measure_detach = data_detach(y_measure)
+        y_pred = data_attach(self.modelfunc.model(best_params,
+                                                  y_measure_detach['x'],
+                                                  self.args[0]),
+                             y_measure_detach['dims'])
 
-        pf = self.data_build(self.modelfunc.get_parallelfraction(
-            best_params, self.args[1]['x']))
+        pf = data_attach(self.modelfunc.get_parallelfraction(
+            best_params, y_measure_detach['x']),
+            y_measure_detach['dims'])
         if self.args[0]:
-            oh = self.data_build(self.modelfunc.get_overhead(
-                best_params, self.args[1]['x']))
+            oh = data_attach(self.modelfunc.get_overhead(
+                best_params, y_measure_detach['x']),
+                y_measure_detach['dims'])
         else:
             oh = False
 
         modelexecparams = {'m': self.m,
                            'steps': self.steps, 'dimension': len(best_params),
-                           'args': self.args, 'threads': self.threads,
+                           'threads': self.threads,
                            'tgen': self.tgen_initial, 'tacc': self.tacc,
                            'tgen_upd_factor': self.tgen_upd_factor,
                            'desired_variance': self.desired_variance,
@@ -452,7 +439,7 @@ class ModelCoupledAnnealer:
             else:
                 self.params = bp
                 self.error = error
-                self.errorrel = 100*(self.error/self.y_measure.mean().mean())
+                self.errorrel = 100*(self.error/self.y_measure.values.mean())
 
     @staticmethod
     def loadcode(codetext, modulename):
@@ -533,10 +520,11 @@ class ModelCoupledAnnealer:
                                                  self.params))
                 }
             }
+        y_measure_detach = data_detach(self.y_measure)
         scores = cross_validate(CSAEstimator(self,
                                 verbosity=self.modelexecparams['verbosity']),
-                                self.modelexecparams['args'][1]['x'],
-                                self.modelexecparams['args'][1]['y'],
+                                y_measure_detach['x'],
+                                y_measure_detach['y'],
                                 cv=kf, scoring=scoring['type'],
                                 return_train_score=False,
                                 verbose=self.modelexecparams['verbosity'])
@@ -579,28 +567,23 @@ class ModelCoupledAnnealer:
             datatosave['config']['modelcommand'] = modelcommand
             if 'hostname' in parsecconfig:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
-            datatosave['config']['savedate'] = datetime.now().strftime(
-                "%d-%m-%Y_%H:%M:%S")
+            datatosave['config']['savedate'] = filedate
             datatosave['config']['modelcodesource'] = self.modelcodesource
             mep = deepcopy(self.modelexecparams)
             mep['pxmin'] = str(mep['pxmin'])
             mep['pxmax'] = str(mep['pxmax'])
-            mep['args'][1]['xtype'] = str(mep['args'][1]['x'].dtype)
-            mep['args'][1]['x'] = json.dumps(mep['args'][1]['x'].tolist())
-            mep['args'][1]['ytype'] = str(mep['args'][1]['y'].dtype)
-            mep['args'][1]['y'] = json.dumps(mep['args'][1]['y'].tolist())
             datatosave['config']['modelexecparams'] = mep
             datatosave['data']['params'] = str(list(self.params))
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
-            datatosave['data']['parsecdata'] = self.y_measure.to_json()
-            datatosave['data']['speedupmodel'] = self.y_model.to_json()
+            datatosave['data']['parsecdata'] = self.y_measure.to_dict()
+            datatosave['data']['speedupmodel'] = self.y_model.to_dict()
             datatosave['data']['parallelfraction'] = \
-                self.parallelfraction.to_json()
+                self.parallelfraction.to_dict()
             if type(self.overhead) == bool:
                 datatosave['data']['overhead'] = False
             else:
-                datatosave['data']['overhead'] = self.overhead.to_json()
+                datatosave['data']['overhead'] = self.overhead.to_dict()
             if self.validation:
                 val = deepcopy(self.validation)
                 for key, value in val['scores'].items():
@@ -644,15 +627,6 @@ class ModelCoupledAnnealer:
                 self.modelexecparams = deepcopy(mep)
                 self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
                 self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
-                self.modelexecparams['args'] = (mep['args'][0], {})
-                self.modelexecparams['args'][1]['input_name'] = \
-                    mep['args'][1]['input_name']
-                self.modelexecparams['args'][1]['x'] = \
-                    np.array(json.loads(mep['args'][1]['x']),
-                             dtype=mep['args'][1]['xtype'])
-                self.modelexecparams['args'][1]['y'] = \
-                    np.array(json.loads(mep['args'][1]['y']),
-                             dtype=mep['args'][1]['ytype'])
             if 'validation' in datadict.keys():
                 val = deepcopy(datadict['validation'])
                 for key, value in val['scores'].items():
@@ -672,37 +646,26 @@ class ModelCoupledAnnealer:
             if 'errorrel' in datadict.keys():
                 self.errorrel = datadict['errorrel']
             if 'parsecdata' in datadict.keys():
-                self.y_measure = pd.read_json(datadict['parsecdata'])
-                self.y_measure.sort_index(inplace=True)
-                self.y_measure.sort_index(axis=1, ascending=True,
-                                          inplace=True)
+                self.y_measure = xr.DataArray.from_dict(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():
-                self.y_model = pd.read_json(datadict['speedupmodel'])
-                self.y_model.sort_index(inplace=True)
-                self.y_model.sort_index(axis=1, ascending=True, inplace=True)
+                self.y_model = xr.DataArray.from_dict(datadict['speedupmodel'])
             if 'parallelfraction' in datadict.keys():
-                self.parallelfraction = pd.read_json(
+                self.parallelfraction = xr.DataArray.from_dict(
                     datadict['parallelfraction'])
-                self.parallelfraction.sort_index(inplace=True)
-                self.parallelfraction.sort_index(axis=1, ascending=True,
-                                                 inplace=True)
             if 'overhead' in datadict.keys():
                 if not datadict['overhead']:
                     self.overhead = datadict['overhead']
                 else:
-                    self.overhead = pd.read_json(datadict['overhead'])
-                    self.overhead.sort_index(inplace=True)
-                    self.overhead.sort_index(axis=1, ascending=True,
-                                             inplace=True)
+                    self.overhead = xr.DataArray.from_dict(
+                        datadict['overhead'])
             if 'savedate' in configdict.keys():
-                self.savedate = datetime.strptime(
-                    configdict['savedate'], "%d-%m-%Y_%H:%M:%S")
+                self.savedate = configdict['savedate']
         else:
             print('Error: File not found')
             return
         return
 
-    def plot3D(self, title='Speedup Model', greycolor=False,
+    def plot3D(self, title='CSA Speedup Model', greycolor=False,
                showmeasures=False, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
@@ -718,18 +681,19 @@ class ModelCoupledAnnealer:
                   'with Axes3D toolkit')
             return
         data = self.y_model
-        if not data.empty:
+        if not data.size == 0:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            tests = data.columns.sort_values()
-            xc = [i + 1 for (i, j) in enumerate(tests)]
-            yc = data.index
+            if 'size' in data.dims:
+                xc = data.coords['size'].values
+                xc_label = 'Input Size'
+            elif 'frequency':
+                xc = [i * 1000 for i in data.coords['frequency'].values]
+                xc_label = 'Frequency'
+            yc = data.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)
-            lz = []
-            for i in tests:
-                lz.append(data[i])
-            Z = np.array(lz)
-            zmin = Z.min()
+            Z = data.values
+            zmin = 0
             zmax = Z.max()
             appname = self.pkg
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
@@ -737,43 +701,31 @@ class ModelCoupledAnnealer:
                 colormap = cm.Greys
             else:
                 colormap = cm.coolwarm
-            surf1 = ax.plot_surface(Y, X, Z, cmap=colormap, linewidth=0.5,
-                            edgecolor='k', linestyle='-', alpha=alpha,
-                            vmin=(zmin - (zmax - zmin) / 10),
-                            vmax=(zmax + (zmax - zmin) / 10), label='Model')
+            surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap, linewidth=0.5,
+                            edgecolor='k', linestyle='-', alpha=alpha)
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
-            ax.set_xlabel('Input Size')
+            ax.set_xlabel(xc_label)
             ax.set_xlim(0, xc[-1])
             ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
             ax.set_ylabel('Number of Cores')
             ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
             ax.set_ylim(0, yc.max())
-            ax.set_zlabel('Speedup')
+            ax.set_zlabel('Model Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
             ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if showmeasures:
                 data_m = self.y_measure
                 ax = fig.gca(projection='3d')
-                tests = data_m.columns.sort_values()
-                xc = [i + 1 for (i, j) in enumerate(tests)]
-                yc = data_m.index
+                xc = data_m.coords['size'].values
+                yc = data_m.coords['cores'].values
                 X, Y = np.meshgrid(yc, xc)
-                lz = []
-                for i in tests:
-                    lz.append(data_m[i])
-                Z = np.array(lz)
+                Z = data_m.values
                 surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,
-                                       edgecolor='k', label='Measures')
-                x = []
-                for i in xc:
-                    for j in range(len(yc)):
-                        x.append(i)
-                y = len(xc) * list(yc)
-                z = []
-                for i in tests:
-                    for j in yc:
-                        z.append(data_m[i][j])
+                                          edgecolor='k', label='Measures')
+                x = np.repeat(xc, len(yc))
+                y = np.resize(yc, len(xc)*len(yc))
+                z = Z.flatten()
                 ax.scatter(x, y, z, c='k', s=6)
                 ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
             ax.legend()
@@ -818,8 +770,11 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.modeldata.modelexecparams)
-        args = (p['args'][0], {'x': X, 'y': y,
-                               'input_name': p['args'][1]['input_name']})
+        oh = not (type(self.modeldata.overhead) is bool)
+        args = (oh, {'x': X,
+                     'y': y,
+                     'dims': self.modeldata.y_measure.dims,
+                     'input_sizes': None})
         if p['pxmin'] is None or p['pxmax'] is None:
             initial_state = [tuple((random.normalvariate(0, 5) for _ in
                                     range(p['dimension'])))

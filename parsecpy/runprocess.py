@@ -32,8 +32,8 @@
             Input name to be used on run. (Default: native).
             Syntax: inputsetname[<initialnumber>:<finalnumber>].
             Ex: native or native_1:10
-        -r REPITITIONS, --repititions REPITITIONS
-            Number of repititions for a specific run. (Default: 1)
+        -r REPITITIONS, --repetitions REPITITIONS
+            Number of repetitions for a specific run. (Default: 1)
         -b CPU_BASE, --cpubase CPU_BASE
             If run with thread affinity(limiting the running cores to defined
             number of cores), define the cpu base number.
@@ -215,8 +215,8 @@ def argsparsevalidation():
                         help='List of frequencies (KHz). Ex: 2000000, 2100000')
     parser.add_argument('-i', '--input', type=argsparseinputlist,
                         help=helpinputtxt, default='native')
-    parser.add_argument('-r', '--repititions', type=int,
-                        help='Number of repititions for a specific run. '
+    parser.add_argument('-r', '--repetitions', type=int,
+                        help='Number of repetitions for a specific run. '
                              '(Default: %(default)s)', default=1)
     parser.add_argument('-b', '--cpubase', type=int,
                         help='If run with thread affinity(limiting the '
@@ -284,7 +284,7 @@ def main():
         env = os.environ
         env['PARSEC_CPU_BASE'] = str(args.cpubase)
 
-    print("Processing %s Repetitions: " % args.repititions)
+    print("Processing %s Repetitions: " % args.repetitions)
     for f in freqs:
         ftxt = None
         if not (len(freqs) == 1 and f == 0):
@@ -299,7 +299,7 @@ def main():
             for c in args.c:
                 print("\n- %s Inputset: %s with %s cores"
                       % (ftxt, inputsize, c))
-                for r in range(args.repititions):
+                for r in range(args.repetitions):
                     print("\n*** Execution ", r+1)
                     try:
                         if args.cpubase:
@@ -324,7 +324,7 @@ def main():
                             print('Error Code: ', res.returncode)
                             print('Error Message: ', error.decode())
                         else:
-                            datarun.threadcpubuild(procs, inputsize, c, r+1)
+                            datarun.threadcpubuild(procs, f, inputsize, c, r+1)
                             output = res.stdout.read()
                             if output:
                                 if args.verbosity > 2:

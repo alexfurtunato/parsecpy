@@ -107,7 +107,7 @@ def model(par, x, oh):
     """
 
     pred = []
-    for p, n in x:
+    for n, p in x:
         y_model = _func_speedup(par, p, n, oh)
         pred.append(y_model)
     return x, pred

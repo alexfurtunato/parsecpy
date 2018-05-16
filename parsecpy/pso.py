@@ -330,9 +330,6 @@ class Swarm:
             if self.verbosity > 1:
                 print('Iteration: ', iteration+1, ' - Error: ',
                       self.bestparticle.bestfpos)
-                ####
-                print(self.bestparticle)
-                ###
             for p in self.particles:
                 p.update(self.bestparticle, self.w, self.c1, self.c2)
             if self.threads > 1:
@@ -581,8 +578,7 @@ class ModelSwarm:
             datatosave['config']['modelcommand'] = modelcommand
             if 'hostname' in parsecconfig:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
-            datatosave['config']['savedate'] = datetime.now().strftime(
-                "%d-%m-%Y_%H:%M:%S")
+            datatosave['config']['savedate'] = filedate
             datatosave['config']['modelcodesource'] = self.modelcodesource
             mep = deepcopy(self.modelexecparams)
             mep['pxmin'] = str(mep['pxmin'])
@@ -680,7 +676,7 @@ class ModelSwarm:
             return
         return
 
-    def plot3D(self, title='Speedup Model', greycolor=False,
+    def plot3D(self, title='PSO Speedup Model', greycolor=False,
                showmeasures=False, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
@@ -696,19 +692,19 @@ class ModelSwarm:
                   'matplotlib with Axes3D toolkit')
             return
         data = self.y_model
-        if not data.empty:
+        if not data.size == 0:
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             if 'size' in data.dims:
                 xc = data.coords['size'].values
                 xc_label = 'Input Size'
-            elif 'frequency':
+            elif 'frequency' in data.dims:
                 xc = [i * 1000 for i in data.coords['frequency'].values]
                 xc_label = 'Frequency'
             yc = data.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)
             Z = data.values
-            zmin = Z.min()
+            zmin = 0
             zmax = Z.max()
             appname = self.pkg
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
@@ -717,9 +713,7 @@ class ModelSwarm:
             else:
                 colormap = cm.coolwarm
             surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap, linewidth=0.5,
-                            edgecolor='k', linestyle='-', alpha=alpha,
-                            vmin=(zmin - (zmax - zmin) / 10),
-                            vmax=(zmax + (zmax - zmin) / 10))
+                            edgecolor='k', linestyle='-', alpha=alpha)
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
             ax.set_xlabel(xc_label)
@@ -735,7 +729,7 @@ class ModelSwarm:
                 data_m = self.y_measure
                 ax = fig.gca(projection='3d')
                 xc = data_m.coords['size'].values
-                yc = data_m.coords['cores'].value
+                yc = data_m.coords['cores'].values
                 X, Y = np.meshgrid(yc, xc)
                 Z = data_m.values
                 surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,

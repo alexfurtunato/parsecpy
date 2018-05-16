@@ -60,6 +60,8 @@ import numpy as np
 from copy import deepcopy
 from parsecpy import ParsecData
 from parsecpy import CoupledAnnealer
+from parsecpy import data_detach
+
 
 
 def argsparselist(txt):
@@ -169,27 +171,23 @@ def main():
 
     parsec_exec = ParsecData(config['parsecpyfilepath'])
     y_measure = parsec_exec.speedups()
+    input_sizes = y_measure.attrs['input_sizes']
 
-    n = y_measure.columns
+    input_ord = []
     if config['problemsizes']:
-        n_model = n.copy()
-        for i in config['problemsizes']:
-            if i not in n_model:
-                print('Error: Measures not has especified problem sizes')
-                sys.exit()
-        y_measure = y_measure[config['problemsizes']]
+            for i in config['problemsizes']:
+                if i not in input_sizes:
+                    print('Error: Measures not has especified problem sizes')
+                    sys.exit()
+                input_ord.append(input_sizes.index(i)+1)
+            y_measure = y_measure.sel(size=sorted(input_ord))
 
-    x = []
-    y = []
-    for i, row in y_measure.iterrows():
-        for c, v in row.iteritems():
-            x.append([i, int(c.split('_')[1])])
-            y.append(v)
-    input_name = c.split('_')[0]
-    x = np.array(x)
-    y = np.array(y)
+    y_measure_detach = data_detach(y_measure)
 
-    argsanneal = (config['overhead'], {'x': x, 'y': y, 'input_name': input_name})
+    argsanneal = (config['overhead'], {'x': y_measure_detach['x'],
+                                      'y': y_measure_detach['y'],
+                                      'dims': y_measure.dims,
+                                      'input_sizes': input_sizes})
 
     repetitions = range(config['repetitions'])
     err_min = 0
