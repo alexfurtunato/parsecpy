@@ -363,26 +363,17 @@ class Swarm:
                                                   self.args[0]),
                              y_measure_detach['dims'])
 
-        pf = data_attach(self.modelfunc.get_parallelfraction(
-            self.bestparticle.pos, y_measure_detach['x']),
-            y_measure_detach['dims'])
-        if self.args[0]:
-            oh = data_attach(self.modelfunc.get_overhead(
-                self.bestparticle.pos, y_measure_detach['x']),
-                y_measure_detach['dims'])
-        else:
-            oh = False
-
         modelexecparams = {'pxmin': list(self.pxmin),
                            'pxmax': list(self.pxmax),
                            'threads': self.threads,
                            'size': self.size, 'w': self.w, 'c1': self.c1,
                            'c2': self.c2, 'maxiter': self.maxiter,
+                           'oh': self.args[0],
                            'modelcodepath': self.modelcodepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'verbosity': self.verbosity}
         self.modelbest = ModelSwarm(bp=self.bestparticle, ymeas=y_measure,
-                                    ypred=y_pred, pf=pf, oh=oh,
+                                    ypred=y_pred,
                                     modelcodepath=self.modelcodepath,
                                     modelcodesource=self.modelcodesource,
                                     modelexecparams=modelexecparams)
@@ -398,8 +389,6 @@ class ModelSwarm:
             error - model error or output of objective function
             y_measure - measured speedups dataframe
             y_model - modeled speedups dataframe
-            parallelfraction - parallel fraction calculated by model
-            overhead - overhead calculated by model
 
         Methods
             loadata()
@@ -412,7 +401,7 @@ class ModelSwarm:
     """
 
     def __init__(self, modeldata=None, bp=None, ymeas=None, ypred=None,
-                 pf=None, oh=False, modelcodepath=None, modelcodesource=None,
+                 modelcodepath=None, modelcodesource=None,
                  modelexecparams=None):
         """
         Create a empty object or initialized of data from a file saved
@@ -422,8 +411,6 @@ class ModelSwarm:
         :param bp: best particle object of swarm
         :param ymeas: output speedup model calculated by model parameters
         :param ypred: output speedup measured by ParsecData class
-        :param pf: the parallel fraction calculated by parameters of model.
-        :param oh: the overhead calculated by parameters of model.
         :param modelcodepath: path of the python module with model coded.
         :param modelcodesource: python module source file content.
         :param modelexecparams: Model execution used parameters.
@@ -434,8 +421,6 @@ class ModelSwarm:
         else:
             self.y_measure = ymeas
             self.y_model = ypred
-            self.parallelfraction = pf
-            self.overhead = oh
             self.modelexecparams = modelexecparams
             self.modelcodesource = None
             self.validation = None
@@ -501,8 +486,7 @@ class ModelSwarm:
         if len(x.shape) == 1:
             x = x.reshape((1, x.shape[0]))
         psomodel = self.loadcode(self.modelcodesource, 'psomodel')
-        oh = not (type(self.overhead) is bool)
-        y = psomodel.model(self.params, x, oh)
+        y = psomodel.model(self.params, x, self.modelexecparams['oh'])
         return y
 
     def validate(self, kfolds=3, scoring=None):
@@ -589,12 +573,6 @@ class ModelSwarm:
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_dict()
             datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-            datatosave['data']['parallelfraction'] = \
-                self.parallelfraction.to_dict()
-            if type(self.overhead) == bool:
-                datatosave['data']['overhead'] = False
-            else:
-                datatosave['data']['overhead'] = self.overhead.to_dict()
             if self.validation:
                 val = deepcopy(self.validation)
                 for key, value in val['scores'].items():
@@ -660,15 +638,6 @@ class ModelSwarm:
                 self.y_measure = xr.DataArray.from_dict(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():
                 self.y_model = xr.DataArray.from_dict(datadict['speedupmodel'])
-            if 'parallelfraction' in datadict.keys():
-                self.parallelfraction = xr.DataArray.from_dict(
-                    datadict['parallelfraction'])
-            if 'overhead' in datadict.keys():
-                if not datadict['overhead']:
-                    self.overhead = datadict['overhead']
-                else:
-                    self.overhead = xr.DataArray.from_dict(
-                        datadict['overhead'])
             if 'savedate' in configdict.keys():
                 self.savedate = configdict['savedate']
         else:
@@ -699,12 +668,12 @@ class ModelSwarm:
                 xc = data.coords['size'].values
                 xc_label = 'Input Size'
             elif 'frequency' in data.dims:
-                xc = [i * 1000 for i in data.coords['frequency'].values]
+                xc = 1000*data.coords['frequency'].values
                 xc_label = 'Frequency'
             yc = data.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)
             Z = data.values
-            zmin = 0
+            zmin = Z.min()
             zmax = Z.max()
             appname = self.pkg
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
@@ -717,18 +686,18 @@ class ModelSwarm:
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
             ax.set_xlabel(xc_label)
-            ax.set_xlim(0, xc[-1])
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            if xc_label is 'Frequency':
+                ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
-            ax.set_ylim(0, yc.max())
             ax.set_zlabel('Model Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
-            ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if showmeasures:
                 data_m = self.y_measure
                 ax = fig.gca(projection='3d')
-                xc = data_m.coords['size'].values
+                if 'size' in data_m.dims:
+                    xc = data_m.coords['size'].values
+                elif 'frequency' in data_m.dims:
+                    xc = 1000*data_m.coords['frequency'].values
                 yc = data_m.coords['cores'].values
                 X, Y = np.meshgrid(yc, xc)
                 Z = data_m.values
@@ -781,11 +750,10 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.modeldata.modelexecparams)
-        oh = not (type(self.modeldata.overhead) is bool)
-        args = (oh, {'x': X,
-                     'y': y,
-                     'dims': self.modeldata.y_measure.dims,
-                     'input_sizes': None})
+        args = (p['oh'], {'x': X,
+                          'y': y,
+                          'dims': self.modeldata.y_measure.dims,
+                          'input_sizes': None})
         sw = Swarm(p['pxmin'], p['pxmax'],
                    parsecpydatapath=p['parsecpydatapath'],
                    modelcodesource=self.modeldata.modelcodesource,

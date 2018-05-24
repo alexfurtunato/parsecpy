@@ -135,8 +135,8 @@ class CoupledAnnealer(object):
         self.tgen_upd_factor = tgen_upd_factor
         self.tacc = tacc_initial
         self.alpha = alpha
-        self.pxmin = pxmin
-        self.pxmax = pxmax
+        self.pxmin = np.array(pxmin)
+        self.pxmax = np.array(pxmax)
         self.args = args
         self.kwargs = kwargs
         self.tgen_initial = tgen_initial
@@ -158,7 +158,7 @@ class CoupledAnnealer(object):
             if modelcodesource is not None:
                 import types
 
-                self.modelfunc = types.ModuleType('psomodel')
+                self.modelfunc = types.ModuleType('csamodel')
                 exec(self.modelcodesource, self.modelfunc.__dict__)
 
         # Set desired_variance.
@@ -169,21 +169,32 @@ class CoupledAnnealer(object):
 
         # Initialize state.
         assert len(initial_state) == self.m
-        self.probe_states = initial_state
+        self.probe_states = initial_state.copy()
 
         # Shallow copy.
-        self.current_states = self.probe_states[:]
+        self.current_states = initial_state.copy()
 
         # Initialize energies.
-        self.probe_energies = self.current_energies = [None] * self.m
+        self.probe_energies = np.zeros(self.m)
+        self.current_energies = self.probe_energies.copy()
 
         self.probe_function = partial(self._probe_wrapper,
                                       self.modelfunc.probe_function,
-                                      self.args, self.kwargs, self.tgen,
-                                      self.pxmin, self.pxmax)
+                                      self.args, self.kwargs, self.tgen)
         self.objective_function = partial(self._obj_wrapper,
                                           self.modelfunc.objective_function,
                                           self.args, self.kwargs)
+
+    def state_adjust(self, state):
+        """
+        Adjust limits of states from CSA (-1.0 : 1.0) to a new one.
+
+        :param state: state to adjust.
+        :return: return the adjusted state.
+        """
+        if len(self.pxmin)>0 and len(self.pxmax)>0:
+            return self.pxmin + (self.pxmax-self.pxmin)*(state/2 + 0.5)
+        return state
 
     @staticmethod
     def _obj_wrapper(func, args, kwargs, p):
@@ -200,7 +211,7 @@ class CoupledAnnealer(object):
         return func(p, *args, **kwargs)
 
     @staticmethod
-    def _probe_wrapper(func, args, kwargs, tgen, pxmin, pxmax, p):
+    def _probe_wrapper(func, args, kwargs, tgen, p):
         """
         Wrapper function that point to constraint function.
 
@@ -211,7 +222,7 @@ class CoupledAnnealer(object):
         :return: A new probe solution based on tgen and a random function
         """
 
-        return func(p, tgen, pxmin, pxmax, *args, **kwargs)
+        return func(p, tgen, *args, **kwargs)
 
     def __update_state(self):
         """
@@ -222,9 +233,10 @@ class CoupledAnnealer(object):
         mpool = mp.Pool(processes=self.threads)
         # Put the workers to work.
         self.probe_states = np.array(mpool.map(self.probe_function,
-                                               self.current_states))
+                                               self.current_states.copy()))
+        probe_temp = np.array([self.state_adjust(i) for i in self.probe_states])
         self.probe_energies = np.array(mpool.map(self.objective_function,
-                                                 self.probe_states))
+                                                 probe_temp.copy()))
         mpool.terminate()
 
     def __update_state_no_par(self):
@@ -234,9 +246,10 @@ class CoupledAnnealer(object):
 
         for i in range(self.m):
             self.probe_states[i] = self.probe_function(
-                self.current_states[i])
+                self.current_states[i].copy())
+            probe_temp = self.state_adjust(self.probe_states[i])
             self.probe_energies[i] = self.objective_function(
-                self.probe_states[i])
+                probe_temp)
 
     def __step(self, k):
         """
@@ -245,25 +258,21 @@ class CoupledAnnealer(object):
 
         cool = True if k % self.update_interval == 0 else False
 
-        max_energy = max(self.current_energies)
-        exp_terms = []
-
-        for i in range(self.m):
-            energy = self.current_energies[i]
-            exp_terms.append(math.exp((energy - max_energy) / self.tacc))
-
-        gamma = sum(exp_terms)
-        prob_accept = [x / gamma for x in exp_terms]
+        max_energy = self.current_energies.max()
+        exp_terms = np.exp((self.current_energies - max_energy) / self.tacc)
+        prob_accept = exp_terms / exp_terms.sum()
 
         # Determine whether to accept or reject probe.
         for i in range(self.m):
-            if self.probe_energies[i] < self.best_energies[i]:
-                self.best_energies[i] = self.probe_energies[i]
-                self.best_states[i] = self.probe_states[i]
-            if (self.probe_energies[i] < self.current_energies[i]) \
-                    or (random.uniform(0, 1) < prob_accept[i]):
+            if self.probe_energies[i] < self.current_energies[i]:
+                self.current_states[i] = self.probe_states[i].copy()
                 self.current_energies[i] = self.probe_energies[i]
-                self.current_states[i] = self.probe_states[i]
+                if self.current_energies[i] < self.best_energies[i]:
+                    self.best_states[i] = self.current_states[i].copy()
+                    self.best_energies[i] = self.current_energies[i]
+            elif prob_accept[i] > random.uniform(0, 1):
+                self.current_states[i] = self.probe_states[i].copy()
+                self.current_energies[i] = self.probe_energies[i]
             if self.verbosity > 2:
                 print('Annealer %s: %s' % (i,self.current_states[i]))
                 print("Best Result: State %s \nError: %s " % (self.best_states[i], self.best_energies[i]))
@@ -274,7 +283,7 @@ class CoupledAnnealer(object):
             self.tgen = self.tgen_upd_factor*self.tgen
 
             # sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
-            sigma2 = (sum(np.array(prob_accept)**2)/self.m) - (1/self.m**2)
+            sigma2 = (sum(prob_accept**2)/self.m) - (1/self.m**2)
             if sigma2 < self.desired_variance:
                 self.tacc *= (1 - self.alpha)
             else:
@@ -304,9 +313,9 @@ class CoupledAnnealer(object):
         Return the optimal state so far.
         """
 
-        energy = min(self.best_energies)
-        index = self.best_energies.index(energy)
-        state = self.current_states[index]
+        energy = self.best_energies.min()
+        index = np.where(self.best_energies == energy)[0][0]
+        state = self.state_adjust(self.best_states[index])
         return energy, state
 
     def run(self):
@@ -324,9 +333,10 @@ class CoupledAnnealer(object):
             update_func = self.__update_state_no_par
 
         update_func()
-        self.current_energies = self.probe_energies[:]
-        self.best_energies = self.current_energies[:]
-        self.best_states = self.current_states[:]
+        self.current_energies = self.probe_energies.copy()
+        self.best_energies = self.current_energies.copy()
+        self.current_states = self.probe_states.copy()
+        self.best_states = self.current_states.copy()
 
         # Run for `steps` or until user interrupts.
         for k in range(1, self.steps + 1):
@@ -349,32 +359,23 @@ class CoupledAnnealer(object):
                                                   self.args[0]),
                              y_measure_detach['dims'])
 
-        pf = data_attach(self.modelfunc.get_parallelfraction(
-            best_params, y_measure_detach['x']),
-            y_measure_detach['dims'])
-        if self.args[0]:
-            oh = data_attach(self.modelfunc.get_overhead(
-                best_params, y_measure_detach['x']),
-                y_measure_detach['dims'])
-        else:
-            oh = False
-
         modelexecparams = {'m': self.m,
                            'steps': self.steps, 'dimension': len(best_params),
                            'threads': self.threads,
                            'tgen': self.tgen_initial, 'tacc': self.tacc,
                            'tgen_upd_factor': self.tgen_upd_factor,
                            'desired_variance': self.desired_variance,
-                           'pxmin': self.pxmin,
-                           'pxmax': self.pxmax,
+                           'pxmin': list(self.pxmin),
+                           'pxmax': list(self.pxmax),
                            'update_interval': self.update_interval,
+                           'oh': self.args[0],
                            'modelcodepath': self.modelcodepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'alpha': self.alpha, 'verbosity': self.verbosity}
         self.modelbest = ModelCoupledAnnealer(bp=best_params,
                                               error=best_energy,
                                               ymeas=y_measure,
-                                              ypred=y_pred, pf=pf, oh=oh,
+                                              ypred=y_pred,
                                               modelcodepath=self.modelcodepath,
                                               modelcodesource=self.modelcodesource,
                                               modelexecparams=modelexecparams)
@@ -391,8 +392,6 @@ class ModelCoupledAnnealer:
             error - output of objective function for above position
             y_measure - speedups of parallel application using ParsecData
             y_model - speedups of model
-            parallelfraction - parallel fraction calculated by this model
-            overhead - overhead part calculated by this model
 
         Methods
             loadata()
@@ -405,8 +404,8 @@ class ModelCoupledAnnealer:
     """
 
     def __init__(self, modeldata=None, bp=None, error=None, ymeas=None,
-                 ypred=None, pf=None, oh=False, modelcodepath=None,
-                 modelcodesource=None, modelexecparams=None):
+                 ypred=None, modelcodepath=None, modelcodesource=None,
+                 modelexecparams=None):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
@@ -414,8 +413,6 @@ class ModelCoupledAnnealer:
         :param bp: best parameter of CSA
         :param ymeas: output speedup model calculated by model parameters
         :param ypred: output speedup measured by ParsecData class
-        :param pf: the parallel fraction calculated by parameters of model.
-        :param oh: the overhead calculated by parameters of model.
         """
 
         if modeldata:
@@ -423,8 +420,6 @@ class ModelCoupledAnnealer:
         else:
             self.y_measure = ymeas
             self.y_model = ypred
-            self.parallelfraction = pf
-            self.overhead = oh
             self.modelexecparams = modelexecparams
             self.modelcodesource = None
             self.validation = None
@@ -433,7 +428,7 @@ class ModelCoupledAnnealer:
                 self.modelcodesource = f.read()
             if modelcodesource is not None:
                 self.modelcodesource = modelcodesource
-            if not bp:
+            if bp is None:
                 self.params = None
                 self.error = None
             else:
@@ -490,8 +485,7 @@ class ModelCoupledAnnealer:
         if len(args.shape) == 1:
             args = args.reshape((1, args.shape[0]))
         csamodel = self.loadcode(self.modelcodesource, 'csamodel')
-        oh = not (type(self.overhead) is bool)
-        y = csamodel.model(self.params, args, oh)
+        y = csamodel.model(self.params, args, self.modelexecparams['oh'])
         return y
 
     def validate(self, kfolds=3, scoring=None):
@@ -578,12 +572,6 @@ class ModelCoupledAnnealer:
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_dict()
             datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-            datatosave['data']['parallelfraction'] = \
-                self.parallelfraction.to_dict()
-            if type(self.overhead) == bool:
-                datatosave['data']['overhead'] = False
-            else:
-                datatosave['data']['overhead'] = self.overhead.to_dict()
             if self.validation:
                 val = deepcopy(self.validation)
                 for key, value in val['scores'].items():
@@ -649,15 +637,6 @@ class ModelCoupledAnnealer:
                 self.y_measure = xr.DataArray.from_dict(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():
                 self.y_model = xr.DataArray.from_dict(datadict['speedupmodel'])
-            if 'parallelfraction' in datadict.keys():
-                self.parallelfraction = xr.DataArray.from_dict(
-                    datadict['parallelfraction'])
-            if 'overhead' in datadict.keys():
-                if not datadict['overhead']:
-                    self.overhead = datadict['overhead']
-                else:
-                    self.overhead = xr.DataArray.from_dict(
-                        datadict['overhead'])
             if 'savedate' in configdict.keys():
                 self.savedate = configdict['savedate']
         else:
@@ -687,13 +666,13 @@ class ModelCoupledAnnealer:
             if 'size' in data.dims:
                 xc = data.coords['size'].values
                 xc_label = 'Input Size'
-            elif 'frequency':
-                xc = [i * 1000 for i in data.coords['frequency'].values]
+            elif 'frequency' in data.dims:
+                xc = 1000*data.coords['frequency'].values
                 xc_label = 'Frequency'
             yc = data.coords['cores'].values
             X, Y = np.meshgrid(yc, xc)
             Z = data.values
-            zmin = 0
+            zmin = Z.min()
             zmax = Z.max()
             appname = self.pkg
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
@@ -706,18 +685,18 @@ class ModelCoupledAnnealer:
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
             ax.set_xlabel(xc_label)
-            ax.set_xlim(0, xc[-1])
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(1.0))
+            if xc_label is 'Frequency':
+                ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(4.0))
-            ax.set_ylim(0, yc.max())
             ax.set_zlabel('Model Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
-            ax.zaxis.set_major_locator(ticker.MultipleLocator(2.0))
             if showmeasures:
                 data_m = self.y_measure
                 ax = fig.gca(projection='3d')
-                xc = data_m.coords['size'].values
+                if 'size' in data_m.dims:
+                    xc = data_m.coords['size'].values
+                elif 'frequency' in data_m.dims:
+                    xc = 1000*data_m.coords['frequency'].values
                 yc = data_m.coords['cores'].values
                 X, Y = np.meshgrid(yc, xc)
                 Z = data_m.values
@@ -770,21 +749,12 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.modeldata.modelexecparams)
-        oh = not (type(self.modeldata.overhead) is bool)
-        args = (oh, {'x': X,
-                     'y': y,
-                     'dims': self.modeldata.y_measure.dims,
-                     'input_sizes': None})
-        if p['pxmin'] is None or p['pxmax'] is None:
-            initial_state = [tuple((random.normalvariate(0, 5) for _ in
-                                    range(p['dimension'])))
-                             for _ in range(p['m'])]
-        else:
-            initial_state = []
-            for j in range(p['m']):
-                t = tuple([li+(ui-li)*random.random() for li,ui
-                           in zip(p['pxmin'], p['pxmax'])])
-                initial_state.append(t)
+        args = (p['oh'], {'x': X,
+                          'y': y,
+                          'dims': self.modeldata.y_measure.dims,
+                          'input_sizes': None})
+        initial_state = np.array([np.random.uniform(size=p['dimension'])
+                                  for _ in range(p['m'])])
         cann = CoupledAnnealer(initial_state,
                                parsecpydatapath=p['parsecpydatapath'],
                                modelcodesource=self.modeldata.modelcodesource,

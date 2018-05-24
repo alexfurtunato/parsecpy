@@ -56,6 +56,8 @@ class ParsecData:
         :param filename: File name that store measures
         """
 
+        self.config = {}
+        self.measures = {}
         if filename:
             self.loaddata(filename)
         return
@@ -491,11 +493,9 @@ class ParsecData:
                                            vmax=(zmax + (zmax - zmin) / 10))
             ax.tick_params(labelsize='small')
             ax.set_xlabel(xc_label)
-            ax.set_xlim(0, xc[-1])
             if xc_label is 'Frequency':
                 ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
-            ax.set_ylim(0, yc.max())
             ax.set_zlabel(zlabel)
             ax.set_zlim(0, 1.10 * zmax)
             fig.canvas.draw_idle()

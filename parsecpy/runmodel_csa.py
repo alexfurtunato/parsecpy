@@ -31,6 +31,8 @@
                             Number steps to run cooling temperatures
       -d DIMENSION, --dimension DIMENSION
                             Number of parameters
+      -f FREQUENCIES, --frequency FREQUENCIES
+                            List of frequencies (KHz). Ex: 2000000, 2100000
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
                             List of problem sizes to model used. Ex:
                             native_01,native_05,native_08
@@ -56,38 +58,11 @@ import time
 import json
 import random
 import argparse
-import numpy as np
 from copy import deepcopy
+import numpy as np
 from parsecpy import ParsecData
 from parsecpy import CoupledAnnealer
-from parsecpy import data_detach
-
-
-
-def argsparselist(txt):
-    """
-    Validate the list of txt argument.
-
-    :param txt: argument of comma separated int strings.
-    :return: list of strings.
-    """
-
-    txt = txt.split(',')
-    listarg = [i.strip() for i in txt]
-    return listarg
-
-
-def argsparsefloatlist(txt):
-    """
-    Validate the list int argument.
-
-    :param txt: argument of comma separated int strings.
-    :return: list of integer converted ints.
-    """
-
-    txt = txt.split(',')
-    listarg = [float(i.strip()) for i in txt]
-    return listarg
+from parsecpy import data_detach, argsparselist, argsparseintlist
 
 
 def argsparsevalidation():
@@ -103,7 +78,7 @@ def argsparsevalidation():
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')
-    parser.add_argument('-f', '--parsecpyfilepath',
+    parser.add_argument('-p', '--parsecpyfilepath',
                         help='Absolute path from Input filename from Parsec '
                              'specificated package.')
     parser.add_argument('-a', '--annealers', type=int,
@@ -114,6 +89,8 @@ def argsparsevalidation():
                         help='Number steps to run cooling temperatures')
     parser.add_argument('-d', '--dimension', type=int,
                         help='Number of parameters')
+    parser.add_argument('-f', '--frequency', type=argsparseintlist,
+                        help='List of frequencies (KHz). Ex: 2000000, 2100000')
     parser.add_argument('-n', '--problemsizes', type=argsparselist,
                         help='List of problem sizes to model used. '
                              'Ex: native_01,native_05,native_08')
@@ -171,16 +148,27 @@ def main():
 
     parsec_exec = ParsecData(config['parsecpyfilepath'])
     y_measure = parsec_exec.speedups()
-    input_sizes = y_measure.attrs['input_sizes']
+    input_sizes = []
+    if 'size' in y_measure.dims:
+        input_sizes = y_measure.attrs['input_sizes']
+        input_ord = []
+        if 'problemsizes' in config.keys():
+                for i in config['problemsizes']:
+                    if i not in input_sizes:
+                        print('Error: Measures not has especified sizes')
+                        sys.exit()
+                    input_ord.append(input_sizes.index(i)+1)
+                y_measure = y_measure.sel(size=sorted(input_ord))
+                y_measure.attrs['input_sizes'] = sorted(config['problemsizes'])
 
-    input_ord = []
-    if config['problemsizes']:
-            for i in config['problemsizes']:
-                if i not in input_sizes:
-                    print('Error: Measures not has especified problem sizes')
-                    sys.exit()
-                input_ord.append(input_sizes.index(i)+1)
-            y_measure = y_measure.sel(size=sorted(input_ord))
+    if 'frequency' in y_measure.dims:
+        frequencies = y_measure.coords['frequency']
+        if 'frequency' in config.keys():
+                for i in config['frequency']:
+                    if i not in frequencies:
+                        print('Error: Measures not has especified frequencies')
+                        sys.exit()
+                y_measure = y_measure.sel(size=sorted(config['frequencies']))
 
     y_measure_detach = data_detach(y_measure)
 
@@ -198,16 +186,8 @@ def main():
     for i in repetitions:
         print('\nAlgorithm Execution: ', i+1)
 
-        if config['lowervalues'] is None or config['uppervalues'] is None:
-            initial_state = [tuple((random.normalvariate(0, 5) for _ in
-                                    range(config['dimension'])))
-                             for _ in range(config['annealers'])]
-        else:
-            initial_state = []
-            for j in range(config['annealers']):
-                t = tuple([li+(ui-li)*random.random() for li,ui
-                           in zip(config['lowervalues'], config['uppervalues'])])
-                initial_state.append(t)
+        initial_state = np.array([np.random.uniform(size=config['dimension'])
+                                  for _ in range(config['annealers'])])
 
         cann = CoupledAnnealer(
             initial_state,

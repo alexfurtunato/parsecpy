@@ -14,11 +14,11 @@
 
 """
 
-import random
-import math
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
+sockets_enable = True
+cores_per_socket = 16
 
 def get_parallelfraction(param, x):
     """
@@ -93,7 +93,11 @@ def _func_speedup(param, p, n, oh):
     else:
         f = _func_parallelfraction(param[:], p, n)
         q = 0
-    return 1/((1-f)+f/p+q)
+    speedup = 1 / ((1 - f) + f / p + q)
+    if sockets_enable:
+        s = p // (cores_per_socket + 1)
+        speedup = speedup - param[-1] * s
+    return speedup
 
 
 def model(par, x, oh):
@@ -113,7 +117,7 @@ def model(par, x, oh):
     return x, pred
 
 
-def probe_function(par, tgen, pxmin, pxmax, *args):
+def probe_function(par, tgen, *args):
     """
     Constraint function that would be considered on model.
 
@@ -124,18 +128,8 @@ def probe_function(par, tgen, pxmin, pxmax, *args):
     :return: A new probe solution based on tgen and a random function
     """
 
-    probe_solution = []
-    limits = True
-    if pxmin is None or pxmax is None:
-        limits = False
-    for i, p in enumerate(par):
-        r = random.uniform(0, 1)
-        t = math.tan(math.pi * (r - 0.5))
-        if limits:
-            ps = pxmin[i] + np.mod(p + t * tgen, pxmax[i] - pxmin[i])
-        else:
-            ps = np.mod(p + t * tgen, 10)
-        probe_solution.append(ps)
+    t = np.tan(np.pi * (np.random.uniform(size=len(par))-0.5))
+    probe_solution = 2*np.mod((par + t * tgen + 1)/2, 1) - 1
     return probe_solution
 
 

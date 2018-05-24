@@ -21,10 +21,10 @@
       -h, --help            show this help message and exit
       --config CONFIG       Filepath from Configuration file configurations
                             parameters
-      -f PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
+      -p PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
                             Path from input data file from Parsec specificated
                             package.
-      -p PARTICLES, --particles PARTICLES
+      -q PARTICLES, --particles PARTICLES
                             Number of particles
       -x MAXITERATIONS, --maxiterations MAXITERATIONS
                             Number max of iterations
@@ -32,6 +32,8 @@
                             List of minimum particles values used. Ex: -1,0,-2,0
       -u UPPERVALUES, --uppervalues UPPERVALUES
                             List of maximum particles values used. Ex: 5,2,1,10
+      -f FREQUENCIES, --frequency FREQUENCIES
+                            List of frequencies (KHz). Ex: 2000000, 2100000
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
                             List of problem sizes to model used. Ex:
                             native_01,native_05,native_08
@@ -58,33 +60,8 @@ import argparse
 from copy import deepcopy
 from parsecpy import ParsecData
 from parsecpy import Swarm
-from parsecpy import data_detach
-
-
-def argsparselist(txt):
-    """
-    Validate the list of txt argument.
-
-    :param txt: argument of comma separated int strings.
-    :return: list of strings.
-    """
-
-    txt = txt.split(',')
-    listarg = [i.strip() for i in txt]
-    return listarg
-
-
-def argsparsefloatlist(txt):
-    """
-    Validate the list of int argument.
-
-    :param txt: argument of comma separated int strings.
-    :return: list of integer converted ints.
-    """
-
-    txt = txt.split(',')
-    listarg = [float(i.strip()) for i in txt]
-    return listarg
+from parsecpy import argsparselist, argsparsefloatlist, argsparseintlist, \
+    data_detach
 
 
 def argsparsevalidation():
@@ -100,10 +77,10 @@ def argsparsevalidation():
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')
-    parser.add_argument('-f', '--parsecpyfilepath',
+    parser.add_argument('-p', '--parsecpyfilepath',
                         help='Path from input data file from Parsec '
                              'specificated package.')
-    parser.add_argument('-p', '--particles', type=int,
+    parser.add_argument('-q', '--particles', type=int,
                         help='Number of particles')
     parser.add_argument('-x', '--maxiterations', type=int,
                         help='Number max of iterations')
@@ -113,6 +90,8 @@ def argsparsevalidation():
     parser.add_argument('-u', '--uppervalues',
                         help='List of maximum particles values used. '
                              'Ex: 5,2,1,10')
+    parser.add_argument('-f', '--frequency', type=argsparseintlist,
+                        help='List of frequencies (KHz). Ex: 2000000, 2100000')
     parser.add_argument('-n', '--problemsizes', type=argsparselist,
                         help='List of problem sizes to model used. '
                              'Ex: native_01,native_05,native_08')
@@ -170,16 +149,27 @@ def main():
 
     parsec_exec = ParsecData(config['parsecpyfilepath'])
     y_measure = parsec_exec.speedups()
-    input_sizes = y_measure.attrs['input_sizes']
+    input_sizes = []
+    if 'size' in y_measure.dims:
+        input_sizes = y_measure.attrs['input_sizes']
+        input_ord = []
+        if 'problemsizes' in config.keys():
+                for i in config['problemsizes']:
+                    if i not in input_sizes:
+                        print('Error: Measures not has especified sizes')
+                        sys.exit()
+                    input_ord.append(input_sizes.index(i)+1)
+                y_measure = y_measure.sel(size=sorted(input_ord))
+                y_measure.attrs['input_sizes'] = sorted(config['problemsizes'])
 
-    input_ord = []
-    if config['problemsizes']:
-            for i in config['problemsizes']:
-                if i not in input_sizes:
-                    print('Error: Measures not has especified problem sizes')
-                    sys.exit()
-                input_ord.append(input_sizes.index(i)+1)
-            y_measure = y_measure.sel(size=sorted(input_ord))
+    if 'frequency' in y_measure.dims:
+        frequencies = y_measure.coords['frequency']
+        if 'frequency' in config.keys():
+                for i in config['frequency']:
+                    if i not in frequencies:
+                        print('Error: Measures not has especified frequencies')
+                        sys.exit()
+                y_measure = y_measure.sel(size=sorted(config['frequencies']))
 
     y_measure_detach = data_detach(y_measure)
     argsswarm = (config['overhead'], {'x': y_measure_detach['x'],
