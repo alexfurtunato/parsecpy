@@ -149,10 +149,11 @@ def main():
         print('\nAlgorithm Execution: ', k+1)
 
         samples_args = []
-        for _ in repetitions:
+        for i in repetitions:
             xy_train_test = train_test_split(x_without_limits,
                                              y_without_limits,
                                              test_size=(samples_n-(k+1))/samples_n)
+            print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
             y_sample = np.concatenate((y_limits, xy_train_test[2]))
             samples_args.append((config,
@@ -160,13 +161,7 @@ def main():
                                   'y': y_sample,
                                   'dims': y_measure.dims,
                                   'input_sizes': input_sizes}))
-        x_sample = np.concatenate((x_limits, x_without_limits), axis=0)
-        y_sample = np.concatenate((y_limits, y_without_limits))
-        samples_args.append((config,
-                                 {'x': x_sample,
-                                  'y': y_sample,
-                                  'dims': y_measure.dims,
-                                  'input_sizes': input_sizes}))
+        print(' ** Args len = ', len(samples_args))
         starttime = time.time()
 
         with futures.ThreadPoolExecutor(max_workers=args.repetitions) \
@@ -175,13 +170,16 @@ def main():
                 res = [i for i in results]
                 computed_errors.append({'k': k+1, 'errors': res})
 
+        print(' $$ Compured Errors: ', res)
+
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
 
     print('\n\n***** Final Results *****\n')
 
     for i in computed_errors:
-        print(i)
+        print('{0:2d} : {1:.4f}'.format(i['k'], np.median(i['errors'])))
+    print('{0:2d} : {1:.4f}'.format(10, parsec_model.error))
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]
