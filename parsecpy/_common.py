@@ -12,10 +12,10 @@ import psutil
 import errno
 import argparse
 
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib import ticker
-from matplotlib.widgets import Slider, RadioButtons
+# import matplotlib.pyplot as plt
+# from matplotlib import cm
+# from matplotlib import ticker
+# from matplotlib.widgets import Slider, RadioButtons
 
 support3d = True
 try:
@@ -252,12 +252,13 @@ def data_attach(data, dims):
     ynp = np.array(data[1])
     coords = []
     shape = []
-    for i,d in enumerate(dims):
+    for i, d in enumerate(dims):
         x = sorted(np.unique(xnp[:, i]), key=int)
         coords.append((d, x))
         shape.append(len(x))
     data_da = xr.DataArray(ynp.reshape(tuple(shape)), coords=coords)
     return data_da
+
 
 def freq_hz(value):
     label = float(value)

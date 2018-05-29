@@ -15,7 +15,7 @@
                              [-r REPETITIONS] [-c CROSSVALIDATION]
                              [-v VERBOSITY]
 
-    Script to run swarm modelling to predict aparsec application output
+    Script to run swarm modelling to predict a parsec application output
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -29,7 +29,7 @@
       -x MAXITERATIONS, --maxiterations MAXITERATIONS
                             Number max of iterations
       -l LOWERVALUES, --lowervalues LOWERVALUES
-                            List of minimum particles values used. Ex: -1,0,-2,0
+                            List of minimum particles values used. Ex:-1,0,-2,0
       -u UPPERVALUES, --uppervalues UPPERVALUES
                             List of maximum particles values used. Ex: 5,2,1,10
       -f FREQUENCIES, --frequency FREQUENCIES
@@ -129,7 +129,7 @@ def main():
             sys.exit()
         with open(args.config, 'r') as fconfig:
             config = json.load(fconfig)
-        for i,v in vars(args).items():
+        for i, v in vars(args).items():
             if v is not None:
                 config[i] = v
     else:
@@ -243,7 +243,8 @@ def main():
         computed_models[best_model_idx].validation = scores
         print('\n***** Cross Validation Done! *****\n')
     print('\n\n***** ALL DONE! *****\n')
-    fn = computed_models[best_model_idx].savedata(parsec_exec.config, ' '.join(sys.argv))
+    fn = computed_models[best_model_idx].savedata(parsec_exec.config,
+                                                  ' '.join(sys.argv))
     print('Model data saved on filename: %s' % fn)
 
 

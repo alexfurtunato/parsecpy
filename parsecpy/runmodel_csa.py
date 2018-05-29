@@ -14,7 +14,7 @@
                              [-t THREADS] [-r REPETITIONS]
                              [-c CROSSVALIDATION] [-v VERBOSITY]
 
-    Script to run csa modelling to predict aparsec application output
+    Script to run csa modelling to predict a parsec application output
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -56,7 +56,6 @@ import os
 import sys
 import time
 import json
-import random
 import argparse
 from copy import deepcopy
 import numpy as np
@@ -124,7 +123,7 @@ def main():
             sys.exit()
         with open(args.config, 'r') as fconfig:
             config = json.load(fconfig)
-        for i,v in vars(args).items():
+        for i, v in vars(args).items():
             if v is not None:
                 config[i] = v
     else:
@@ -144,7 +143,6 @@ def main():
     if not os.path.isfile(config['parsecpyfilepath']):
         print('Error: You should inform the correct parsecpy measures file')
         sys.exit()
-
 
     parsec_exec = ParsecData(config['parsecpyfilepath'])
     y_measure = parsec_exec.speedups()
@@ -173,9 +171,9 @@ def main():
     y_measure_detach = data_detach(y_measure)
 
     argsanneal = (config['overhead'], {'x': y_measure_detach['x'],
-                                      'y': y_measure_detach['y'],
-                                      'dims': y_measure.dims,
-                                      'input_sizes': input_sizes})
+                                       'y': y_measure_detach['y'],
+                                       'dims': y_measure.dims,
+                                       'input_sizes': input_sizes})
 
     repetitions = range(config['repetitions'])
     err_min = 0
