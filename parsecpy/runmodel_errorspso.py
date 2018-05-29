@@ -36,6 +36,7 @@ import json
 import argparse
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, ModelSwarm
 from parsecpy import data_detach
@@ -43,7 +44,9 @@ from parsecpy import data_detach
 
 def workers(args):
     config = args[0]
-    argsswarm = (config['oh'], args[1])
+    x_measure = args[1]['x']
+    y_measuse = args[1]['y']
+    argsswarm = (config['oh'], args[2])
 
     sw = Swarm(config['pxmin'], config['pxmax'],
                parsecpydatapath=config['parsecpydatapath'],
@@ -53,7 +56,9 @@ def workers(args):
                threads=config['threads'], verbosity=config['verbosity'],
                args=argsswarm)
     model = sw.run()
-    return model.error
+    y_pred = model.predict(x_measure)
+    error = mean_squared_error(y_measuse, y_pred)
+    return error
 
 
 def argsparsevalidation():
@@ -143,7 +148,7 @@ def main():
             print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
             y_sample = np.concatenate((y_limits, xy_train_test[2]))
-            samples_args.append((config,
+            samples_args.append((config, y_measure_detach,
                                  {'x': x_sample,
                                   'y': y_sample,
                                   'dims': y_measure.dims,

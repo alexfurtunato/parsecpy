@@ -36,6 +36,7 @@ import json
 import argparse
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import CoupledAnnealer, ModelCoupledAnnealer
 from parsecpy import data_detach
@@ -43,9 +44,11 @@ from parsecpy import data_detach
 
 def workers(args):
     config = args[0]
+    x_measure = args[1]['x']
+    y_measuse = args[1]['y']
     initial_state = np.array([np.random.uniform(size=config['dimension'])
                               for _ in range(config['m'])])
-    argsanneal = (config['oh'], args[1])
+    argsanneal = (config['oh'], args[2])
 
     cann = CoupledAnnealer(
         initial_state,
@@ -66,7 +69,9 @@ def workers(args):
         args=argsanneal
     )
     model = cann.run()
-    return model.error
+    y_pred = model.predict(x_measure)
+    error = mean_squared_error(y_measuse, y_pred)
+    return error
 
 
 def argsparsevalidation():
@@ -156,7 +161,7 @@ def main():
             print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
             y_sample = np.concatenate((y_limits, xy_train_test[2]))
-            samples_args.append((config,
+            samples_args.append((config, y_measure_detach,
                                  {'x': x_sample,
                                   'y': y_sample,
                                   'dims': y_measure.dims,
