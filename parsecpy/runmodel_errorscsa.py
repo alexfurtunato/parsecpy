@@ -142,13 +142,13 @@ def main():
 
     computed_errors = []
     repetitions = range(args.repetitions)
-    samples_args = []
     samples_n = 10
 
     for k in range(samples_n-1):
 
         print('\nAlgorithm Execution: ', k+1)
 
+        samples_args = []
         for _ in repetitions:
             xy_train_test = train_test_split(x_without_limits,
                                              y_without_limits,
