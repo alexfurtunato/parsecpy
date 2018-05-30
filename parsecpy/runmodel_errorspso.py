@@ -45,7 +45,7 @@ from parsecpy import data_detach
 def workers(args):
     config = args[0]
     x_measure = args[1]['x']
-    y_measuse = args[1]['y']
+    y_measure = args[1]['y']
     argsswarm = (config['oh'], args[2])
 
     sw = Swarm(config['pxmin'], config['pxmax'],
@@ -57,8 +57,8 @@ def workers(args):
                args=argsswarm)
     model = sw.run()
     y_pred = model.predict(x_measure)
-    error = mean_squared_error(y_measuse, y_pred)
-    return error
+    error = mean_squared_error(y_measure, y_pred[1])
+    return error, model.params
 
 
 def argsparsevalidation():
@@ -159,10 +159,12 @@ def main():
         with futures.ThreadPoolExecutor(max_workers=args.repetitions) \
                 as executor:
                 results = executor.map(workers, samples_args)
-                res = [i for i in results]
-                computed_errors.append({'k': k+1, 'errors': res})
+                errors = [i[0] for i in results]
+                params = [i[1] for i in results]
+                computed_errors.append({'k': k+1, 'errors': errors, 'params': params})
 
-        print(' $$ Compured Errors: ', res)
+        print(' $$ Compured Errors: ', errors)
+        print(' $$ Compured Params: ', params)
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))

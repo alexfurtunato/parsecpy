@@ -45,7 +45,7 @@ from parsecpy import data_detach
 def workers(args):
     config = args[0]
     x_measure = args[1]['x']
-    y_measuse = args[1]['y']
+    y_measure = args[1]['y']
     initial_state = np.array([np.random.uniform(size=config['dimension'])
                               for _ in range(config['m'])])
     argsanneal = (config['oh'], args[2])
@@ -70,7 +70,7 @@ def workers(args):
     )
     model = cann.run()
     y_pred = model.predict(x_measure)
-    error = mean_squared_error(y_measuse, y_pred)
+    error = mean_squared_error(y_measure, y_pred[1])
     return error
 
 
