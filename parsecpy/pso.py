@@ -356,6 +356,15 @@ class Swarm:
         if self.threads > 1:
             mpool.terminate()
 
+        return (self.bestparticle.fpos, self.bestparticle.pos)
+
+    def get_model(self):
+        """
+        Return a ModelSwarm object with measures and model
+
+        :return: ModelSwarm object
+        """
+
         y_measure = ParsecData(self.parsecpydatapath).speedups()
         y_measure_detach = data_detach(y_measure)
         y_pred = data_attach(self.modelfunc.model(self.bestparticle.pos,
@@ -363,7 +372,8 @@ class Swarm:
                                                   self.args[0]),
                              y_measure_detach['dims'])
 
-        modelexecparams = {'pxmin': list(self.pxmin),
+        modelexecparams = {'algorithm': 'PSO',
+                           'pxmin': list(self.pxmin),
                            'pxmax': list(self.pxmax),
                            'threads': self.threads,
                            'size': self.size, 'w': self.w, 'c1': self.c1,
@@ -573,18 +583,21 @@ class ModelSwarm:
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_dict()
             datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-            if self.validation:
-                val = deepcopy(self.validation)
-                for key, value in val['scores'].items():
-                    val['scores'][key]['type'] = str(value['value'].dtype)
-                    val['scores'][key]['value'] = json.dumps(
-                        value['value'].tolist())
-                for key, value in val['times'].items():
-                    valtemp = {'type': '', 'value': ''}
-                    valtemp['type'] = str(value.dtype)
-                    valtemp['value'] = json.dumps(value.tolist())
-                    val['times'][key] = valtemp.copy()
-                datatosave['data']['validation'] = val
+            if hasattr(self, 'measuresfraction'):
+                datatosave['config']['measuresfraction'] = self.measuresfraction
+            if hasattr(self, 'validation'):
+                if self.validation:
+                    val = deepcopy(self.validation)
+                    for key, value in val['scores'].items():
+                        val['scores'][key]['type'] = str(value['value'].dtype)
+                        val['scores'][key]['value'] = json.dumps(
+                            value['value'].tolist())
+                    for key, value in val['times'].items():
+                        valtemp = {'type': '', 'value': ''}
+                        valtemp['type'] = str(value.dtype)
+                        valtemp['value'] = json.dumps(value.tolist())
+                        val['times'][key] = valtemp.copy()
+                    datatosave['data']['validation'] = val
             json.dump(datatosave, f, ensure_ascii=False)
         return filename
 
@@ -616,6 +629,8 @@ class ModelSwarm:
                 self.modelexecparams = deepcopy(mep)
                 self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
                 self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
+            if 'measuresfraction' in configdict.keys():
+                self.measuresfraction = configdict['measuresfraction']
             if 'validation' in datadict.keys():
                 val = deepcopy(datadict['validation'])
                 for key, value in val['scores'].items():
@@ -761,7 +776,8 @@ class SwarmEstimator(BaseEstimator, RegressorMixin):
                    maxiter=p['maxiter'], threads=p['threads'],
                    verbosity=self.verbosity,
                    args=args)
-        self.modeldata = sw.run()
+        sw.run()
+        self.modeldata = sw.get_model()
         self.X_ = X
         self.y_ = y
         return self

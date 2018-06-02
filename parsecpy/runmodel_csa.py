@@ -205,7 +205,8 @@ def main():
             verbosity=config['verbosity'],
             args=argsanneal
         )
-        model = cann.run()
+        cann.run()
+        model = cann.get_model()
         computed_models.append(model)
         if i == 0:
             err_min = model.error

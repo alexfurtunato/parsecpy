@@ -43,6 +43,8 @@
                             Number of Threads
       -r REPETITIONS, --repetitions REPETITIONS
                             Number of repetitions to algorithm execution
+      -m FRACTION, --measuresfraction FRACTION
+                            Fraction of measures data to calculate the model
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
                             If run the cross validation of modelling
       -v VERBOSITY, --verbosity VERBOSITY
@@ -58,10 +60,12 @@ import json
 import time
 import argparse
 from copy import deepcopy
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from parsecpy import ParsecData
 from parsecpy import Swarm
-from parsecpy import argsparselist, argsparsefloatlist, argsparseintlist, \
-    data_detach
+from parsecpy import argsparselist, argsparsefloatlist, \
+    argsparseintlist, argsparsefraction, data_detach
 
 
 def argsparsevalidation():
@@ -101,8 +105,11 @@ def argsparsevalidation():
                         help='Number of Threads')
     parser.add_argument('-r', '--repetitions', type=int,
                         help='Number of repetitions to algorithm execution')
-    parser.add_argument('-c', '--crossvalidation', type=bool,
-                        help='If run the cross validation of modelling')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-c', '--crossvalidation', type=bool,
+                       help='If run the cross validation of modelling')
+    group.add_argument('-m', '--measuresfraction', type=argsparsefraction,
+                       help='Fraction of measures data to calculate the model')
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
     args = parser.parse_args()
@@ -172,8 +179,19 @@ def main():
                 y_measure = y_measure.sel(size=sorted(config['frequencies']))
 
     y_measure_detach = data_detach(y_measure)
-    argsswarm = (config['overhead'], {'x': y_measure_detach['x'],
-                                      'y': y_measure_detach['y'],
+    if 'measuresfraction' in config:
+        xy_train_test = train_test_split(y_measure_detach['x'],
+                                         y_measure_detach['y'],
+                                         test_size=1.0 - config['measuresfraction'])
+        x_sample = xy_train_test[0]
+        y_sample = xy_train_test[2]
+    else:
+        x_sample = y_measure_detach['x']
+        y_sample = y_measure_detach['y']
+
+    # TODO: fractioned measure don't must have dims like entire measures
+    argsswarm = (config['overhead'], {'x': x_sample,
+                                      'y': y_sample,
                                       'dims': y_measure.dims,
                                       'input_sizes': input_sizes})
 
@@ -192,7 +210,13 @@ def main():
                    c2=config['c2'], maxiter=config['maxiterations'],
                    threads=config['threads'], verbosity=config['verbosity'],
                    args=argsswarm)
-        model = sw.run()
+        sw.run()
+        model = sw.get_model()
+        if 'measuresfraction' in config:
+            y_pred = model.predict(y_measure_detach['x'])
+            model.error = mean_squared_error(y_measure_detach['y'], y_pred[1])
+            model.errorrel = 100 * (model.error / y_measure.values.mean())
+            model.measuresfraction = config['measuresfraction']
         computed_models.append(model)
         if i == 0:
             err_min = model.error

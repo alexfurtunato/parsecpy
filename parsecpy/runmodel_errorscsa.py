@@ -68,10 +68,11 @@ def workers(args):
         verbosity=config['verbosity'],
         args=argsanneal
     )
-    model = cann.run()
+    cann.run()
+    model = cann.get_model()
     y_pred = model.predict(x_measure)
     error = mean_squared_error(y_measure, y_pred[1])
-    return error
+    return {'error': error, 'params': model.params}
 
 
 def argsparsevalidation():
@@ -171,11 +172,15 @@ def main():
 
         with futures.ThreadPoolExecutor(max_workers=args.repetitions) \
                 as executor:
-                results = executor.map(workers, samples_args)
-                res = [i for i in results]
-                computed_errors.append({'k': k+1, 'errors': res})
-
-        print(' $$ Compured Errors: ', res)
+            results = executor.map(workers, samples_args)
+            errors = []
+            params = []
+            for i in results:
+                errors.append(i['error'])
+                params.append(list(i['params']))
+            computed_errors.append({'k': k + 1,
+                                    'errors': errors,
+                                    'params': params})
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -183,8 +188,13 @@ def main():
     print('\n\n***** Final Results *****\n')
 
     for i in computed_errors:
-        print('{0:2d} : {1:.4f}'.format(i['k'], np.median(i['errors'])))
-    print('{0:2d} : {1:.4f}'.format(10, parsec_model.error))
+        print('Iteration {0:2d}'.format(i['k']))
+        print('  * Errors: {}'.format(i['errors']))
+        print('  * Params: {}'.format(i['params']))
+    print('Iteration {0:2d}'.format(10))
+    print('  * Errors: {0:.4f}'.format(parsec_model.error))
+    print('  * Params: {}'.format(parsec_model.params))
+
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]

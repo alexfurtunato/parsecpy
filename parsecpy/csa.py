@@ -350,6 +350,16 @@ class CoupledAnnealer(object):
                                     start_time=start_time)
             elif self.verbosity > 1:
                 self.__status_check(k, min(self.best_energies))
+        best_energy, best_params = self.__get_best()
+
+        return (best_energy, best_params)
+
+    def get_model(self):
+        """
+        Return a ModelCoupledAnnealer object with measures and model
+
+        :return: ModelCoupledAnnealer object
+        """
 
         best_energy, best_params = self.__get_best()
         y_measure = ParsecData(self.parsecpydatapath).speedups()
@@ -359,7 +369,8 @@ class CoupledAnnealer(object):
                                                   self.args[0]),
                              y_measure_detach['dims'])
 
-        modelexecparams = {'m': self.m,
+        modelexecparams = {'algorithm': 'CSA',
+                           'm': self.m,
                            'steps': self.steps, 'dimension': len(best_params),
                            'threads': self.threads,
                            'tgen': self.tgen_initial, 'tacc': self.tacc,
@@ -572,7 +583,7 @@ class ModelCoupledAnnealer:
             datatosave['data']['errorrel'] = self.errorrel
             datatosave['data']['parsecdata'] = self.y_measure.to_dict()
             datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-            if self.validation:
+            if hasattr(self, 'validation'):
                 val = deepcopy(self.validation)
                 for key, value in val['scores'].items():
                     val['scores'][key]['type'] = str(value['value'].dtype)
@@ -771,7 +782,8 @@ class CSAEstimator(BaseEstimator, RegressorMixin):
                                threads=p['threads'],
                                verbosity=self.verbosity,
                                args=args)
-        self.modeldata = cann.run()
+        cann.run()
+        self.modeldata = cann.get_model()
         self.X_ = X
         self.y_ = y
         return self

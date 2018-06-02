@@ -28,6 +28,22 @@ except ImportError:
 # Functions to Arguments validations
 #
 
+def argsparsefraction(txt):
+    """
+    Validate the txt argument as value between 0.0 and 1.0.
+
+    :param txt: argument is a float string between 0.0 and 1.0.
+    :return: float
+    """
+
+    msg = "Value shoud be a float between 0.0 and 1.0"
+    try:
+        value = float(txt)
+        if value < 0 or value > 1.0:
+            raise argparse.ArgumentTypeError(msg)
+    except ValueError:
+        raise argparse.ArgumentTypeError(msg)
+
 
 def argsparselist(txt):
     """
