@@ -19,8 +19,8 @@ class Particle:
 
         Atrributes
             dim - size of swarm, is that, number of particles
-            lxmin - minimum values of particle position (parameters of model)
-            lxmax - maximum values of particle position (parameters of model)
+            lowervalues - minimum values of particle position (parameters of model)
+            uppervalues - maximum values of particle position (parameters of model)
             vxmin - Minimum values of particles velocity
             vxmax - Maximum values of particles velocity
             pos - actual position of particle (parameters of model)
@@ -38,23 +38,23 @@ class Particle:
 
     """
 
-    def __init__(self, lxmin, lxmax, vxmin, vxmax):
+    def __init__(self, lowervalues, uppervalues, vxmin, vxmax):
         """
         Create a particle object with initial position,
         best position, velocity, objective value and best objective value.
 
-        :param lxmin: miminum value of particle position
-        :param lxmax: maximum value of particle position
+        :param lowervalues: miminum value of particle position
+        :param uppervalues: maximum value of particle position
         :param vxmin: miminum value of particle velocity
         :param vxmax: maximum value of particle velocity
         """
 
-        self.dim = len(lxmin)
-        self.lxmin = lxmin.copy()
-        self.lxmax = lxmax.copy()
+        self.dim = len(lowervalues)
+        self.lowervalues = lowervalues.copy()
+        self.uppervalues = uppervalues.copy()
         self.vxmin = vxmin
         self.vxmax = vxmax
-        self.pos = lxmin + np.random.rand(self.dim)*(lxmax - lxmin)
+        self.pos = lowervalues + np.random.rand(self.dim)*(uppervalues - lowervalues)
         self.fpos = np.inf  # Infinite float
         self.vel = vxmin + np.random.rand(self.dim)*(vxmax - vxmin)
         # self.bestpos = np.zeros_like(self.pos)
@@ -110,10 +110,10 @@ class Particle:
         self.vel = self.vel * (~np.logical_or(maskvl, maskvh)) \
                    + self.vxmin*maskvl + self.vxmax*maskvh
         self.pos = self.pos + self.vel
-        maskl = self.pos < self.lxmin
-        maskh = self.pos > self.lxmax
+        maskl = self.pos < self.lowervalues
+        maskh = self.pos > self.uppervalues
         self.pos = self.pos * (~np.logical_or(maskl, maskh)) \
-                   + self.lxmin*maskl + self.lxmax*maskh
+                   + self.lowervalues*maskl + self.uppervalues*maskh
 
 
 class Swarm:
@@ -129,8 +129,8 @@ class Swarm:
             kwargs - Key arguments passed for objective
                      and constraint functions
             pdim - Particles dimention
-            pxmin - Particle minimum position values
-            pxmax - Particle maximum position values
+            lowervalues - Particle minimum position values
+            uppervalues - Particle maximum position values
             w - Inertial factor to calculate particle velocity
             c1 - Scaling factor for particle bestpos attribute.
             c2 - Scaling factor for best particle bestpos attribute.
@@ -155,7 +155,7 @@ class Swarm:
     """
 
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
-    def __init__(self, lxmin, lxmax, parsecpydatapath=None,
+    def __init__(self, lowervalues, uppervalues, parsecpydatapath=None,
                  modelcodepath=None, modelcodesource=None,
                  size=100, w=0.5, c1=2, c2=2, maxiter=100,
                  threads=1, verbosity=True,
@@ -166,8 +166,8 @@ class Swarm:
         values and find out the initial best particle. The objective and
         constraint functions are pointed by the swarm attributes.
 
-        :param lxmin - Particle minimum position values
-        :param lxmax - Particle maximum position values
+        :param lowervalues - Particle minimum position values
+        :param uppervalues - Particle maximum position values
         :param modelcodepath - path of python module with model functions
         :param modelcodesource - string with python code of model functions
         :param size - Size of swarm (number of particles)
@@ -186,10 +186,10 @@ class Swarm:
                         and constraint functions
         """
 
-        if len(lxmin) == len(lxmax):
-            lxmin = np.array(lxmin)
-            lxmax = np.array(lxmax)
-            if not np.all(lxmin < lxmax):
+        if len(lowervalues) == len(uppervalues):
+            lowervalues = np.array(lowervalues)
+            uppervalues = np.array(uppervalues)
+            if not np.all(lowervalues < uppervalues):
                 raise AssertionError()
         else:
             raise AssertionError()
@@ -197,16 +197,16 @@ class Swarm:
         self.maxiter = maxiter
         self.threads = threads
         self.kwargs = kwargs
-        self.pdim = len(lxmin)
-        self.pxmin = lxmin.copy()
-        self.pxmax = lxmax.copy()
+        self.pdim = len(lowervalues)
+        self.lowervalues = lowervalues.copy()
+        self.uppervalues = uppervalues.copy()
         self.w = w
         self.c1 = c1
         self.c2 = c2
-        self.vxmax = 0.1*np.abs(self.pxmax - self.pxmin)
+        self.vxmax = 0.1*np.abs(self.uppervalues - self.lowervalues)
         self.vxmin = -self.vxmax
         self.size = size
-        self.particles = np.array([Particle(self.pxmin, self.pxmax,
+        self.particles = np.array([Particle(self.lowervalues, self.uppervalues,
                                             self.vxmin, self.vxmax)
                                    for _ in range(self.size)])
         self.modelcodepath = modelcodepath
@@ -225,6 +225,8 @@ class Swarm:
             else:
                 sys.path.append(os.path.dirname(modelcodepath))
             self.modelfunc = importlib.import_module(pythonmodule)
+            with open(modelcodepath) as f:
+                self.modelcodesource = f.read()
         elif modelcodesource is not None:
             import types
 
@@ -351,12 +353,12 @@ class Swarm:
         """
 
         modelexecparams = {'algorithm': 'pso',
-                           'pxmin': list(self.pxmin),
-                           'pxmax': list(self.pxmax),
+                           'lowervalues': list(self.lowervalues),
+                           'uppervalues': list(self.uppervalues),
                            'threads': self.threads,
                            'size': self.size, 'w': self.w, 'c1': self.c1,
                            'c2': self.c2, 'maxiter': self.maxiter,
-                           'oh': self.kwargs['oh'],
+                           'overhead': self.kwargs['overhead'],
                            'modelcodepath': self.modelcodepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'verbosity': self.verbosity}

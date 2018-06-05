@@ -56,39 +56,52 @@ The objective function can be build with a module python passed as argument to l
   
 ### Class Swarm
 
-    >>> from parsecpy import Swarm
+    >>> from parsecpy import data_detach, Swarm, ParsecModel
     >>> parsec_date = ParsecData("my_output_parsec_file.dat")
     >>> out_measure = parsec_exec.speedups()
-    >>> inputsizes = [(col, int(col.split('_')[1])) for col in y_measure]
-    >>> cores = y_measure.index
+    >>> meas = data_detach(out_measure)
     >>> overhead = False
-    >>> argsswarm = (out_measure, overhead, cores, inputsizes)
-    >>> pso = Swarm([0,0,0,0], [2.0,1.0,1.0,2.0], args=argsswarm, threads=10, 
-                    size=100, maxiter=1000, modelpath=/root/mymodelfunc.py)
-    >>> model = pso.run()
-    >>> model.validate()
-    >>> print(model.params)
-    >>> print(model.validation)
+    >>> kwargsmodel = {'overhead':  overhead}
+    >>> sw = Swarm([0,0,0,0], [2.0,1.0,1.0,2.0], kwargs=kwargsmodel, threads=10,
+                    size=100, maxiter=1000, modelpath=/root/mymodelfunc.py,
+                    x_meas=meas['x'], y_meas=meas['y'])
+    >>> error, solution = sw.run()
+    >>> model = ParsecModel(bsol=solution,
+                            berr=error,
+                            ymeas=out_measure,
+                            modelcodesource=sw.modelcodesource,
+                            modelexecparams=sw.get_parameters())
+    >>> scores = model.validate(kfolds=10)
+    >>> print(model.sol)
+    >>> print(model.scores)
 
 ### Class CoupledAnnealer
 
-    >>> from parsecpy import CoupledAnnealer
+    >>> import numpy as np
+    >>> import random
+    >>> from parsecpy import data_detach, Swarm, ParsecModel
     >>> parsec_date = ParsecData("my_output_parsec_file.dat")
     >>> out_measure = parsec_exec.speedups()
-    >>> inputsizes = [(col, int(col.split('_')[1])) for col in y_measure]
-    >>> cores = y_measure.index
+    >>> meas = data_detach(out_measure)
     >>> overhead = False
-    >>> argscsa = (out_measure, overhead, cores, inputsizes)
-    >>> initial_state = [
-            tuple((random.normalvariate(0, 5) for _ in xrange(args.dimension)))
-            for x in xrange(args.annealers)]
-    >>> csa = CoupledAnnealer(n_annealers=10, initial_state=initial_state, tgen_initial=0.01, tacc_initial=0.1,
-                    threads=10, steps=1000, update_interval=100, dimension=5, 
-                    args=argscsa, modelpath=/root/mymodelfunc.py)
-    >>> model = csa.run()
-    >>> model.validate()
-    >>> print(model.params)
-    >>> print(model.validation)
+    >>> kwargsmodel = {'overhead':  overhead}
+    >>> initial_state = initial_state = np.array([np.random.uniform(size=5)
+                                      for _ in range(10)])
+    >>> csa = CoupledAnnealer(n_annealers=10, initial_state=initial_state,
+                    tgen_initial=0.01, tacc_initial=0.1,
+                    threads=10, steps=1000, update_interval=100, dimension=5,
+                    args=argscsa, modelpath=/root/mymodelfunc.py
+                    x_meas=meas['x'], y_meas=meas['y'])
+    >>> error, solution = csa.run()
+    >>> model = ParsecModel(bsol=solution,
+                            berr=error,
+                            ymeas=out_measure,
+                            modelcodesource=csa.modelcodesource,
+                            modelexecparams=csa.get_parameters())
+    >>> scores = model.validate(kfolds=10)
+    >>> print(model.sol)
+    >>> print(model.scores)
+
     
 #### Requirements for model python module
 
@@ -97,49 +110,37 @@ The python module file provided by user should has the following
 
  - To PSO model, should has the constraint function as following:
  
-    def constraint_function(p, *args):
+    def constraint_function(par, x_meas, **kwargs):
         # your code
         # arguments:
         # par - particle object
-        # args - list of position arguments passed to function:
-        #   args[0] - boolean value (if overhead should be considerable)
-        #   args[1] - Dictionary with 3 elements:
-                   'x' - List of tuples with independet variable(s)
-                   'y' - List of dependent variable (target)
-                   'input_name' - name of input size of parsec
+        # kwargs - Dict with extra parameters:
+        #   kwargs['overhead'] - boolean value (if overhead should be considerable)
         # analize the feasable of particles position (searched parameters)
         # return True or False, depend of requirements
         return boolean_value
 
  - To CSA model, should has probe function as following:
 
-    def probe_function(par, tgen, *args):
+    def probe_function(par, tgen):
         # your code
         # arguments:
         # par - actual parameters values
         # tgen - actual temperature of generation
-        # args - list of position arguments passed to function:
-        #   args[0] - boolean value (if overhead should be considerable)
-        #   args[1] - Dictionary with 3 elements:
-                      'x' - List of tuples with independet variable(s)
-                      'y' - List of dependent variable (target)
-                      'input_name' - name of input size of parsec
         # generate a new probe solution
         # return a list os parameters of probe solution
         return probe_solution
 
  - And the models files should has a objective function as following:
 
-        def objective_function(par, *args):
+        def objective_function(par, x_meas, y_meas, **kwargs):
             # your code
             # arguments:
             # par - particle object
-            # args - list of position arguments passed to function:
-            #   args[0] - boolean value (if overhead should be considerable)
-            #   args[1] - Dictionary with 3 elements:
-                       'x' - List of tuples with independet variable(s)
-                       'y' - List of dependent variable (target)
-                       'input_name' - name of input size of parsec
+            # x_meas - Measures array of independent variables
+            # y_meas - Measures array of dependent variable
+            # kwargs - Dict with extra parameters:
+            #   kwargs['overhead'] - boolean value (if overhead should be considerable)
             # calculate the function with should be minimized
             # return the calculated value
             return float_value 
@@ -148,60 +149,68 @@ The python module file provided by user should has the following
 
 Script to run parsec app with repetitions and multiples inputs sizes
 
-    parsecpy_runprocess [-h] -p PACKAGE
+    usage: parsecpy_runprocess [-h] -p PACKAGE
                            [-c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}]
-                           [-i INPUT] [-r REPITITIONS]
+                           [-f FREQUENCY] [-i INPUT] [-r REPETITIONS]
+                           [-b CPUBASE] [-v VERBOSITY]
                            c
-    
+
+    Script to run parsec app with repetitions and multiples inputs sizes
+
     positional arguments:
       c                     List of cores numbers to be used. Ex: 1,2,4
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       -p PACKAGE, --package PACKAGE
                             Package Name to run
       -c {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}, --compiler {gcc,gcc-serial,gcc-hooks,gcc-openmp,gcc-pthreads,gcc-tbb}
                             Compiler name to be used on run. (Default: gcc-hooks).
+      -f FREQUENCY, --frequency FREQUENCY
+                            List of frequencies (KHz). Ex: 2000000, 2100000
       -i INPUT, --input INPUT
                             Input name to be used on run. (Default: native).
                             Syntax: inputsetname[<initialnumber>:<finalnumber>].
-                            Ex: native or native_1:10
-      -r REPITITIONS, --repititions REPITITIONS
-                            Number of repititions for a specific run. (Default: 1)
-                            
+                            From lowest to highest size. Ex: native or native_1:10
+      -r REPETITIONS, --repetitions REPETITIONS
+                            Number of repetitions for a specific run. (Default: 1)
+      -b CPUBASE, --cpubase CPUBASE
+                            If run with thread affinity(limiting the running cores
+                            to defined number of cores), define the cpu base
+                            number.
+      -v VERBOSITY, --verbosity VERBOSITY
+                            verbosity level. 0 = No verbose
+
     Example:
-        parsecpy_runprocess -p frqmine -c gcc-hooks -r 5 -i native 1,2,4,8
+        parsecpy_runprocess -p freqmine -c gcc-hooks -r 5 -i native 1,2,4,8 -v 3
   
 
-### Run PSO Modelling script
+### Run PSO or CSA Modelling script
 
 Script to run swarm modelling to predict a parsec application output. On examples folder, exists a template file of
 configurations parameters to use on execution of this script
 
-    usage: parsecpy_runmodel_pso [-h] --config CONFIG -f PARSECPYFILEPATH
-                             [-p PARTICLES] [-x MAXITERATIONS]
-                             [-l LOWERVALUES] [-u UPPERVALUES]
-                             [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
-                             [-r REPETITIONS] [-c CROSSVALIDATION]
-                             [-v VERBOSITY]
+    usage: parsecpy_runmodel [-h] --config CONFIG -a {csa,pso}
+                         [-p PARSECPYFILEPATH] [-f FREQUENCY]
+                         [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
+                         [-r REPETITIONS]
+                         [-c CROSSVALIDATION | -m MEASURESFRACTION]
+                         [-v VERBOSITY]
 
-    Script to run swarm modelling to predict aparsec application output
+    Script to run optimizer modelling algorithm to predict a parsec application
+    output
 
     optional arguments:
       -h, --help            show this help message and exit
       --config CONFIG       Filepath from Configuration file configurations
                             parameters
-      -f PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
+      -a {csa,pso}, --algorithm {csa,pso}
+                            Optimization algorithm to use on modellingprocess.
+      -p PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
                             Path from input data file from Parsec specificated
                             package.
-      -p PARTICLES, --particles PARTICLES
-                            Number of particles
-      -x MAXITERATIONS, --maxiterations MAXITERATIONS
-                            Number max of iterations
-      -l LOWERVALUES, --lowervalues LOWERVALUES
-                            List of minimum particles values used. Ex: -1,0,-2,0
-      -u UPPERVALUES, --uppervalues UPPERVALUES
-                            List of maximum particles values used. Ex: 5,2,1,10
+      -f FREQUENCY, --frequency FREQUENCY
+                            List of frequencies (KHz). Ex: 2000000, 2100000
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
                             List of problem sizes to model used. Ex:
                             native_01,native_05,native_08
@@ -213,60 +222,16 @@ configurations parameters to use on execution of this script
                             Number of repetitions to algorithm execution
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
                             If run the cross validation of modelling
-      -v VERBOSITY, --verbosity VERBOSITY
-                            verbosity level. 0 = No verbose
-    Example
-        parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10
-            -f /var/myparsecsim.dat --config /var/myconfig.json -x 1000 -p 10
-
-  
-### Run CSA Modelling script
-
-Script to run csa modelling to predict a parsec application output. On examples folder, exists a template file of
-configurations parameters to use on execution of this script
-
-    usage: parsecpy_runmodel_csa [-h] --config CONFIG -f PARSECPYFILENAME
-                             [-a ANNEALERS] [-s STEPS] [-u UPDATE_INTERVAL]
-                             [-d DIMENSION] [-n PROBLEMSIZES] [-o OVERHEAD]
-                             [-t THREADS] [-r REPETITIONS]
-                             [-c CROSSVALIDATION] [-v VERBOSITY]
-
-    Script to run csa modelling to predict aparsec application output
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --config CONFIG       Filepath from Configuration file configurations
-                            parameters
-      -f PARSECPYFILENAME, --parsecpyfilename PARSECPYFILENAME
-                            Absolute path from Input filename from Parsec
-                            specificated package.
-      -a ANNEALERS, --annealers ANNEALERS
-                            Number of annealers
-      -s STEPS, --steps STEPS
-                            Number max of iterations
-      -u UPDATE_INTERVAL, --update_interval UPDATE_INTERVAL
-                            Number steps to run cooling temperatures
-      -d DIMENSION, --dimension DIMENSION
-                            Number of parameters
-      -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
-                            List of problem sizes to model used. Ex:
-                            native_01,native_05,native_08
-      -o OVERHEAD, --overhead OVERHEAD
-                            If it consider the overhead
-      -t THREADS, --threads THREADS
-                            Number of Threads
-      -r REPETITIONS, --repetitions REPETITIONS
-                            Number of repetitions to algorithm execution
-      -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
-                            If run the cross validation of modelling
+      -m MEASURESFRACTION, --measuresfraction MEASURESFRACTION
+                            Fraction of measures data to calculate the model
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
 
     Example
-        parsecpy_runmodel_csa -f /var/myparsecsim.dat
-        --config /var/myconfig.json -d 5 -s 1000 -a 10
-  
-    
+        parsecpy_runmodel --config /var/myconfig.json -a pso
+            -p /var/myparsecsim.dat -r 10 -v 3
+
+
 ### Logs process
 
 Script to parse a folder with parsec log files and save measures an output file

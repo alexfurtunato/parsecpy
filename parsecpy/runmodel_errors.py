@@ -23,6 +23,8 @@
       -r REPETITIONS, --repetitions REPETITIONS
                             Number of repetitions to each number of measures
                             algorithm execution
+      -s SAMPLES, --samples SAMPLES
+                            Number of samples to test
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
 
@@ -48,10 +50,10 @@ from parsecpy import data_detach
 def workers(args):
     config = args[0]
     y_measure = args[1]
-    kwargsmodel = {'oh': config['oh']}
+    kwargsmodel = {'overhead': config['overhead']}
 
     if config['algorithm'] == 'pso':
-        optm = Swarm(config['pxmin'], config['pxmax'],
+        optm = Swarm(config['lowervalues'], config['uppervalues'],
                      parsecpydatapath=config['parsecpydatapath'],
                      modelcodepath=config['modelcodepath'],
                      size=config['size'], w=config['w'],
@@ -63,20 +65,20 @@ def workers(args):
                      kwargs=kwargsmodel)
     elif config['algorithm'] == 'csa':
         initial_state = np.array([np.random.uniform(size=config['dimension'])
-                                  for _ in range(config['m'])])
+                                  for _ in range(config['annealers'])])
         optm = CoupledAnnealer(initial_state,
                                parsecpydatapath=config['parsecpydatapath'],
                                modelcodepath=config['modelcodepath'],
-                               n_annealers=config['m'],
+                               n_annealers=config['annealers'],
                                steps=config['steps'],
                                update_interval=config['update_interval'],
-                               tgen_initial=config['tgen'],
+                               tgen_initial=config['tgen_initial'],
                                tgen_upd_factor=config['tgen_upd_factor'],
-                               tacc_initial=config['tacc'],
+                               tacc_initial=config['tacc_initial'],
                                alpha=config['alpha'],
                                desired_variance=config['desired_variance'],
-                               pxmin=config['pxmin'],
-                               pxmax=config['pxmax'],
+                               lowervalues=config['lowervalues'],
+                               uppervalues=config['uppervalues'],
                                threads=config['threads'],
                                verbosity=config['verbosity'],
                                x_meas=args[2]['x'],
@@ -90,7 +92,6 @@ def workers(args):
     model = ParsecModel(bsol=solution,
                         berr=error,
                         ymeas=y_measure,
-                        modelcodepath=optm.modelcodepath,
                         modelcodesource=optm.modelcodesource,
                         modelexecparams=optm.get_parameters())
     pred = model.predict(y_measure_detach['x'])
@@ -118,6 +119,8 @@ def argsparsevalidation():
     parser.add_argument('-r', '--repetitions', type=int,
                         help='Number of repetitions to each number of measures '
                              'algorithm execution')
+    parser.add_argument('-s', '--samples', type=int,
+                        help='Number of samples to test')
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
     args = parser.parse_args()
@@ -175,11 +178,11 @@ def main():
 
     computed_errors = []
     repetitions = range(args.repetitions)
-    samples_n = 10
+    samples_n = args.samples
 
-    for k in range(samples_n-1):
+    for k in range(1,samples_n):
 
-        print('\nAlgorithm Execution: ', k+1)
+        print('\nAlgorithm Execution: ', k)
 
         samples_args = []
         for i in repetitions:
@@ -189,9 +192,10 @@ def main():
             # print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             # x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
             # y_sample = np.concatenate((y_limits, xy_train_test[2]))
+            test_size = 1 - (k/samples_n)
             xy_train_test = train_test_split(y_measure_detach['x'],
                                              y_measure_detach['y'],
-                                             test_size=(samples_n-(k+1))/samples_n)
+                                             test_size=test_size)
             print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             x_sample = xy_train_test[0]
             y_sample = xy_train_test[2]
@@ -228,8 +232,7 @@ def main():
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]
-    filename = '%s_%serrors_%s.errordat' % (pkgname, args['algorithm'],
-                                            filedate)
+    filename = '%s_%serrors_%s.errordat' % (pkgname, args.algorithm, filedate)
     with open(filename, 'w') as f:
         json.dump(computed_errors, f, ensure_ascii=False)
     print('Errors data saved on filename: %s' % filename)

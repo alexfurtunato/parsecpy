@@ -116,13 +116,14 @@ def main():
 
     """
 
-    print("\n***** Processing the Model *****")
     # adjust list of arguments to avoid negative number values error
     for i, arg in enumerate(sys.argv):
         if (arg[0] == '-') and arg[1].isdigit():
             sys.argv[i] = ' ' + arg
 
     args = argsparsevalidation()
+
+    print("\n***** Processing the Model *****")
 
     if args.config:
         if not os.path.isfile(args.config):
@@ -183,8 +184,7 @@ def main():
         x_sample = y_measure_detach['x']
         y_sample = y_measure_detach['y']
 
-    # TODO: fractioned measure don't must have dims like entire measures
-    kwargsmodel = {'oh': config['overhead']}
+    kwargsmodel = {'overhead': config['overhead']}
 
     repetitions = range(config['repetitions'])
     err_min = 0
@@ -200,7 +200,7 @@ def main():
                          modelcodepath=config['modelfilepath'],
                          size=config['particles'], w=config['w'],
                          c1=config['c1'], c2=config['c2'],
-                         maxiter=config['maxiterations'],
+                         maxiter=config['maxiter'],
                          threads=config['threads'],
                          verbosity=config['verbosity'],
                          x_meas=x_sample, y_meas=y_sample,
@@ -219,8 +219,8 @@ def main():
                                    tacc_initial=config['tacc_initial'],
                                    alpha=config['alpha'],
                                    desired_variance=config['desired_variance'],
-                                   pxmin=config['lowervalues'],
-                                   pxmax=config['uppervalues'],
+                                   lowervalues=config['lowervalues'],
+                                   uppervalues=config['uppervalues'],
                                    threads=config['threads'],
                                    verbosity=config['verbosity'],
                                    x_meas=x_sample,
@@ -234,7 +234,6 @@ def main():
         model = ParsecModel(bsol=solution,
                             berr=error,
                             ymeas=y_measure,
-                            modelcodepath=optm.modelcodepath,
                             modelcodesource=optm.modelcodesource,
                             modelexecparams=optm.get_parameters())
         if 'measuresfraction' in config.keys():

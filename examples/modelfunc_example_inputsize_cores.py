@@ -42,13 +42,13 @@ def get_overhead(param, x):
 
     :param param: Actual parameters values
     :param x: Inputs array
-    :return: Dict with input array ('x') and predicted overhead array ('oh')
+    :return: Dict with input array ('x') and predicted overhead array ('overhead')
     """
 
-    oh = []
+    overhead = []
     for p, n in x:
-        oh.append(_func_overhead(param[:4], p, n))
-    return {'x': x, 'oh': oh}
+        overhead.append(_func_overhead(param[:4], p, n))
+    return {'x': x, 'overhead': overhead}
 
 
 def _func_parallelfraction(f, p, n):
@@ -78,7 +78,7 @@ def _func_overhead(q, p, n):
     return q[0]+(q[1]*p)/pow(q[2], n)
 
 
-def _func_speedup(param, p, n, oh):
+def _func_speedup(param, p, n, overhead):
     """
     Model function to calculate the speedup without overhead.
 
@@ -88,7 +88,7 @@ def _func_speedup(param, p, n, oh):
     :return: calculated speedup value
     """
 
-    if oh:
+    if overhead:
         f = _func_parallelfraction(param[:4], p, n)
         q = _func_overhead(param[4:], p, n)
     else:
@@ -101,19 +101,19 @@ def _func_speedup(param, p, n, oh):
     return speedup
 
 
-def model(par, x, oh):
+def model(par, x, overhead):
     """
     Mathematical Model function to predict the measures values.
 
     :param par: Actual parameters values
     :param x: inputs array
-    :param oh: If should be considered the overhead
+    :param overhead: If should be considered the overhead
     :return: Dict with input array ('x') and predicted output array ('y')
     """
 
     pred = []
     for n, p in x:
-        y_model = _func_speedup(par, p, n, oh)
+        y_model = _func_speedup(par, p, n, overhead)
         pred.append(y_model)
     return {'x': x, 'y': pred}
 
@@ -144,7 +144,7 @@ def constraint_function(par, x_meas, **kwargs):
     :return: If parameters are acceptable based on return functions
     """
 
-    pred = model(par, x_meas, kwargs['oh'])
+    pred = model(par, x_meas, kwargs['overhead'])
     y_min = np.min(pred['y'])
     f_pred = get_parallelfraction(par, x_meas)
     f_max = np.max(f_pred['pf'])
@@ -163,5 +163,5 @@ def objective_function(par, x_meas, y_meas, **kwargs):
     :return: Mean squared error between measures and predicts
     """
 
-    pred = model(par, x_meas, kwargs['oh'])
+    pred = model(par, x_meas, kwargs['overhead'])
     return mean_squared_error(y_meas, pred['y'])

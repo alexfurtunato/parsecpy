@@ -486,11 +486,11 @@ class ParsecData:
             Z = dataplot.values
             zmin = data.values.min()
             zmax = data.values.max()
-            surfspeedupu = ax.plot_surface(Y, X, Z, cmap=colormap,
-                                           linewidth=0.5, edgecolor='k',
-                                           linestyle='-',
-                                           vmin=(zmin - (zmax - zmin) / 10),
-                                           vmax=(zmax + (zmax - zmin) / 10))
+            surfspeedup = ax.plot_surface(Y, X, Z, cmap=colormap,
+                                          linewidth=0.5, edgecolor='k',
+                                          linestyle='-',
+                                          vmin=(zmin - (zmax - zmin) / 10),
+                                          vmax=(zmax + (zmax - zmin) / 10))
             ax.tick_params(labelsize='small')
             ax.set_xlabel(xc_label)
             if xc_label is 'Frequency':

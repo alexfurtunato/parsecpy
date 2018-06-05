@@ -137,7 +137,7 @@ class ParsecModel:
         if len(x.shape) == 1:
             x = x.reshape((1, x.shape[0]))
         psomodel = self.loadcode(self.modelcodesource, 'psomodel')
-        pred = psomodel.model(self.sol, x, self.modelexecparams['oh'])
+        pred = psomodel.model(self.sol, x, self.modelexecparams['overhead'])
         return pred
 
     def validate(self, kfolds=3, scoring=None):
@@ -204,7 +204,7 @@ class ParsecModel:
         pkgname = os.path.basename(self.modelexecparams['parsecpydatapath'])
         pkgname = pkgname.split('_')[0]
         filename = '%s_%smodel_datafile_%s.dat' % (pkgname,
-                                                   parsecconfig['algorithm'],
+                                                   self.modelexecparams['algorithm'],
                                                    filedate)
         with open(filename, 'w') as f:
             datatosave = {'config': {}, 'data': {}}
@@ -218,8 +218,8 @@ class ParsecModel:
             datatosave['config']['savedate'] = filedate
             datatosave['config']['modelcodesource'] = self.modelcodesource
             mep = deepcopy(self.modelexecparams)
-            mep['pxmin'] = str(mep['pxmin'])
-            mep['pxmax'] = str(mep['pxmax'])
+            mep['lowervalues'] = str(mep['lowervalues'])
+            mep['uppervalues'] = str(mep['uppervalues'])
             datatosave['config']['modelexecparams'] = mep
             datatosave['data']['params'] = str(list(self.sol))
             datatosave['data']['error'] = self.error
@@ -270,8 +270,8 @@ class ParsecModel:
             if 'modelexecparams' in configdict.keys():
                 mep = deepcopy(configdict['modelexecparams'])
                 self.modelexecparams = deepcopy(mep)
-                self.modelexecparams['pxmin'] = json.loads(mep['pxmin'])
-                self.modelexecparams['pxmax'] = json.loads(mep['pxmax'])
+                self.modelexecparams['lowervalues'] = json.loads(mep['lowervalues'])
+                self.modelexecparams['uppervalues'] = json.loads(mep['uppervalues'])
             if 'measuresfraction' in configdict.keys():
                 self.measuresfraction = configdict['measuresfraction']
             if 'validation' in datadict.keys():
@@ -408,12 +408,12 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
             print('y :')
             print(y)
         p = deepcopy(self.model.modelexecparams)
-        kwargsmodel = {'oh': p['oh']}
+        kwargsmodel = {'overhead': p['overhead']}
 
         y_measure = data_detach(self.model.y_measure)
 
         if p['algorithm'] == 'pso':
-            optm = Swarm(p['pxmin'], p['pxmax'],
+            optm = Swarm(p['lowervalues'], p['uppervalues'],
                          parsecpydatapath=p['parsecpydatapath'],
                          modelcodesource=self.model.modelcodesource,
                          size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
@@ -423,20 +423,20 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
                          kwargs=kwargsmodel)
         elif p['algorithm'] == 'csa':
             initial_state = np.array([np.random.uniform(size=p['dimension'])
-                                      for _ in range(p['m'])])
+                                      for _ in range(p['annealers'])])
             optm = CoupledAnnealer(initial_state,
                                    parsecpydatapath=p['parsecpydatapath'],
                                    modelcodesource=self.model.modelcodesource,
-                                   n_annealers=p['m'],
+                                   n_annealers=p['annealers'],
                                    steps=p['steps'],
                                    update_interval=p['update_interval'],
-                                   tgen_initial=p['tgen'],
+                                   tgen_initial=p['tgen_initial'],
                                    tgen_upd_factor=p['tgen_upd_factor'],
-                                   tacc_initial=p['tacc'],
+                                   tacc_initial=p['tacc_initial'],
                                    alpha=p['alpha'],
                                    desired_variance=p['desired_variance'],
-                                   pxmin=p['pxmin'],
-                                   pxmax=p['pxmax'],
+                                   lowervalues=p['lowervalues'],
+                                   uppervalues=p['uppervalues'],
                                    threads=p['threads'],
                                    verbosity=self.verbosity,
                                    kwargs=kwargsmodel)
@@ -448,7 +448,6 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
         self.model = ParsecModel(bsol=solution,
                                  berr=error,
                                  ymeas=self.model.y_measure,
-                                 modelcodepath=optm.modelcodepath,
                                  modelcodesource=optm.modelcodesource,
                                  modelexecparams=optm.get_parameters())
         self.X_ = X

@@ -31,11 +31,9 @@ class CoupledAnnealer(object):
             update_interval - Specifies how many steps in between updates
                               to the generation and acceptance temperatures.
             tgen_initial - The initial value of the generation temperature.
-            tgen_schedule - Determines the factor that tgen is multiplied by
+            tgen_upd_factor - Determines the factor that tgen is multiplied by
                             during each  update.
             tacc_initial - The initial value of the acceptance temperature.
-            tacc_schedule - Determines the factor that `tacc` is multiplied by
-                            during each update.
             desired_variance - The desired variance of the acceptance
                                probabilities. If not specified,
                                `desired_variance` will be set to
@@ -65,6 +63,7 @@ class CoupledAnnealer(object):
 
     """
 
+    # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
     def __init__(self, initial_state,
                  parsecpydatapath=None,
                  modelcodepath=None,
@@ -77,24 +76,26 @@ class CoupledAnnealer(object):
                  tacc_initial=0.9,
                  alpha=0.05,
                  desired_variance=None,
-                 pxmin=None,
-                 pxmax=None,
+                 lowervalues=None,
+                 uppervalues=None,
                  threads=1,
                  verbosity=0,
                  x_meas = None,
                  y_meas = None,
                  kwargs={}):
         self.steps = steps
-        self.m = n_annealers
+        self.annealers = n_annealers
         self.threads = threads if threads > 0 else mp.cpu_count()
         self.update_interval = update_interval
         self.verbosity = verbosity
+        self.tgen_initial = tgen_initial
         self.tgen = tgen_initial
         self.tgen_upd_factor = tgen_upd_factor
+        self.tacc_initial = tacc_initial
         self.tacc = tacc_initial
         self.alpha = alpha
-        self.pxmin = np.array(pxmin)
-        self.pxmax = np.array(pxmax)
+        self.lowervalues = np.array(lowervalues)
+        self.uppervalues = np.array(uppervalues)
         self.kwargs = kwargs
         self.tgen_initial = tgen_initial
         self.parsecpydatapath = parsecpydatapath
@@ -113,6 +114,8 @@ class CoupledAnnealer(object):
             else:
                 sys.path.append(os.path.dirname(modelcodepath))
             self.modelfunc = importlib.import_module(pythonmodule)
+            with open(modelcodepath) as f:
+                self.modelcodesource = f.read()
         elif modelcodesource is not None:
                 import types
 
@@ -121,19 +124,19 @@ class CoupledAnnealer(object):
 
         # Set desired_variance.
         if desired_variance is None:
-            self.desired_variance = 0.99 * (self.m - 1) / (self.m ** 2)
+            self.desired_variance = 0.99 * (self.annealers - 1) / (self.annealers ** 2)
         else:
             self.desired_variance = desired_variance
 
         # Initialize state.
-        assert len(initial_state) == self.m
+        assert len(initial_state) == self.annealers
         self.probe_states = initial_state.copy()
 
         # Shallow copy.
         self.current_states = initial_state.copy()
 
         # Initialize energies.
-        self.probe_energies = np.zeros(self.m)
+        self.probe_energies = np.zeros(self.annealers)
         self.current_energies = self.probe_energies.copy()
 
         self.probe_function = partial(self._probe_wrapper,
@@ -150,8 +153,8 @@ class CoupledAnnealer(object):
         :param state: state to adjust.
         :return: return the adjusted state.
         """
-        if len(self.pxmin)>0 and len(self.pxmax)>0:
-            return self.pxmin + (self.pxmax-self.pxmin)*(state/2 + 0.5)
+        if len(self.lowervalues)>0 and len(self.uppervalues)>0:
+            return self.lowervalues + (self.uppervalues-self.lowervalues)*(state/2 + 0.5)
         return state
 
     @staticmethod
@@ -202,7 +205,7 @@ class CoupledAnnealer(object):
         Update the current state across all annealers sequentially.
         """
 
-        for i in range(self.m):
+        for i in range(self.annealers):
             self.probe_states[i] = self.probe_function(
                 self.current_states[i].copy())
             probe_temp = self.state_adjust(self.probe_states[i])
@@ -221,7 +224,7 @@ class CoupledAnnealer(object):
         prob_accept = exp_terms / exp_terms.sum()
 
         # Determine whether to accept or reject probe.
-        for i in range(self.m):
+        for i in range(self.annealers):
             if self.probe_energies[i] < self.current_energies[i]:
                 self.current_states[i] = self.probe_states[i].copy()
                 self.current_energies[i] = self.probe_energies[i]
@@ -240,8 +243,8 @@ class CoupledAnnealer(object):
             # Update generation temp.
             self.tgen = self.tgen_upd_factor*self.tgen
 
-            # sigma2 = (sum(np.array(prob_accept)**2)*self.m - 1)/(self.m - 1)
-            sigma2 = (sum(prob_accept**2)/self.m) - (1/self.m**2)
+            # sigma2 = (sum(np.array(prob_accept)**2)*self.annealers - 1)/(self.annealers - 1)
+            sigma2 = (sum(prob_accept**2)/self.annealers) - (1/self.annealers**2)
             if sigma2 < self.desired_variance:
                 self.tacc *= (1 - self.alpha)
             else:
@@ -320,16 +323,17 @@ class CoupledAnnealer(object):
 
         best_energy, best_params = self.__get_best()
         modelexecparams = {'algorithm': 'csa',
-                           'm': self.m,
+                           'annealers': self.annealers,
                            'steps': self.steps, 'dimension': len(best_params),
                            'threads': self.threads,
-                           'tgen': self.tgen_initial, 'tacc': self.tacc,
+                           'tgen_initial': self.tgen_initial,
+                           'tacc_initial': self.tacc_initial,
                            'tgen_upd_factor': self.tgen_upd_factor,
                            'desired_variance': self.desired_variance,
-                           'pxmin': list(self.pxmin),
-                           'pxmax': list(self.pxmax),
+                           'lowervalues': list(self.lowervalues),
+                           'uppervalues': list(self.uppervalues),
                            'update_interval': self.update_interval,
-                           'oh': self.kwargs['oh'],
+                           'overhead': self.kwargs['overhead'],
                            'modelcodepath': self.modelcodepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'alpha': self.alpha, 'verbosity': self.verbosity}
