@@ -26,13 +26,14 @@ def get_parallelfraction(param, x):
 
     :param param: Actual parameters values
     :param x: Inputs array
-    :return: Tuple with input array and predicted parallel fraction array
+    :return: Dict with input array ('x') and predicted parallel
+             fraction array ('pf')
     """
 
     pf = []
     for p, n in x:
         pf.append(_func_parallelfraction(param[:4], p, n))
-    return x, pf
+    return {'x': x, 'pf': pf}
 
 
 def get_overhead(param, x):
@@ -41,13 +42,13 @@ def get_overhead(param, x):
 
     :param param: Actual parameters values
     :param x: Inputs array
-    :return: Tuple with input array and predicted overhead array
+    :return: Dict with input array ('x') and predicted overhead array ('oh')
     """
 
     oh = []
     for p, n in x:
         oh.append(_func_overhead(param[:4], p, n))
-    return x, oh
+    return {'x': x, 'oh': oh}
 
 
 def _func_parallelfraction(f, p, n):
@@ -107,17 +108,17 @@ def model(par, x, oh):
     :param par: Actual parameters values
     :param x: inputs array
     :param oh: If should be considered the overhead
-    :return: Tuple with input array and predicted output array
+    :return: Dict with input array ('x') and predicted output array ('y')
     """
 
     pred = []
     for n, p in x:
         y_model = _func_speedup(par, p, n, oh)
         pred.append(y_model)
-    return x, pred
+    return {'x': x, 'y': pred}
 
 
-def probe_function(par, tgen, *args):
+def probe_function(par, tgen):
     """
     Constraint function that would be considered on model.
 
@@ -133,7 +134,7 @@ def probe_function(par, tgen, *args):
     return probe_solution
 
 
-def constraint_function(par, *args):
+def constraint_function(par, x_meas, **kwargs):
     """
     Constraint function that would be considered on model.
 
@@ -143,16 +144,16 @@ def constraint_function(par, *args):
     :return: If parameters are acceptable based on return functions
     """
 
-    pred = model(par, args[1]['x'], args[0])
-    y_min = np.min(pred[1])
-    f_pred = get_parallelfraction(par, args[1]['x'])
-    f_max = np.max(f_pred[1])
-    f_min = np.min(f_pred[1])
+    pred = model(par, x_meas, kwargs['oh'])
+    y_min = np.min(pred['y'])
+    f_pred = get_parallelfraction(par, x_meas)
+    f_max = np.max(f_pred['pf'])
+    f_min = np.min(f_pred['pf'])
     is_feasable = np.all(np.array([1-f_max, f_min, y_min]) >= 0)
     return is_feasable
 
 
-def objective_function(par, *args):
+def objective_function(par, x_meas, y_meas, **kwargs):
     """
     Objective function (target function) to minimize.
 
@@ -162,6 +163,5 @@ def objective_function(par, *args):
     :return: Mean squared error between measures and predicts
     """
 
-    measure = args[1]
-    pred = model(par, measure['x'], args[0])
-    return mean_squared_error(measure['y'], pred[1])
+    pred = model(par, x_meas, kwargs['oh'])
+    return mean_squared_error(y_meas, pred['y'])

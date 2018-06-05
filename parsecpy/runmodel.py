@@ -8,30 +8,25 @@
     provided by user on a python module file. Its possible, also, provide a
     overhead function to integrate the model
 
-    usage: parsecpy_runmodel_pso [-h] --config CONFIG -f PARSECPYFILEPATH
+    usage: parsecpy_runmodel [-h] --config CONFIG -f PARSECPYFILEPATH
                              [-p PARTICLES] [-x MAXITERATIONS]
                              [-l LOWERVALUES] [-u UPPERVALUES]
                              [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
                              [-r REPETITIONS] [-c CROSSVALIDATION]
                              [-v VERBOSITY]
 
-    Script to run swarm modelling to predict a parsec application output
+    Script to run modelling algorithm to predict a parsec application output
 
     optional arguments:
       -h, --help            show this help message and exit
       --config CONFIG       Filepath from Configuration file configurations
                             parameters
+      -a ALGORITHM, --algorithm ['csa' or 'pso']
+                            Optimization algorithm to use on modelling
+                            process.
       -p PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
                             Path from input data file from Parsec specificated
                             package.
-      -q PARTICLES, --particles PARTICLES
-                            Number of particles
-      -x MAXITERATIONS, --maxiterations MAXITERATIONS
-                            Number max of iterations
-      -l LOWERVALUES, --lowervalues LOWERVALUES
-                            List of minimum particles values used. Ex:-1,0,-2,0
-      -u UPPERVALUES, --uppervalues UPPERVALUES
-                            List of maximum particles values used. Ex: 5,2,1,10
       -f FREQUENCIES, --frequency FREQUENCIES
                             List of frequencies (KHz). Ex: 2000000, 2100000
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
@@ -50,8 +45,8 @@
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
     Example
-        parsecpy_runmodel_pso -l -10,-10,-10,-10,-10 -u 10,10,10,10,10
-            -f /var/myparsecsim.dat --config /var/myconfig.json -x 1000 -p 10
+        parsecpy_runmodel --config my_config.json -a pso
+              -p /var/myparsecsim.dat -r 4 -v 3
 """
 
 import os
@@ -60,12 +55,16 @@ import json
 import time
 import argparse
 from copy import deepcopy
+import numpy as np
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+
 from parsecpy import ParsecData
-from parsecpy import Swarm
-from parsecpy import argsparselist, argsparsefloatlist, \
-    argsparseintlist, argsparsefraction, data_detach
+from parsecpy import Swarm, CoupledAnnealer
+from parsecpy import ParsecModel
+from parsecpy import argsparselist, argsparseintlist, argsparsefraction
+from parsecpy import data_detach
 
 
 def argsparsevalidation():
@@ -75,25 +74,20 @@ def argsparsevalidation():
     :return: argparse object with validated arguments.
     """
 
-    parser = argparse.ArgumentParser(description='Script to run swarm '
-                                                 'modelling to predict a'
-                                                 'parsec application output')
+    parser = argparse.ArgumentParser(description='Script to run optimizer '
+                                                 'modelling algorithm to '
+                                                 'predict a parsec application '
+                                                 'output')
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')
+    parser.add_argument('-a', '--algorithm', required=True,
+                        choices=['csa', 'pso'],
+                        help='Optimization algorithm to use on modelling'
+                             'process.')
     parser.add_argument('-p', '--parsecpyfilepath',
                         help='Path from input data file from Parsec '
                              'specificated package.')
-    parser.add_argument('-q', '--particles', type=int,
-                        help='Number of particles')
-    parser.add_argument('-x', '--maxiterations', type=int,
-                        help='Number max of iterations')
-    parser.add_argument('-l', '--lowervalues', type=argsparsefloatlist,
-                        help='List of minimum particles values '
-                             'used. Ex: -1,0,-2,0')
-    parser.add_argument('-u', '--uppervalues',
-                        help='List of maximum particles values used. '
-                             'Ex: 5,2,1,10')
     parser.add_argument('-f', '--frequency', type=argsparseintlist,
                         help='List of frequencies (KHz). Ex: 2000000, 2100000')
     parser.add_argument('-n', '--problemsizes', type=argsparselist,
@@ -179,7 +173,7 @@ def main():
                 y_measure = y_measure.sel(size=sorted(config['frequencies']))
 
     y_measure_detach = data_detach(y_measure)
-    if 'measuresfraction' in config:
+    if 'measuresfraction' in config.keys():
         xy_train_test = train_test_split(y_measure_detach['x'],
                                          y_measure_detach['y'],
                                          test_size=1.0 - config['measuresfraction'])
@@ -190,10 +184,7 @@ def main():
         y_sample = y_measure_detach['y']
 
     # TODO: fractioned measure don't must have dims like entire measures
-    argsswarm = (config['overhead'], {'x': x_sample,
-                                      'y': y_sample,
-                                      'dims': y_measure.dims,
-                                      'input_sizes': input_sizes})
+    kwargsmodel = {'oh': config['overhead']}
 
     repetitions = range(config['repetitions'])
     err_min = 0
@@ -204,17 +195,51 @@ def main():
     for i in repetitions:
         print('\nAlgorithm Execution: ', i+1)
 
-        sw = Swarm(lv, uv, parsecpydatapath=config['parsecpyfilepath'],
-                   modelcodepath=config['modelfilepath'],
-                   size=config['particles'], w=config['w'], c1=config['c1'],
-                   c2=config['c2'], maxiter=config['maxiterations'],
-                   threads=config['threads'], verbosity=config['verbosity'],
-                   args=argsswarm)
-        sw.run()
-        model = sw.get_model()
-        if 'measuresfraction' in config:
-            y_pred = model.predict(y_measure_detach['x'])
-            model.error = mean_squared_error(y_measure_detach['y'], y_pred[1])
+        if config['algorithm'] == 'pso':
+            optm = Swarm(lv, uv, parsecpydatapath=config['parsecpyfilepath'],
+                         modelcodepath=config['modelfilepath'],
+                         size=config['particles'], w=config['w'],
+                         c1=config['c1'], c2=config['c2'],
+                         maxiter=config['maxiterations'],
+                         threads=config['threads'],
+                         verbosity=config['verbosity'],
+                         x_meas=x_sample, y_meas=y_sample,
+                         kwargs=kwargsmodel)
+        elif config['algorithm'] == 'csa':
+            initial_state = np.array([np.random.uniform(size=config['dimension'])
+                                      for _ in range(config['annealers'])])
+            optm = CoupledAnnealer(initial_state,
+                                   parsecpydatapath=config['parsecpyfilepath'],
+                                   modelcodepath=config['modelfilepath'],
+                                   n_annealers=config['annealers'],
+                                   steps=config['steps'],
+                                   update_interval=config['update_interval'],
+                                   tgen_initial=config['tgen_initial'],
+                                   tgen_upd_factor=config['tgen_upd_factor'],
+                                   tacc_initial=config['tacc_initial'],
+                                   alpha=config['alpha'],
+                                   desired_variance=config['desired_variance'],
+                                   pxmin=config['lowervalues'],
+                                   pxmax=config['uppervalues'],
+                                   threads=config['threads'],
+                                   verbosity=config['verbosity'],
+                                   x_meas=x_sample,
+                                   y_meas=y_sample,
+                                   kwargs=kwargsmodel)
+        else:
+            print('Error: You should inform the correct algorithm to use')
+            sys.exit()
+
+        error, solution = optm.run()
+        model = ParsecModel(bsol=solution,
+                            berr=error,
+                            ymeas=y_measure,
+                            modelcodepath=optm.modelcodepath,
+                            modelcodesource=optm.modelcodesource,
+                            modelexecparams=optm.get_parameters())
+        if 'measuresfraction' in config.keys():
+            pred = model.predict(y_measure_detach['x'])
+            model.error = mean_squared_error(y_measure_detach['y'], pred['y'])
             model.errorrel = 100 * (model.error / y_measure.values.mean())
             model.measuresfraction = config['measuresfraction']
         computed_models.append(model)
@@ -235,7 +260,7 @@ def main():
           (computed_models[best_model_idx].error,
            computed_models[best_model_idx].errorrel))
     if config['verbosity'] > 0:
-        print('Best Parameters: \n', computed_models[best_model_idx].params)
+        print('Best Parameters: \n', computed_models[best_model_idx].sol)
     if config['verbosity'] > 1:
         print('\nMeasured Speedup: \n', y_measure)
         print('\nModeled Speedup: \n', computed_models[best_model_idx].y_model)

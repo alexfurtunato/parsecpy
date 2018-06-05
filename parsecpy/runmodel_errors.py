@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-    Module to run pso models with differents number of measures.
+    Module to run optimzer modeller with differents number of measures.
 
     The aim is to visualize the minimal number of measures witch maintains the
     model error at acceptable limits
 
-    usage: parsecpy_runmodel_errorspso [-h] -m MODELFILENAME
+    usage: parsecpy_runmodel_errors [-h] -a ALGORITHM -m MODELFILENAME
                              [-r REPETITIONS] [-v VERBOSITY]
 
     Script to run pso modelling errors to find out a minimal number of measures
@@ -14,6 +14,9 @@
 
     optional arguments:
       -h, --help            show this help message and exit
+      -a ALGORITHM, --algorithm ['csa' or 'pso']
+                            Optimization algorithm to use on modelling
+                            process.
       -m MODELFILENAME, --modelfilename MODELFILENAME
                             Absolute path from model filename with PSO Model
                             parameters executed previously.
@@ -24,7 +27,7 @@
                             verbosity level. 0 = No verbose
 
     Example
-        parsecpy_runmodel_errorspso -m /var/myparseccsamodel.dat
+        parsecpy_runmodel_errors -a pso -m /var/myparseccsamodel.dat
         --config /var/myconfig.json -r 10 -v 3
 """
 
@@ -32,34 +35,67 @@ import os
 import sys
 import time
 from datetime import datetime
+import numpy as np
 import json
 import argparse
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
-from parsecpy import Swarm, ModelSwarm
+from parsecpy import Swarm, CoupledAnnealer, ParsecModel
 from parsecpy import data_detach
 
 
 def workers(args):
     config = args[0]
-    x_measure = args[1]['x']
-    y_measure = args[1]['y']
-    argsswarm = (config['oh'], args[2])
+    y_measure = args[1]
+    kwargsmodel = {'oh': config['oh']}
 
-    sw = Swarm(config['pxmin'], config['pxmax'],
-               parsecpydatapath=config['parsecpydatapath'],
-               modelcodepath=config['modelcodepath'],
-               size=config['size'], w=config['w'], c1=config['c1'],
-               c2=config['c2'], maxiter=config['maxiter'],
-               threads=config['threads'], verbosity=config['verbosity'],
-               args=argsswarm)
-    sw.run()
-    model = sw.get_model()
-    y_pred = model.predict(x_measure)
-    error = mean_squared_error(y_measure, y_pred[1])
-    return {'error': error, 'params': model.params}
+    if config['algorithm'] == 'pso':
+        optm = Swarm(config['pxmin'], config['pxmax'],
+                     parsecpydatapath=config['parsecpydatapath'],
+                     modelcodepath=config['modelcodepath'],
+                     size=config['size'], w=config['w'],
+                     c1=config['c1'], c2=config['c2'],
+                     maxiter=config['maxiter'],
+                     threads=config['threads'],
+                     verbosity=config['verbosity'],
+                     x_meas=args[2]['x'], y_meas=args[2]['y'],
+                     kwargs=kwargsmodel)
+    elif config['algorithm'] == 'csa':
+        initial_state = np.array([np.random.uniform(size=config['dimension'])
+                                  for _ in range(config['m'])])
+        optm = CoupledAnnealer(initial_state,
+                               parsecpydatapath=config['parsecpydatapath'],
+                               modelcodepath=config['modelcodepath'],
+                               n_annealers=config['m'],
+                               steps=config['steps'],
+                               update_interval=config['update_interval'],
+                               tgen_initial=config['tgen'],
+                               tgen_upd_factor=config['tgen_upd_factor'],
+                               tacc_initial=config['tacc'],
+                               alpha=config['alpha'],
+                               desired_variance=config['desired_variance'],
+                               pxmin=config['pxmin'],
+                               pxmax=config['pxmax'],
+                               threads=config['threads'],
+                               verbosity=config['verbosity'],
+                               x_meas=args[2]['x'],
+                               y_meas=args[2]['y'],
+                               kwargs=kwargsmodel)
+    else:
+        print('Error: You should inform the correct algorithm to use')
+        sys.exit()
+    error, solution = optm.run()
+    y_measure_detach = data_detach(y_measure)
+    model = ParsecModel(bsol=solution,
+                        berr=error,
+                        ymeas=y_measure,
+                        modelcodepath=optm.modelcodepath,
+                        modelcodesource=optm.modelcodesource,
+                        modelexecparams=optm.get_parameters())
+    pred = model.predict(y_measure_detach['x'])
+    error = mean_squared_error(y_measure_detach['y'], pred['y'])
+    return {'error': error, 'sol': model.sol}
 
 
 def argsparsevalidation():
@@ -72,6 +108,10 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run pso '
                                                  'modelling to predict a'
                                                  'parsec application output')
+    parser.add_argument('-a', '--algorithm', required=True,
+                        choices=['csa', 'pso'],
+                        help='Optimization algorithm to use on modelling'
+                             'process.')
     parser.add_argument('-m', '--modelfilepath',
                         help='Absolute path from model filename with '
                              'PSO Model parameters executed previously.')
@@ -99,7 +139,7 @@ def main():
               'function to model')
         sys.exit()
 
-    parsec_model = ModelSwarm(args.modelfilepath)
+    parsec_model = ParsecModel(args.modelfilepath)
     y_measure = parsec_model.y_measure
     config = parsec_model.modelexecparams
     if args.verbosity:
@@ -155,11 +195,9 @@ def main():
             print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
             x_sample = xy_train_test[0]
             y_sample = xy_train_test[2]
-            samples_args.append((config, y_measure_detach,
+            samples_args.append((config, y_measure,
                                  {'x': x_sample,
-                                  'y': y_sample,
-                                  'dims': y_measure.dims,
-                                  'input_sizes': input_sizes}))
+                                  'y': y_sample}))
         print(' ** Args len = ', len(samples_args))
         starttime = time.time()
 
@@ -167,13 +205,13 @@ def main():
                 as executor:
                 results = executor.map(workers, samples_args)
                 errors = []
-                params = []
+                sols = []
                 for i in results:
                     errors.append(i['error'])
-                    params.append(list(i['params']))
+                    sols.append(list(i['sol']))
                 computed_errors.append({'k': k+1,
                                         'errors': errors,
-                                        'params': params})
+                                        'sols': sols})
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -183,14 +221,15 @@ def main():
     for i in computed_errors:
         print('Iteration {0:2d}'.format(i['k']))
         print('  * Errors: {}'.format(i['errors']))
-        print('  * Params: {}'.format(i['params']))
+        print('  * Params: {}'.format(i['sols']))
     print('Iteration {0:2d}'.format(10))
     print('  * Errors: {0:.4f}'.format(parsec_model.error))
-    print('  * Params: {}'.format(parsec_model.params))
+    print('  * Params: {}'.format(parsec_model.sol))
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]
-    filename = '%s_psoerrors_%s.errordat' % (pkgname, filedate)
+    filename = '%s_%serrors_%s.errordat' % (pkgname, args['algorithm'],
+                                            filedate)
     with open(filename, 'w') as f:
         json.dump(computed_errors, f, ensure_ascii=False)
     print('Errors data saved on filename: %s' % filename)

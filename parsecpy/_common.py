@@ -41,6 +41,7 @@ def argsparsefraction(txt):
         value = float(txt)
         if value < 0 or value > 1.0:
             raise argparse.ArgumentTypeError(msg)
+        return value
     except ValueError:
         raise argparse.ArgumentTypeError(msg)
 
@@ -264,8 +265,8 @@ def data_attach(data, dims):
     :return: DataArray of data.
     """
 
-    xnp = np.array(data[0])
-    ynp = np.array(data[1])
+    xnp = np.array(data['x'])
+    ynp = np.array(data['y'])
     coords = []
     shape = []
     for i, d in enumerate(dims):
