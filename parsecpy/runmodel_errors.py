@@ -166,6 +166,7 @@ def main():
         for sf in size_or_freq_limits:
             for c in cores_limits:
                 limits.append([sf, c])
+        limits_pn = len(limits)/len(y_measure_detach['y'])
 
         limits_bool = np.isin(y_measure_detach['x'], limits)
         limits_bool = np.array([np.all(i) for i in limits_bool])
@@ -190,7 +191,7 @@ def main():
                 xy_train_test = train_test_split(x_without_limits,
                                                  y_without_limits,
                                                  test_size=(test_size
-                                                            + 4/samples_n))
+                                                            + limits_pn))
                 x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
                 y_sample = np.concatenate((y_limits, xy_train_test[2]))
             else:
