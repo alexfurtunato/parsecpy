@@ -22,6 +22,8 @@
                             algorithm execution
       -s SAMPLES, --samples SAMPLES
                             Number of samples to test
+      -l LIMITS, --limits LIMITS
+                            If include the surface limits points(4) on samples
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
 
@@ -114,6 +116,9 @@ def argsparsevalidation():
                              'algorithm execution')
     parser.add_argument('-s', '--samples', type=int,
                         help='Number of samples to test')
+    parser.add_argument('-l', '--limits', type=bool,
+                        help='If include the surface limits points(4) on '
+                             'samples', default=False)
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
     args = parser.parse_args()
@@ -149,25 +154,26 @@ def main():
 
     y_measure_detach = data_detach(y_measure)
 
-    # Separate max and min limits values of x and y on measures
+    if args.limits:
+        # Separate max and min limits values of x and y on measures
 
-    # cores_limits = [y_measure.coords['cores'].values.min(),
-    #                 y_measure.coords['cores'].values.max()]
-    # size_or_freq_limits = [coord_2.values.min(),
-    #                        coord_2.values.max()]
+        cores_limits = [y_measure.coords['cores'].values.min(),
+                        y_measure.coords['cores'].values.max()]
+        size_or_freq_limits = [coord_2.values.min(),
+                               coord_2.values.max()]
 
-    # limits = []
-    # for sf in size_or_freq_limits:
-    #     for c in cores_limits:
-    #         limits.append([sf, c])
+        limits = []
+        for sf in size_or_freq_limits:
+            for c in cores_limits:
+                limits.append([sf, c])
 
-    # limits_bool = np.isin(y_measure_detach['x'], limits)
-    # limits_bool = np.array([np.all(i) for i in limits_bool])
+        limits_bool = np.isin(y_measure_detach['x'], limits)
+        limits_bool = np.array([np.all(i) for i in limits_bool])
 
-    # x_limits = y_measure_detach['x'][limits_bool]
-    # x_without_limits = y_measure_detach['x'][~limits_bool]
-    # y_limits = y_measure_detach['y'][limits_bool]
-    # y_without_limits = y_measure_detach['y'][~limits_bool]
+        x_limits = y_measure_detach['x'][limits_bool]
+        x_without_limits = y_measure_detach['x'][~limits_bool]
+        y_limits = y_measure_detach['y'][limits_bool]
+        y_without_limits = y_measure_detach['y'][~limits_bool]
 
     computed_errors = []
     repetitions = range(args.repetitions)
@@ -180,18 +186,20 @@ def main():
         samples_args = []
         test_size = 1 - (k / samples_n)
         for i in repetitions:
-            # xy_train_test = train_test_split(x_without_limits,
-            #                                  y_without_limits,
-            #                                  test_size=(samples_n-(k+1))/samples_n)
-            # print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
-            # x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
-            # y_sample = np.concatenate((y_limits, xy_train_test[2]))
-            xy_train_test = train_test_split(y_measure_detach['x'],
-                                             y_measure_detach['y'],
-                                             test_size=test_size)
+            if args.limits:
+                xy_train_test = train_test_split(x_without_limits,
+                                                 y_without_limits,
+                                                 test_size=(test_size
+                                                            + 4/samples_n))
+                x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
+                y_sample = np.concatenate((y_limits, xy_train_test[2]))
+            else:
+                xy_train_test = train_test_split(y_measure_detach['x'],
+                                                 y_measure_detach['y'],
+                                                 test_size=test_size)
+                x_sample = xy_train_test[0]
+                y_sample = xy_train_test[2]
             print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
-            x_sample = xy_train_test[0]
-            y_sample = xy_train_test[2]
             samples_args.append((config, y_measure,
                                  {'x': x_sample,
                                   'y': y_sample}))
