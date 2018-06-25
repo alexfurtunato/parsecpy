@@ -236,10 +236,10 @@ def main():
 
     print(head)
     for i in computed_errors:
-        print('Iteration {0:2d}'.format(i['k']))
+        print('Samples {0:2d}'.format(i['train_size']))
         print('  * Errors: {}'.format(i['errors']))
         print('  * Params: {}'.format(i['sols']))
-    print('Iteration {0:2d}'.format(10))
+    print('Samples {0:2d}'.format(samples_n))
     print('  * Errors: {0:.4f}'.format(parsec_model.error))
     print('  * Params: {}'.format(parsec_model.sol))
 
