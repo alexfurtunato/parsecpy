@@ -225,7 +225,7 @@ def main():
             break
         train_size *= 2
         if train_size >= samples_n and not last:
-            train_size = samples_n
+            train_size = samples_n - len(y_limits)
             last = True
         print('  Execution time = %.2f seconds' % (endtime - starttime))
 
