@@ -191,7 +191,7 @@ def main():
             if args.limits:
                 xy_train_test = train_test_split(x_without_limits,
                                                  y_without_limits,
-                                                 train_size=train_size)
+                                                 train_size=(train_size-len(y_limits)))
                 x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
                 y_sample = np.concatenate((y_limits, xy_train_test[2]))
             else:
