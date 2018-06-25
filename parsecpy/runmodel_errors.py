@@ -20,8 +20,6 @@
       -r REPETITIONS, --repetitions REPETITIONS
                             Number of repetitions to each number of measures
                             algorithm execution
-      -s SAMPLES, --samples SAMPLES
-                            Number of samples to test
       -l LIMITS, --limits LIMITS
                             If include the surface limits points(4) on samples
       -v VERBOSITY, --verbosity VERBOSITY
@@ -114,8 +112,6 @@ def argsparsevalidation():
     parser.add_argument('-r', '--repetitions', type=int,
                         help='Number of repetitions to each number of measures '
                              'algorithm execution')
-    parser.add_argument('-s', '--samples', type=int,
-                        help='Number of samples to test')
     parser.add_argument('-l', '--limits', type=bool,
                         help='If include the surface limits points(4) on '
                              'samples', default=False)
@@ -166,7 +162,6 @@ def main():
         for sf in size_or_freq_limits:
             for c in cores_limits:
                 limits.append([sf, c])
-        limits_pn = len(limits)/len(y_measure_detach['y'])
 
         limits_bool = np.isin(y_measure_detach['x'], limits)
         limits_bool = np.array([np.all(i) for i in limits_bool])
@@ -178,28 +173,35 @@ def main():
 
     computed_errors = []
     repetitions = range(args.repetitions)
-    samples_n = args.samples
+    samples_n = 1
+    for i in [len(y_measure.coords[i]) for i in y_measure.coords]:
+        samples_n *= i
+    if args.limits:
+        train_size = max(len(parsec_model.sol), len(y_limits))
+    else:
+        train_size = len(parsec_model.sol)
 
-    for k in range(1,samples_n):
+    last = False
+    while True:
 
-        print('\nAlgorithm Execution: ', k)
+        print('\nSample size: ', train_size)
 
         samples_args = []
-        test_size = 1 - (k / samples_n)
         for i in repetitions:
             if args.limits:
                 xy_train_test = train_test_split(x_without_limits,
                                                  y_without_limits,
-                                                 test_size=test_size)
+                                                 train_size=train_size)
                 x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
                 y_sample = np.concatenate((y_limits, xy_train_test[2]))
             else:
                 xy_train_test = train_test_split(y_measure_detach['x'],
                                                  y_measure_detach['y'],
-                                                 test_size=test_size)
+                                                 train_size=train_size)
                 x_sample = xy_train_test[0]
                 y_sample = xy_train_test[2]
-            print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]), ', y=', len(xy_train_test[2]))
+            print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]),
+                  ', y=', len(xy_train_test[2]))
             samples_args.append((config, y_measure,
                                  {'x': x_sample,
                                   'y': y_sample}))
@@ -208,18 +210,23 @@ def main():
 
         with futures.ThreadPoolExecutor(max_workers=args.repetitions) \
                 as executor:
-                results = executor.map(workers, samples_args)
-                errors = []
-                sols = []
-                for i in results:
-                    errors.append(i['error'])
-                    sols.append(list(i['sol']))
-                computed_errors.append({'k': k+1,
-                                        'train_size': 1-test_size,
-                                        'errors': errors,
-                                        'sols': sols})
+            results = executor.map(workers, samples_args)
+            errors = []
+            sols = []
+            for i in results:
+                errors.append(i['error'])
+                sols.append(list(i['sol']))
+            computed_errors.append({'train_size': train_size,
+                                    'errors': errors,
+                                    'sols': sols})
 
         endtime = time.time()
+        if last:
+            break
+        train_size *= 2
+        if train_size >= samples_n and not last:
+            train_size = samples_n
+            last = True
         print('  Execution time = %.2f seconds' % (endtime - starttime))
 
     head = {'algorithm': config['algorithm'],
