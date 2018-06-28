@@ -47,6 +47,8 @@ from parsecpy import data_detach
 def workers(args):
     config = args[0]
     y_measure = args[1]
+    train = args[2]
+    test = args[3]
     kwargsmodel = {'overhead': config['overhead']}
 
     if config['algorithm'] == 'pso':
@@ -58,7 +60,7 @@ def workers(args):
                      maxiter=config['maxiter'],
                      threads=config['threads'],
                      verbosity=config['verbosity'],
-                     x_meas=args[2]['x'], y_meas=args[2]['y'],
+                     x_meas=train['x'], y_meas=train['y'],
                      kwargs=kwargsmodel)
     elif config['algorithm'] == 'csa':
         initial_state = np.array([np.random.uniform(size=config['dimension'])
@@ -78,21 +80,20 @@ def workers(args):
                                uppervalues=config['uppervalues'],
                                threads=config['threads'],
                                verbosity=config['verbosity'],
-                               x_meas=args[2]['x'],
-                               y_meas=args[2]['y'],
+                               x_meas=train['x'],
+                               y_meas=train['y'],
                                kwargs=kwargsmodel)
     else:
         print('Error: You should inform the correct algorithm to use')
         sys.exit()
     error, solution = optm.run()
-    y_measure_detach = data_detach(y_measure)
     model = ParsecModel(bsol=solution,
                         berr=error,
                         ymeas=y_measure,
                         modelcodesource=optm.modelcodesource,
                         modelexecparams=optm.get_parameters())
-    pred = model.predict(y_measure_detach['x'])
-    error = mean_squared_error(y_measure_detach['y'], pred['y'])
+    pred = model.predict(test['x'])
+    error = mean_squared_error(test['y'], pred['y'])
     return {'error': error, 'sol': model.sol}
 
 
@@ -181,7 +182,6 @@ def main():
     else:
         train_size = len(parsec_model.sol)
 
-    last = False
     while True:
 
         print('\nSample size: ', train_size)
@@ -189,22 +189,24 @@ def main():
         samples_args = []
         for i in repetitions:
             if args.limits:
-                xy_train_test = train_test_split(x_without_limits,
-                                                 y_without_limits,
-                                                 train_size=(train_size-len(y_limits)))
-                x_sample = np.concatenate((x_limits, xy_train_test[0]), axis=0)
-                y_sample = np.concatenate((y_limits, xy_train_test[2]))
+                x_train, x_test, y_train, y_test = train_test_split(x_without_limits,
+                                                                    y_without_limits,
+                                                                    train_size=(train_size-len(y_limits)))
+                x_sample = np.concatenate((x_limits, x_train), axis=0)
+                y_sample = np.concatenate((y_limits, y_train))
             else:
-                xy_train_test = train_test_split(y_measure_detach['x'],
-                                                 y_measure_detach['y'],
-                                                 train_size=train_size)
-                x_sample = xy_train_test[0]
-                y_sample = xy_train_test[2]
-            print(' ** ', i, ' - samples lens: x=', len(xy_train_test[0]),
-                  ', y=', len(xy_train_test[2]))
+                x_train, x_test, y_train, y_test = train_test_split(y_measure_detach['x'],
+                                                                    y_measure_detach['y'],
+                                                                    train_size=train_size)
+                x_sample = x_train
+                y_sample = y_train
+            print(' ** ', i, ' - samples lens: x=', len(x_train),
+                  ', y=', len(y_train))
             samples_args.append((config, y_measure,
                                  {'x': x_sample,
-                                  'y': y_sample}))
+                                  'y': y_sample},
+                                 {'x': x_test,
+                                  'y': y_test}))
         print(' ** Args len = ', len(samples_args))
         starttime = time.time()
 
@@ -221,13 +223,10 @@ def main():
                                     'sols': sols})
 
         endtime = time.time()
-        if last:
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
+        if train_size >= int(samples_n/2):
             break
         train_size *= 2
-        if train_size >= samples_n and not last:
-            train_size = samples_n - len(y_limits)
-            last = True
-        print('  Execution time = %.2f seconds' % (endtime - starttime))
 
     head = {'algorithm': config['algorithm'],
             'modeldatapath': args.modelfilepath,
