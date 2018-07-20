@@ -17,9 +17,9 @@
       -m MODELFILENAME, --modelfilename MODELFILENAME
                             Absolute path from model filename with PSO Model
                             parameters executed previously.
-      -r REPETITIONS, --repetitions REPETITIONS
-                            Number of repetitions to each number of measures
-                            algorithm execution
+      -f FOLDS, --folds FOLDS
+                            Number of folds to use on split train and test
+                            group of values
       -l LIMITS, --limits LIMITS
                             If include the surface limits points(4) on samples
       -v VERBOSITY, --verbosity VERBOSITY
@@ -38,6 +38,7 @@ import numpy as np
 import json
 import argparse
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecModel
@@ -110,9 +111,9 @@ def argsparsevalidation():
     parser.add_argument('-m', '--modelfilepath',
                         help='Absolute path from model filename with '
                              'PSO Model parameters executed previously.')
-    parser.add_argument('-r', '--repetitions', type=int,
-                        help='Number of repetitions to each number of measures '
-                             'algorithm execution')
+    parser.add_argument('-f', '--folds', type=int,
+                        help='Number of folds to use on split train and test '
+                             'group of values')
     parser.add_argument('-l', '--limits', type=bool,
                         help='If include the surface limits points(4) on '
                              'samples', default=False)
@@ -173,7 +174,6 @@ def main():
         y_without_limits = y_measure_detach['y'][~limits_bool]
 
     computed_errors = []
-    repetitions = range(args.repetitions)
     samples_n = 1
     for i in [len(y_measure.coords[i]) for i in y_measure.coords]:
         samples_n *= i
@@ -187,30 +187,35 @@ def main():
         print('\nSample size: ', train_size)
 
         samples_args = []
-        for i in repetitions:
-            if args.limits:
-                x_train, x_test, y_train, y_test = train_test_split(x_without_limits,
-                                                                    y_without_limits,
-                                                                    train_size=(train_size-len(y_limits)))
-                x_sample = np.concatenate((x_limits, x_train), axis=0)
-                y_sample = np.concatenate((y_limits, y_train))
-            else:
-                x_train, x_test, y_train, y_test = train_test_split(y_measure_detach['x'],
-                                                                    y_measure_detach['y'],
-                                                                    train_size=train_size)
-                x_sample = x_train
-                y_sample = y_train
-            print(' ** ', i, ' - samples lens: x=', len(x_train),
-                  ', y=', len(y_train))
-            samples_args.append((config, y_measure,
-                                 {'x': x_sample,
-                                  'y': y_sample},
-                                 {'x': x_test,
-                                  'y': y_test}))
+        kf = KFold(n_splits=args.folds, shuffle=True)
+        if args.limits:
+            for train_idx, test_idx in kf.split(x_without_limits):
+                x_train = np.concatenate((x_limits, x_without_limits[train_idx]),
+                                         axis=0)
+                y_train = np.concatenate((y_limits, y_without_limits[train_idx]))
+                x_test = x_without_limits[test_idx]
+                y_test = y_without_limits[test_idx]
+                samples_args.append((config, y_measure,
+                                     {'x': x_train,
+                                      'y': y_train},
+                                     {'x': x_test,
+                                      'y': y_test}))
+        else:
+            for train_idx, test_idx in kf.split(y_measure_detach['x']):
+                x_train = y_measure_detach['x'][train_idx]
+                y_train = y_measure_detach['y'][train_idx]
+                x_test = y_measure_detach['x'][test_idx]
+                y_test = y_measure_detach['y'][test_idx]
+                samples_args.append((config, y_measure,
+                                     {'x': x_train,
+                                      'y': y_train},
+                                     {'x': x_test,
+                                      'y': y_test}))
+
         print(' ** Args len = ', len(samples_args))
         starttime = time.time()
 
-        with futures.ThreadPoolExecutor(max_workers=args.repetitions) \
+        with futures.ThreadPoolExecutor(max_workers=len(samples_args)) \
                 as executor:
             results = executor.map(workers, samples_args)
             errors = []
