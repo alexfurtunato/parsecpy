@@ -38,7 +38,6 @@ import numpy as np
 import json
 import argparse
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecModel
@@ -144,7 +143,6 @@ def main():
     if args.verbosity:
         config['verbosity'] = args.verbosity
 
-    input_sizes = []
     if 'size' in y_measure.dims:
         coord_2 = y_measure.coords['size']
     elif 'frequency' in y_measure.dims:
@@ -187,25 +185,30 @@ def main():
         print('\nSample size: ', train_size)
 
         samples_args = []
-        kf = KFold(n_splits=args.folds, shuffle=True)
         if args.limits:
-            for train_idx, test_idx in kf.split(x_without_limits):
-                x_train = np.concatenate((x_limits, x_without_limits[train_idx]),
-                                         axis=0)
-                y_train = np.concatenate((y_limits, y_without_limits[train_idx]))
-                x_test = x_without_limits[test_idx]
-                y_test = y_without_limits[test_idx]
+            for r in args.folds:
+                xy_split = train_test_split(x_without_limits,
+                                            y_without_limits,
+                                            train_size=(train_size -
+                                                        len(y_limits)))
+                x_train, x_test, y_train, y_test = xy_split
+                x_train = np.concatenate((x_limits, x_train), axis=0)
+                y_train = np.concatenate((y_limits, y_train))
+                print(' ** ', r, ' - samples lens: x=', len(x_train),
+                      ', y=', len(y_train))
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
                                       'y': y_train},
                                      {'x': x_test,
                                       'y': y_test}))
         else:
-            for train_idx, test_idx in kf.split(y_measure_detach['x']):
-                x_train = y_measure_detach['x'][train_idx]
-                y_train = y_measure_detach['y'][train_idx]
-                x_test = y_measure_detach['x'][test_idx]
-                y_test = y_measure_detach['y'][test_idx]
+            for r in args.folds:
+                xy_split = train_test_split(y_measure_detach['x'],
+                                            y_measure_detach['y'],
+                                            train_size=train_size)
+                x_train, x_test, y_train, y_test = xy_split
+                print(' ** ', r, ' - samples lens: x=', len(x_train),
+                      ', y=', len(y_train))
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
                                       'y': y_train},
@@ -249,12 +252,15 @@ def main():
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]
-    filename = '%s_%serrors_%s.errordat' % (pkgname, config['algorithm'], filedate)
+    filename = '%s_%serrors_%s.errordat' % (pkgname, config['algorithm'],
+                                            filedate)
     with open(filename, 'w') as f:
-        json.dump({'head': head, 'errors': computed_errors}, f, ensure_ascii=False)
+        json.dump({'head': head, 'errors': computed_errors}, f,
+                  ensure_ascii=False)
     print('Errors data saved on filename: %s' % filename)
 
     print('\n\n***** ALL DONE! *****\n')
+
 
 if __name__ == '__main__':
     main()
