@@ -186,7 +186,7 @@ def main():
 
         samples_args = []
         if args.limits:
-            for r in args.folds:
+            for r in range(args.folds):
                 xy_split = train_test_split(x_without_limits,
                                             y_without_limits,
                                             train_size=(train_size -
@@ -194,7 +194,7 @@ def main():
                 x_train, x_test, y_train, y_test = xy_split
                 x_train = np.concatenate((x_limits, x_train), axis=0)
                 y_train = np.concatenate((y_limits, y_train))
-                print(' ** ', r, ' - samples lens: x=', len(x_train),
+                print(' ** ', r+1, ' - samples lens: x=', len(x_train),
                       ', y=', len(y_train))
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
@@ -202,12 +202,12 @@ def main():
                                      {'x': x_test,
                                       'y': y_test}))
         else:
-            for r in args.folds:
+            for r in range(args.folds):
                 xy_split = train_test_split(y_measure_detach['x'],
                                             y_measure_detach['y'],
                                             train_size=train_size)
                 x_train, x_test, y_train, y_test = xy_split
-                print(' ** ', r, ' - samples lens: x=', len(x_train),
+                print(' ** ', r+1, ' - samples lens: x=', len(x_train),
                       ', y=', len(y_train))
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
