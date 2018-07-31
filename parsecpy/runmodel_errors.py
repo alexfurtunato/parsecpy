@@ -37,7 +37,7 @@ from datetime import datetime
 import numpy as np
 import json
 import argparse
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import ShuffleSplit
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecModel
@@ -185,30 +185,27 @@ def main():
         print('\nSample size: ', train_size)
 
         samples_args = []
+        sf = ShuffleSplit(n_splits=args.folds, train_size=train_size)
         if args.limits:
-            for r in range(args.folds):
-                xy_split = train_test_split(x_without_limits,
-                                            y_without_limits,
-                                            train_size=(train_size -
-                                                        len(y_limits)))
-                x_train, x_test, y_train, y_test = xy_split
-                x_train = np.concatenate((x_limits, x_train), axis=0)
-                y_train = np.concatenate((y_limits, y_train))
-                print(' ** ', r+1, ' - samples lens: x=', len(x_train),
-                      ', y=', len(y_train))
+            for train_idx, test_idx in sf.split(x_without_limits):
+                x_train = np.concatenate(
+                    (x_limits, x_without_limits[train_idx]),
+                    axis=0)
+                y_train = np.concatenate(
+                    (y_limits, y_without_limits[train_idx]))
+                x_test = x_without_limits[test_idx]
+                y_test = y_without_limits[test_idx]
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
                                       'y': y_train},
                                      {'x': x_test,
                                       'y': y_test}))
         else:
-            for r in range(args.folds):
-                xy_split = train_test_split(y_measure_detach['x'],
-                                            y_measure_detach['y'],
-                                            train_size=train_size)
-                x_train, x_test, y_train, y_test = xy_split
-                print(' ** ', r+1, ' - samples lens: x=', len(x_train),
-                      ', y=', len(y_train))
+            for train_idx, test_idx in sf.split(y_measure_detach['x']):
+                x_train = y_measure_detach['x'][train_idx]
+                y_train = y_measure_detach['y'][train_idx]
+                x_test = y_measure_detach['x'][test_idx]
+                y_test = y_measure_detach['y'][test_idx]
                 samples_args.append((config, y_measure,
                                      {'x': x_train,
                                       'y': y_train},
