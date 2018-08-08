@@ -253,6 +253,8 @@ def main():
     print(head)
     for i in computed_errors:
         print('Samples {0:2d}'.format(i['train_size']))
+        print('  * Train: {}'.format(i['train']))
+        print('  * Test: {}'.format(i['test']))
         print('  * Errors: {}'.format(i['errors']))
         print('  * Params: {}'.format(i['sols']))
     print('Samples {0:2d}'.format(samples_n))
