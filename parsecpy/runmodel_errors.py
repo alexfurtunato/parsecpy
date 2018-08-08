@@ -33,6 +33,7 @@
 import os
 import sys
 import time
+import re
 from datetime import datetime
 import numpy as np
 import json
@@ -94,7 +95,7 @@ def workers(args):
                         modelexecparams=optm.get_parameters())
     pred = model.predict(test['x'])
     error = mean_squared_error(test['y'], pred['y'])
-    return {'error': error, 'sol': model.sol}
+    return {'train': train, 'error': error, 'sol': model.sol}
 
 
 def argsparsevalidation():
@@ -138,6 +139,8 @@ def main():
         sys.exit()
 
     parsec_model = ParsecModel(args.modelfilepath)
+    tipo_modelo = re.search(r'config\d', parsec_model.modelcommand).group()
+    tipo_modelo = tipo_modelo[-1]
     y_measure = parsec_model.y_measure
     config = parsec_model.modelexecparams
     if args.verbosity:
@@ -218,12 +221,15 @@ def main():
         with futures.ThreadPoolExecutor(max_workers=len(samples_args)) \
                 as executor:
             results = executor.map(workers, samples_args)
+            train = []
             errors = []
             sols = []
             for i in results:
+                train.append(i['train'])
                 errors.append(i['error'])
                 sols.append(list(i['sol']))
             computed_errors.append({'train_size': train_size,
+                                    'train': train,
                                     'errors': errors,
                                     'sols': sols})
 
@@ -249,8 +255,10 @@ def main():
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     pkgname = args.modelfilepath.split('_')[0]
-    filename = '%s_%serrors_%s.errordat' % (pkgname, config['algorithm'],
-                                            filedate)
+    filename = '%s_%serrors_%s_%s.errordat' % (pkgname,
+                                               config['algorithm'],
+                                               tipo_modelo,
+                                               filedate)
     with open(filename, 'w') as f:
         json.dump({'head': head, 'errors': computed_errors}, f,
                   ensure_ascii=False)
