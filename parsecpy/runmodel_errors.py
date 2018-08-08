@@ -95,7 +95,8 @@ def workers(args):
                         modelexecparams=optm.get_parameters())
     pred = model.predict(test['x'])
     error = mean_squared_error(test['y'], pred['y'])
-    return {'train': train, 'test': test, 'error': error, 'sol': model.sol}
+    return {'train': list(train), 'test': list(test),
+            'error': error, 'sol': model.sol}
 
 
 def argsparsevalidation():
