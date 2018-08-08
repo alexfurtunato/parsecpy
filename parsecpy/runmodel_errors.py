@@ -95,8 +95,8 @@ def workers(args):
                         modelexecparams=optm.get_parameters())
     pred = model.predict(test['x'])
     error = mean_squared_error(test['y'], pred['y'])
-    train_list = {'x': list(train['x']), 'y': list(train['y'])}
-    test_list = {'x': list(test['x']), 'y': list(test['y'])}
+    train_list = {'x': train['x'].tolist(), 'y': train['y'].tolist()}
+    test_list = {'x': test['x'].tolist(), 'y': test['y'].tolist()}
     return {'train': train_list, 'test': test_list,
             'error': error, 'sol': model.sol}
 
