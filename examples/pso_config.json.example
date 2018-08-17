@@ -1,6 +1,6 @@
 {
   "parsecpyfilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
-  "modelfilepath": "/home/userexample/csa_modelfunc.py",
+  "modelcodefilepath": "/home/userexample/csa_modelfunc.py",
   "particles": 100,
   "w": 1,
   "c1": 1,

@@ -49,7 +49,7 @@ class ParsecModel:
                  bsol=None,
                  berr=None,
                  ymeas=None,
-                 modelcodepath=None,
+                 modelcodefilepath=None,
                  modelcodesource=None,
                  modelexecparams=None):
         """
@@ -60,7 +60,7 @@ class ParsecModel:
         :param bsol: best solution of optmizer
         :param berr: best error of optimizer
         :param ymeas: output speedup model calculated by model parameters
-        :param modelcodepath: path of the python module with model coded.
+        :param modelcodefilepath: path of the python module with model coded.
         :param modelcodesource: python module source file content.
         :param modelexecparams: Model execution used parameters.
         """
@@ -72,8 +72,8 @@ class ParsecModel:
             self.modelexecparams = modelexecparams
             self.modelcodesource = None
             self.validation = None
-            if modelcodepath is not None:
-                f = open(modelcodepath)
+            if modelcodefilepath is not None:
+                f = open(modelcodefilepath)
                 self.modelcodesource = f.read()
             if modelcodesource is not None:
                 self.modelcodesource = modelcodesource

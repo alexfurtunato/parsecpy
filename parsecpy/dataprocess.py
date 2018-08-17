@@ -224,7 +224,7 @@ class ParsecData:
             self.measures[frequency] = {inputsize: {numberofcores: [ttime]}}
         return
 
-    def threadcpubuild(self, source, frequency, inputsize, numberofcores):
+    def threadcpubuild(self, source, frequency, inputsize, numberofcores, repetition):
         """
         Resume all execution threads cpu numbers, grouped by frequencies,
         input sizes and number of cores and repetitions, on a dictionary.
@@ -244,17 +244,20 @@ class ParsecData:
         if frequency in threadcpu.keys():
             if inputsize in threadcpu[frequency].keys():
                 if numberofcores in threadcpu[frequency][inputsize].keys():
-                    inputdict = threadcpu[frequency][inputsize]
-                    inputdict[numberofcores].append(source.values())
+                    if repetition in threadcpu[frequency][inputsize][numberofcores].keys():
+                        inputdict = threadcpu[frequency][inputsize]
+                        inputdict[numberofcores][repetition].append(source.values())
+                    else:
+                        threadcpu[frequency][inputsize][numberofcores][repetition] = [source.values()]
                 else:
                     threadcpu[frequency][inputsize][numberofcores] = \
-                        [source.values()]
+                        {repetition: [source.values()]}
             else:
                 threadcpu[frequency][inputsize] = \
-                    {numberofcores: [source.values()]}
+                    {numberofcores: {repetition: [source.values()]}}
         else:
             threadcpu[frequency] = \
-                {inputsize: {numberofcores: [source.values()]}}
+                {inputsize: {numberofcores: {repetition: [source.values()]}}}
         return
 
     def threads(self):

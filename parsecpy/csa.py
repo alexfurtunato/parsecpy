@@ -66,7 +66,7 @@ class CoupledAnnealer(object):
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
     def __init__(self, initial_state,
                  parsecpydatapath=None,
-                 modelcodepath=None,
+                 modelcodefilepath=None,
                  modelcodesource=None,
                  n_annealers=10,
                  steps=10000,
@@ -99,22 +99,22 @@ class CoupledAnnealer(object):
         self.kwargs = kwargs
         self.tgen_initial = tgen_initial
         self.parsecpydatapath = parsecpydatapath
-        self.modelcodepath = modelcodepath
+        self.modelcodefilepath = modelcodefilepath
         self.modelcodesource = modelcodesource
         self.best_energies = []
         self.best_states = []
         self.x_meas = x_meas
         self.y_meas = y_meas
 
-        if self.modelcodepath is not None:
-            pythonfile = os.path.basename(modelcodepath)
+        if self.modelcodefilepath is not None:
+            pythonfile = os.path.basename(modelcodefilepath)
             pythonmodule = pythonfile.split('.')[0]
-            if not os.path.dirname(modelcodepath):
+            if not os.path.dirname(modelcodefilepath):
                 sys.path.append('.')
             else:
-                sys.path.append(os.path.dirname(modelcodepath))
+                sys.path.append(os.path.dirname(modelcodefilepath))
             self.modelfunc = importlib.import_module(pythonmodule)
-            with open(modelcodepath) as f:
+            with open(modelcodefilepath) as f:
                 self.modelcodesource = f.read()
         elif modelcodesource is not None:
                 import types
@@ -334,7 +334,7 @@ class CoupledAnnealer(object):
                            'uppervalues': list(self.uppervalues),
                            'update_interval': self.update_interval,
                            'overhead': self.kwargs['overhead'],
-                           'modelcodepath': self.modelcodepath,
+                           'modelcodefilepath': self.modelcodefilepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'alpha': self.alpha, 'verbosity': self.verbosity}
 

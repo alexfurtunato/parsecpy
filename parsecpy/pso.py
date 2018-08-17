@@ -138,7 +138,7 @@ class Swarm:
             vxmax - Maximum particles velocity
             size - Size of swarm (number of particles)
             particles - List with swarm particles objects
-            modelcodepath -
+            modelcodefilepath -
             modelcodesource -
             modelbest -
             parsecpydatapath -
@@ -156,7 +156,7 @@ class Swarm:
 
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
     def __init__(self, lowervalues, uppervalues, parsecpydatapath=None,
-                 modelcodepath=None, modelcodesource=None,
+                 modelcodefilepath=None, modelcodesource=None,
                  size=100, w=0.5, c1=2, c2=2, maxiter=100,
                  threads=1, verbosity=True,
                  x_meas=None, y_meas=None,
@@ -168,7 +168,7 @@ class Swarm:
 
         :param lowervalues - Particle minimum position values
         :param uppervalues - Particle maximum position values
-        :param modelcodepath - path of python module with model functions
+        :param modelcodefilepath - path of python module with model functions
         :param modelcodesource - string with python code of model functions
         :param size - Size of swarm (number of particles)
         :param w - Inertial factor to calculate particle velocity
@@ -209,7 +209,7 @@ class Swarm:
         self.particles = np.array([Particle(self.lowervalues, self.uppervalues,
                                             self.vxmin, self.vxmax)
                                    for _ in range(self.size)])
-        self.modelcodepath = modelcodepath
+        self.modelcodefilepath = modelcodefilepath
         self.modelcodesource = modelcodesource
         self.modelbest = None
         self.parsecpydatapath = parsecpydatapath
@@ -217,15 +217,15 @@ class Swarm:
         self.x_meas = x_meas
         self.y_meas = y_meas
 
-        if self.modelcodepath is not None:
-            pythonfile = os.path.basename(modelcodepath)
+        if self.modelcodefilepath is not None:
+            pythonfile = os.path.basename(modelcodefilepath)
             pythonmodule = pythonfile.split('.')[0]
-            if not os.path.dirname(modelcodepath):
+            if not os.path.dirname(modelcodefilepath):
                 sys.path.append('.')
             else:
-                sys.path.append(os.path.dirname(modelcodepath))
+                sys.path.append(os.path.dirname(modelcodefilepath))
             self.modelfunc = importlib.import_module(pythonmodule)
-            with open(modelcodepath) as f:
+            with open(modelcodefilepath) as f:
                 self.modelcodesource = f.read()
         elif modelcodesource is not None:
             import types
@@ -359,7 +359,7 @@ class Swarm:
                            'size': self.size, 'w': self.w, 'c1': self.c1,
                            'c2': self.c2, 'maxiter': self.maxiter,
                            'overhead': self.kwargs['overhead'],
-                           'modelcodepath': self.modelcodepath,
+                           'modelcodefilepath': self.modelcodefilepath,
                            'parsecpydatapath': self.parsecpydatapath,
                            'verbosity': self.verbosity}
         return modelexecparams

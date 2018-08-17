@@ -137,7 +137,7 @@ def main():
     else:
         config = vars(args)
 
-    if not os.path.isfile(config['modelfilepath']):
+    if not os.path.isfile(config['modelcodefilepath']):
         print('Error: You should inform the correct module of '
               'objective function to model')
         sys.exit()
@@ -174,15 +174,8 @@ def main():
                 y_measure = y_measure.sel(size=sorted(config['frequencies']))
 
     y_measure_detach = data_detach(y_measure)
-    if 'measuresfraction' in config.keys():
-        xy_train_test = train_test_split(y_measure_detach['x'],
-                                         y_measure_detach['y'],
-                                         test_size=1.0 - config['measuresfraction'])
-        x_sample = xy_train_test[0]
-        y_sample = xy_train_test[2]
-    else:
-        x_sample = y_measure_detach['x']
-        y_sample = y_measure_detach['y']
+    x_sample = y_measure_detach['x']
+    y_sample = y_measure_detach['y']
 
     kwargsmodel = {'overhead': config['overhead']}
 
@@ -197,7 +190,7 @@ def main():
 
         if config['algorithm'] == 'pso':
             optm = Swarm(lv, uv, parsecpydatapath=config['parsecpyfilepath'],
-                         modelcodepath=config['modelfilepath'],
+                         modelcodefilepath=config['modelcodefilepath'],
                          size=config['particles'], w=config['w'],
                          c1=config['c1'], c2=config['c2'],
                          maxiter=config['maxiter'],
@@ -210,7 +203,7 @@ def main():
                                       for _ in range(config['annealers'])])
             optm = CoupledAnnealer(initial_state,
                                    parsecpydatapath=config['parsecpyfilepath'],
-                                   modelcodepath=config['modelfilepath'],
+                                   modelcodefilepath=config['modelcodefilepath'],
                                    n_annealers=config['annealers'],
                                    steps=config['steps'],
                                    update_interval=config['update_interval'],
@@ -236,11 +229,6 @@ def main():
                             ymeas=y_measure,
                             modelcodesource=optm.modelcodesource,
                             modelexecparams=optm.get_parameters())
-        if 'measuresfraction' in config.keys():
-            pred = model.predict(y_measure_detach['x'])
-            model.error = mean_squared_error(y_measure_detach['y'], pred['y'])
-            model.errorrel = 100 * (model.error / y_measure.values.mean())
-            model.measuresfraction = config['measuresfraction']
         computed_models.append(model)
         if i == 0:
             err_min = model.error

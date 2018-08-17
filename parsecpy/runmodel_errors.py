@@ -55,7 +55,7 @@ def workers(args):
     if config['algorithm'] == 'pso':
         optm = Swarm(config['lowervalues'], config['uppervalues'],
                      parsecpydatapath=config['parsecpydatapath'],
-                     modelcodepath=config['modelcodepath'],
+                     modelcodefilepath=config['modelcodefilepath'],
                      size=config['size'], w=config['w'],
                      c1=config['c1'], c2=config['c2'],
                      maxiter=config['maxiter'],
@@ -68,7 +68,7 @@ def workers(args):
                                   for _ in range(config['annealers'])])
         optm = CoupledAnnealer(initial_state,
                                parsecpydatapath=config['parsecpydatapath'],
-                               modelcodepath=config['modelcodepath'],
+                               modelcodefilepath=config['modelcodefilepath'],
                                n_annealers=config['annealers'],
                                steps=config['steps'],
                                update_interval=config['update_interval'],
@@ -111,7 +111,7 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run pso '
                                                  'modelling to predict a'
                                                  'parsec application output')
-    parser.add_argument('-m', '--modelfilepath',
+    parser.add_argument('-m', '--modelcodefilepath',
                         help='Absolute path from model filename with '
                              'PSO Model parameters executed previously.')
     parser.add_argument('-f', '--folds', type=int,
@@ -136,12 +136,12 @@ def main():
 
     args = argsparsevalidation()
 
-    if not os.path.isfile(args.modelfilepath):
+    if not os.path.isfile(args.modelcodefilepath):
         print('Error: You should inform the correct module of objective '
               'function to model')
         sys.exit()
 
-    parsec_model = ParsecModel(args.modelfilepath)
+    parsec_model = ParsecModel(args.modelcodefilepath)
     tipo_modelo = re.search(r'config\d', parsec_model.modelcommand).group()
     tipo_modelo = tipo_modelo[-1]
     y_measure = parsec_model.y_measure
@@ -246,7 +246,7 @@ def main():
         train_size *= 2
 
     head = {'algorithm': config['algorithm'],
-            'modeldatapath': args.modelfilepath,
+            'modeldatapath': args.modelcodefilepath,
             }
     print('\n\n***** Final Results *****\n')
 
@@ -262,7 +262,7 @@ def main():
     print('  * Params: {}'.format(parsec_model.sol))
 
     filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    pkgname = args.modelfilepath.split('_')[0]
+    pkgname = args.modelcodefilepath.split('_')[0]
     filename = '%s_%serrors_%s_%s.errordat' % (pkgname,
                                                config['algorithm'],
                                                tipo_modelo,
