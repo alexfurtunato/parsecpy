@@ -72,7 +72,7 @@ class ParsecData:
         if not self.config:
             return 'No data'
         pkg = 'Package: ' + self.config['pkg']
-        dt = 'Date: ' + self.config['execdate'].strftime("%d-%m-%Y_%H:%M:%S")
+        dt = 'Date: ' + self.config['execdate']
         command = 'Command: ' + self.config['command']
         return pkg + '\n' + dt + '\n' + command
 
