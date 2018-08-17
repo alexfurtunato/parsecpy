@@ -244,16 +244,16 @@ class ParsecData:
             if inputsize in threadcpu[frequency].keys():
                 if numberofcores in threadcpu[frequency][inputsize].keys():
                     inputdict = threadcpu[frequency][inputsize]
-                    inputdict[numberofcores].append(source.values())
+                    inputdict[numberofcores].append(source)
                 else:
                     threadcpu[frequency][inputsize][numberofcores] = \
-                        [source.values()]
+                        [source]
             else:
                 threadcpu[frequency][inputsize] = \
-                    {numberofcores: [source.values()]}
+                    {numberofcores: [source]}
         else:
             threadcpu[frequency] = \
-                {inputsize: {numberofcores: [source.values()]}}
+                {inputsize: {numberofcores: [source]}}
         return
 
     def threads(self):
