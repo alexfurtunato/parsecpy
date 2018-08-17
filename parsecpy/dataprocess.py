@@ -214,7 +214,7 @@ class ParsecData:
             if inputsize in self.measures[frequency].keys():
                 if numberofcores in self.measures[frequency][inputsize].keys():
                     self.measures[frequency][inputsize][numberofcores].\
-                        append(ttime)
+                    append(ttime)
                 else:
                     self.measures[frequency][inputsize][numberofcores] = \
                         [ttime]
@@ -224,7 +224,7 @@ class ParsecData:
             self.measures[frequency] = {inputsize: {numberofcores: [ttime]}}
         return
 
-    def threadcpubuild(self, source, frequency, inputsize, numberofcores, repetition):
+    def threadcpubuild(self, source, frequency, inputsize, numberofcores):
         """
         Resume all execution threads cpu numbers, grouped by frequencies,
         input sizes and number of cores and repetitions, on a dictionary.
@@ -236,7 +236,6 @@ class ParsecData:
         :param frequency: Frequency used on execution (0 if don't fixed).
         :param inputsize: Input size used on execution.
         :param numberofcores: Number of cores used on executed process.
-        :param repetition: Number of executed repetition.
         :return:
         """
 
@@ -244,20 +243,17 @@ class ParsecData:
         if frequency in threadcpu.keys():
             if inputsize in threadcpu[frequency].keys():
                 if numberofcores in threadcpu[frequency][inputsize].keys():
-                    if repetition in threadcpu[frequency][inputsize][numberofcores].keys():
-                        inputdict = threadcpu[frequency][inputsize]
-                        inputdict[numberofcores][repetition].append(source.values())
-                    else:
-                        threadcpu[frequency][inputsize][numberofcores][repetition] = [source.values()]
+                    inputdict = threadcpu[frequency][inputsize]
+                    inputdict[numberofcores].append(source.values())
                 else:
                     threadcpu[frequency][inputsize][numberofcores] = \
-                        {repetition: [source.values()]}
+                        [source.values()]
             else:
                 threadcpu[frequency][inputsize] = \
-                    {numberofcores: {repetition: [source.values()]}}
+                    {numberofcores: [source.values()]}
         else:
             threadcpu[frequency] = \
-                {inputsize: {numberofcores: {repetition: [source.values()]}}}
+                {inputsize: {numberofcores: [source.values()]}}
         return
 
     def threads(self):

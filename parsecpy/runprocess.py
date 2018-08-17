@@ -193,7 +193,7 @@ def main():
                             print('Error Code: ', res.returncode)
                             print('Error Message: ', error.decode())
                         else:
-                            datarun.threadcpubuild(procs, f, inputsize, c, r+1)
+                            datarun.threadcpubuild(procs, f, inputsize, c)
                             output = res.stdout.read()
                             if output:
                                 if args.verbosity > 2:
