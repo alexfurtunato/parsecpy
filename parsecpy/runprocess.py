@@ -212,6 +212,7 @@ def main():
                         print("Error: Error on System Execution : ",
                               sys.exc_info())
     print(datarun)
+    print(datarun.config)
     print(datarun.times())
     print("\n\n***** Done! *****\n")
     if args.frequency:
