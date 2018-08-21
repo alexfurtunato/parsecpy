@@ -22,7 +22,7 @@ class CoupledAnnealer(object):
     Class for performing coupled simulated annealing process.
 
         Attributes
-            n_annealers - The number of annealing processes to run.
+            size - The number of annealing processes to run.
             initial_state - A list of objects of length `n_probes`. This is
                             used to set the initial values of the input
                             parameters for `objective_function` for all
@@ -44,9 +44,9 @@ class CoupledAnnealer(object):
             threads - The number of parallel processes. Defaults to a single
                       process. If `threads` <= 0, then the number of processes
                       will be set to the number of available CPUs. Note that
-                      this is different from the `n_annealers`. If
+                      this is different from the `size`. If
                       `objective_function` is costly to compute, it might make
-                      sense to set `n_annealers` = `processes` = max number
+                      sense to set `size` = `processes` = max number
                       of CPUs.
                       On the other hand, if `objective_function` is easy to
                       compute, then the CSA process will likely run a LOT
@@ -65,10 +65,10 @@ class CoupledAnnealer(object):
 
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
     def __init__(self, initial_state,
-                 parsecpydatapath=None,
+                 parsecpydatafilepath=None,
                  modelcodefilepath=None,
                  modelcodesource=None,
-                 n_annealers=10,
+                 size=10,
                  steps=10000,
                  update_interval=100,
                  tgen_initial=0.1,
@@ -84,7 +84,7 @@ class CoupledAnnealer(object):
                  y_meas = None,
                  kwargs={}):
         self.steps = steps
-        self.annealers = n_annealers
+        self.size = size
         self.threads = threads if threads > 0 else mp.cpu_count()
         self.update_interval = update_interval
         self.verbosity = verbosity
@@ -98,7 +98,7 @@ class CoupledAnnealer(object):
         self.uppervalues = np.array(uppervalues)
         self.kwargs = kwargs
         self.tgen_initial = tgen_initial
-        self.parsecpydatapath = parsecpydatapath
+        self.parsecpydatafilepath = parsecpydatafilepath
         self.modelcodefilepath = modelcodefilepath
         self.modelcodesource = modelcodesource
         self.best_energies = []
@@ -124,19 +124,19 @@ class CoupledAnnealer(object):
 
         # Set desired_variance.
         if desired_variance is None:
-            self.desired_variance = 0.99 * (self.annealers - 1) / (self.annealers ** 2)
+            self.desired_variance = 0.99 * (self.size - 1) / (self.size ** 2)
         else:
             self.desired_variance = desired_variance
 
         # Initialize state.
-        assert len(initial_state) == self.annealers
+        assert len(initial_state) == self.size
         self.probe_states = initial_state.copy()
 
         # Shallow copy.
         self.current_states = initial_state.copy()
 
         # Initialize energies.
-        self.probe_energies = np.zeros(self.annealers)
+        self.probe_energies = np.zeros(self.size)
         self.current_energies = self.probe_energies.copy()
 
         self.probe_function = partial(self._probe_wrapper,
@@ -187,7 +187,7 @@ class CoupledAnnealer(object):
 
     def __update_state(self):
         """
-        Update the current state across all annealers in parallel.
+        Update the current state across all size in parallel.
         """
 
         # Set up the mp pool.
@@ -202,10 +202,10 @@ class CoupledAnnealer(object):
 
     def __update_state_no_par(self):
         """
-        Update the current state across all annealers sequentially.
+        Update the current state across all size sequentially.
         """
 
-        for i in range(self.annealers):
+        for i in range(self.size):
             self.probe_states[i] = self.probe_function(
                 self.current_states[i].copy())
             probe_temp = self.state_adjust(self.probe_states[i])
@@ -224,7 +224,7 @@ class CoupledAnnealer(object):
         prob_accept = exp_terms / exp_terms.sum()
 
         # Determine whether to accept or reject probe.
-        for i in range(self.annealers):
+        for i in range(self.size):
             if self.probe_energies[i] < self.current_energies[i]:
                 self.current_states[i] = self.probe_states[i].copy()
                 self.current_energies[i] = self.probe_energies[i]
@@ -243,8 +243,8 @@ class CoupledAnnealer(object):
             # Update generation temp.
             self.tgen = self.tgen_upd_factor*self.tgen
 
-            # sigma2 = (sum(np.array(prob_accept)**2)*self.annealers - 1)/(self.annealers - 1)
-            sigma2 = (sum(prob_accept**2)/self.annealers) - (1/self.annealers**2)
+            # sigma2 = (sum(np.array(prob_accept)**2)*self.size - 1)/(self.size - 1)
+            sigma2 = (sum(prob_accept**2)/self.size) - (1/self.size**2)
             if sigma2 < self.desired_variance:
                 self.tacc *= (1 - self.alpha)
             else:
@@ -323,7 +323,7 @@ class CoupledAnnealer(object):
 
         best_energy, best_params = self.__get_best()
         modelexecparams = {'algorithm': 'csa',
-                           'annealers': self.annealers,
+                           'size': self.size,
                            'steps': self.steps, 'dimension': len(best_params),
                            'threads': self.threads,
                            'tgen_initial': self.tgen_initial,
@@ -335,7 +335,7 @@ class CoupledAnnealer(object):
                            'update_interval': self.update_interval,
                            'overhead': self.kwargs['overhead'],
                            'modelcodefilepath': self.modelcodefilepath,
-                           'parsecpydatapath': self.parsecpydatapath,
+                           'parsecpydatafilepath': self.parsecpydatafilepath,
                            'alpha': self.alpha, 'verbosity': self.verbosity}
 
         return modelexecparams

@@ -1,7 +1,8 @@
 {
-  "parsecpyfilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
+  "algorithm": "pso",
+  "parsecpydatafilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
   "modelcodefilepath": "/home/userexample/csa_modelfunc.py",
-  "particles": 100,
+  "size": 100,
   "w": 1,
   "c1": 1,
   "c2": 4,

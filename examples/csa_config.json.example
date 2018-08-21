@@ -1,7 +1,8 @@
 {
-  "parsecpyfilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
+  "algorithm": "csa",
+  "parsecpydatafilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
   "modelcodefilepath": "/home/userexample/csa_modelfunc.py",
-  "annealers": 5,
+  "size": 5,
   "dimension": 7,
   "steps": 50000,
   "update_interval": 1,

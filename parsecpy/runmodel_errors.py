@@ -47,14 +47,14 @@ from parsecpy import data_detach
 
 def workers(args):
     config = args[0]
-    y_measure = args[1]
+    measure = args[1]
     train = args[2]
     test = args[3]
     kwargsmodel = {'overhead': config['overhead']}
 
     if config['algorithm'] == 'pso':
         optm = Swarm(config['lowervalues'], config['uppervalues'],
-                     parsecpydatapath=config['parsecpydatapath'],
+                     parsecpydatafilepath=config['parsecpydatafilepath'],
                      modelcodefilepath=config['modelcodefilepath'],
                      size=config['size'], w=config['w'],
                      c1=config['c1'], c2=config['c2'],
@@ -65,11 +65,11 @@ def workers(args):
                      kwargs=kwargsmodel)
     elif config['algorithm'] == 'csa':
         initial_state = np.array([np.random.uniform(size=config['dimension'])
-                                  for _ in range(config['annealers'])])
+                                  for _ in range(config['size'])])
         optm = CoupledAnnealer(initial_state,
-                               parsecpydatapath=config['parsecpydatapath'],
+                               parsecpydatafilepath=config['parsecpydatafilepath'],
                                modelcodefilepath=config['modelcodefilepath'],
-                               n_annealers=config['annealers'],
+                               size=config['size'],
                                steps=config['steps'],
                                update_interval=config['update_interval'],
                                tgen_initial=config['tgen_initial'],
@@ -90,7 +90,7 @@ def workers(args):
     error, solution = optm.run()
     model = ParsecModel(bsol=solution,
                         berr=error,
-                        ymeas=y_measure,
+                        measure=measure,
                         modelcodesource=optm.modelcodesource,
                         modelexecparams=optm.get_parameters())
     pred = model.predict(test['x'])
@@ -144,23 +144,23 @@ def main():
     parsec_model = ParsecModel(args.modelcodefilepath)
     tipo_modelo = re.search(r'config\d', parsec_model.modelcommand).group()
     tipo_modelo = tipo_modelo[-1]
-    y_measure = parsec_model.y_measure
+    measure = parsec_model.measure
     config = parsec_model.modelexecparams
     if args.verbosity:
         config['verbosity'] = args.verbosity
 
-    if 'size' in y_measure.dims:
-        coord_2 = y_measure.coords['size']
-    elif 'frequency' in y_measure.dims:
-        coord_2 = y_measure.coords['frequency']
+    if 'size' in measure.dims:
+        coord_2 = measure.coords['size']
+    elif 'frequency' in measure.dims:
+        coord_2 = measure.coords['frequency']
 
-    y_measure_detach = data_detach(y_measure)
+    measure_detach = data_detach(measure)
 
     if args.limits:
         # Separate max and min limits values of x and y on measures
 
-        cores_limits = [y_measure.coords['cores'].values.min(),
-                        y_measure.coords['cores'].values.max()]
+        cores_limits = [measure.coords['cores'].values.min(),
+                        measure.coords['cores'].values.max()]
         size_or_freq_limits = [coord_2.values.min(),
                                coord_2.values.max()]
 
@@ -169,17 +169,17 @@ def main():
             for c in cores_limits:
                 limits.append([sf, c])
 
-        limits_bool = np.isin(y_measure_detach['x'], limits)
+        limits_bool = np.isin(measure_detach['x'], limits)
         limits_bool = np.array([np.all(i) for i in limits_bool])
 
-        x_limits = y_measure_detach['x'][limits_bool]
-        x_without_limits = y_measure_detach['x'][~limits_bool]
-        y_limits = y_measure_detach['y'][limits_bool]
-        y_without_limits = y_measure_detach['y'][~limits_bool]
+        x_limits = measure_detach['x'][limits_bool]
+        x_without_limits = measure_detach['x'][~limits_bool]
+        y_limits = measure_detach['y'][limits_bool]
+        y_without_limits = measure_detach['y'][~limits_bool]
 
     computed_errors = []
     samples_n = 1
-    for i in [len(y_measure.coords[i]) for i in y_measure.coords]:
+    for i in [len(measure.coords[i]) for i in measure.coords]:
         samples_n *= i
     if args.limits:
         train_size = max(len(parsec_model.sol), len(y_limits))
@@ -201,18 +201,18 @@ def main():
                     (y_limits, y_without_limits[train_idx]))
                 x_test = x_without_limits[test_idx]
                 y_test = y_without_limits[test_idx]
-                samples_args.append((config, y_measure,
+                samples_args.append((config, measure,
                                      {'x': x_train,
                                       'y': y_train},
                                      {'x': x_test,
                                       'y': y_test}))
         else:
-            for train_idx, test_idx in sf.split(y_measure_detach['x']):
-                x_train = y_measure_detach['x'][train_idx]
-                y_train = y_measure_detach['y'][train_idx]
-                x_test = y_measure_detach['x'][test_idx]
-                y_test = y_measure_detach['y'][test_idx]
-                samples_args.append((config, y_measure,
+            for train_idx, test_idx in sf.split(measure_detach['x']):
+                x_train = measure_detach['x'][train_idx]
+                y_train = measure_detach['y'][train_idx]
+                x_test = measure_detach['x'][test_idx]
+                y_test = measure_detach['y'][test_idx]
+                samples_args.append((config, measure,
                                      {'x': x_train,
                                       'y': y_train},
                                      {'x': x_test,

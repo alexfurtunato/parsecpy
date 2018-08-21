@@ -31,7 +31,7 @@ class ParsecModel:
         Atrributes
             sol - solution of optimizer (model parameters)
             error - model error or output of objective function
-            y_measure - measured speedups xarray
+            measure - measured speedups xarray
             y_model - modeled speedups xarray
 
         Methods
@@ -48,7 +48,7 @@ class ParsecModel:
                  modeldatapath=None,
                  bsol=None,
                  berr=None,
-                 ymeas=None,
+                 measure=None,
                  modelcodefilepath=None,
                  modelcodesource=None,
                  modelexecparams=None):
@@ -59,7 +59,7 @@ class ParsecModel:
         :param modeldatapath: path of the model data previously saved.
         :param bsol: best solution of optmizer
         :param berr: best error of optimizer
-        :param ymeas: output speedup model calculated by model parameters
+        :param measure: output speedup model calculated by model parameters
         :param modelcodefilepath: path of the python module with model coded.
         :param modelcodesource: python module source file content.
         :param modelexecparams: Model execution used parameters.
@@ -68,7 +68,7 @@ class ParsecModel:
         if modeldatapath:
             self.loaddata(modeldatapath)
         else:
-            self.y_measure = ymeas
+            self.measure = measure
             self.modelexecparams = modelexecparams
             self.modelcodesource = None
             self.validation = None
@@ -83,10 +83,10 @@ class ParsecModel:
             else:
                 self.sol = bsol
                 self.error = berr
-                self.errorrel = 100*(self.error/self.y_measure.values.mean())
-            y_meas_detach = data_detach(self.y_measure)
-            self.y_model = data_attach(self.predict(y_meas_detach['x']),
-                                       y_meas_detach['dims'])
+                self.errorrel = 100*(self.error/self.measure.values.mean())
+            measure_detach = data_detach(self.measure)
+            self.y_model = data_attach(self.predict(measure_detach['x']),
+                                       measure_detach['dims'])
 
     @staticmethod
     def loadcode(codetext, modulename):
@@ -109,8 +109,8 @@ class ParsecModel:
 
         :return: ParsecData object
         """
-        if os.path.isfile(self.modelexecparams['parsecpydatapath']):
-            pd = ParsecData(self.modelexecparams['parsecpydatapath'])
+        if os.path.isfile(self.modelexecparams['parsecpydatafilepath']):
+            pd = ParsecData(self.modelexecparams['parsecpydatafilepath'])
             return pd
         else:
             print('Parsecpy datarun file %s was not found')
@@ -166,11 +166,11 @@ class ParsecModel:
                                                  self.sol))
                 }
             }
-        y_measure_detach = data_detach(self.y_measure)
+        measure_detach = data_detach(self.measure)
         scores = cross_validate(ModelEstimator(self,
                                 verbosity=self.modelexecparams['verbosity']),
-                                y_measure_detach['x'],
-                                y_measure_detach['y'],
+                                measure_detach['x'],
+                                measure_detach['y'],
                                 cv=kf, scoring=scoring['type'],
                                 return_train_score=False,
                                 verbose=self.modelexecparams['verbosity'])
@@ -201,7 +201,7 @@ class ParsecModel:
         """
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        pkgname = os.path.basename(self.modelexecparams['parsecpydatapath'])
+        pkgname = os.path.basename(self.modelexecparams['parsecpydatafilepath'])
         pkgname = pkgname.split('_')[0]
         filename = '%s_%smodel_datafile_%s.dat' % (pkgname,
                                                    self.modelexecparams['algorithm'],
@@ -224,7 +224,7 @@ class ParsecModel:
             datatosave['data']['params'] = str(list(self.sol))
             datatosave['data']['error'] = self.error
             datatosave['data']['errorrel'] = self.errorrel
-            datatosave['data']['parsecdata'] = self.y_measure.to_dict()
+            datatosave['data']['parsecdata'] = self.measure.to_dict()
             datatosave['data']['speedupmodel'] = self.y_model.to_dict()
             if hasattr(self, 'measuresfraction'):
                 datatosave['config']['measuresfraction'] = self.measuresfraction
@@ -293,7 +293,7 @@ class ParsecModel:
             if 'errorrel' in datadict.keys():
                 self.errorrel = datadict['errorrel']
             if 'parsecdata' in datadict.keys():
-                self.y_measure = xr.DataArray.from_dict(datadict['parsecdata'])
+                self.measure = xr.DataArray.from_dict(datadict['parsecdata'])
             if 'speedupmodel' in datadict.keys():
                 self.y_model = xr.DataArray.from_dict(datadict['speedupmodel'])
             if 'savedate' in configdict.keys():
@@ -350,7 +350,7 @@ class ParsecModel:
             ax.set_zlabel('Model Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
             if showmeasures:
-                data_m = self.y_measure
+                data_m = self.measure
                 ax = fig.gca(projection='3d')
                 if 'size' in data_m.dims:
                     xc = data_m.coords['size'].values
@@ -387,91 +387,96 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
 
     """
 
-    def __init__(self, model=None, verbosity=0):
-        self.model = model
+    def __init__(self, parameters, verbosity=0):
+        self.parameters = parameters
+        self.model = None
         self.verbosity = verbosity
 
-    def fit(self, X, y, **kwargs):
+    def fit(self, x, y, dims, **kwargs):
         """
         method to train of model with train splited data.
 
-        :param X: measured inputs array
+        :param x: measured inputs array
         :param y: measured outputs array
         :return: return ModelEstimator object.
         """
 
-        X, y = check_X_y(X, y)
+        x, y = check_X_y(x, y)
         if self.verbosity > 2:
-            print('\nFit: X lenght = ', X.shape, ' y lenght = ', y.shape)
-            print('X :')
-            print(X)
+            print('\nFit: x lenght = ', x.shape, ' y lenght = ', y.shape)
+            print('x :')
+            print(x)
             print('y :')
             print(y)
-        p = deepcopy(self.model.modelexecparams)
-        kwargsmodel = {'overhead': p['overhead']}
+        kwargsmodel = {'overhead': self.parameters['overhead']}
 
-        y_measure = data_detach(self.model.y_measure)
-
-        if p['algorithm'] == 'pso':
-            optm = Swarm(p['lowervalues'], p['uppervalues'],
-                         parsecpydatapath=p['parsecpydatapath'],
-                         modelcodesource=self.model.modelcodesource,
-                         size=p['size'], w=p['w'], c1=p['c1'], c2=p['c2'],
-                         maxiter=p['maxiter'], threads=p['threads'],
-                         x_meas=y_measure['x'], y_meas=y_measure['y'],
-                         verbosity=self.verbosity,
+        if self.parameters['algorithm'] == 'pso':
+            optm = Swarm(self.parameters['lowervalues'],
+                         self.parameters['uppervalues'],
+                         parsecpydatafilepath=self.parameters['parsecpydatafilepath'],
+                         modelcodefilepath=self.parameters['modelcodefilepath'],
+                         size=self.parameters['size'], w=self.parameters['w'],
+                         c1=self.parameters['c1'], c2=self.parameters['c2'],
+                         maxiter=self.parameters['maxiter'],
+                         threads=self.parameters['threads'],
+                         x_meas=x, y_meas=y, verbosity=self.verbosity,
                          kwargs=kwargsmodel)
-        elif p['algorithm'] == 'csa':
-            initial_state = np.array([np.random.uniform(size=p['dimension'])
-                                      for _ in range(p['annealers'])])
+        elif self.parameters['algorithm'] == 'csa':
+            initial_state = np.array([np.random.uniform(size=self.parameters['dimension'])
+                                      for _ in range(self.parameters['size'])])
             optm = CoupledAnnealer(initial_state,
-                                   parsecpydatapath=p['parsecpydatapath'],
-                                   modelcodesource=self.model.modelcodesource,
-                                   n_annealers=p['annealers'],
-                                   steps=p['steps'],
-                                   update_interval=p['update_interval'],
-                                   tgen_initial=p['tgen_initial'],
-                                   tgen_upd_factor=p['tgen_upd_factor'],
-                                   tacc_initial=p['tacc_initial'],
-                                   alpha=p['alpha'],
-                                   desired_variance=p['desired_variance'],
-                                   lowervalues=p['lowervalues'],
-                                   uppervalues=p['uppervalues'],
-                                   threads=p['threads'],
-                                   verbosity=self.verbosity,
+                                   parsecpydatafilepath=self.parameters['parsecpydatafilepath'],
+                                   modelcodefilepath=self.parameters['modelcodefilepath'],
+                                   size=self.parameters['size'],
+                                   steps=self.parameters['steps'],
+                                   update_interval=self.parameters['update_interval'],
+                                   tgen_initial=self.parameters['tgen_initial'],
+                                   tgen_upd_factor=self.parameters['tgen_upd_factor'],
+                                   tacc_initial=self.parameters['tacc_initial'],
+                                   alpha=self.parameters['alpha'],
+                                   desired_variance=self.parameters['desired_variance'],
+                                   lowervalues=self.parameters['lowervalues'],
+                                   uppervalues=self.parameters['uppervalues'],
+                                   threads=self.parameters['threads'],
+                                   x_meas=x, y_meas=y, verbosity=self.verbosity,
                                    kwargs=kwargsmodel)
         else:
             print('Error: You should inform the correct algorithm to use')
             return
 
         error, solution = optm.run()
+        measure = data_attach({'x': x, 'y': y}, dims)
         self.model = ParsecModel(bsol=solution,
                                  berr=error,
-                                 ymeas=self.model.y_measure,
+                                 measure=measure,
                                  modelcodesource=optm.modelcodesource,
                                  modelexecparams=optm.get_parameters())
-        self.X_ = X
+        self.x_ = x
         self.y_ = y
         return self
 
-    def predict(self, X):
+    def predict(self, x):
         """
         method to test of model with test divided data.
 
-        :param X: inputs array
+        :param x: inputs array
         :return: return model outputs array.
         """
 
-        check_is_fitted(self, ['X_', 'y_'])
-        X = check_array(X)
-        y = self.model.predict(X)['y']
-        if self.verbosity > 2:
-            print('\nPredict: X lenght = ', X.shape)
-            print('X :')
-            print(X)
-            print('y :')
-            print(y)
-        return y
+        if self.model is not None:
+            check_is_fitted(self, ['x_', 'y_'])
+            x = check_array(x)
+            y = self.model.predict(x)['y']
+            if self.verbosity > 2:
+                print('\nPredict: x lenght = ', x.shape)
+                print('x :')
+                print(x)
+                print('y :')
+                print(y)
+            return y
+        else:
+            print('Error: Model should be fittted before')
+            return
 
     @staticmethod
     def see_score(y, y_pred, **kwargs):

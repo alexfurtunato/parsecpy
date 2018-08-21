@@ -237,7 +237,7 @@ use on execution of this script
                             parameters
       -a {csa,pso}, --algorithm {csa,pso}
                             Optimization algorithm to use on modellingprocess.
-      -p PARSECPYFILEPATH, --parsecpyfilepath PARSECPYFILEPATH
+      -p PARSECPYDATAFILEPATH, --parsecpydatafilepath PARSECPYDATAFILEPATH
                             Path from input data file from Parsec specificated
                             package.
       -f FREQUENCY, --frequency FREQUENCY

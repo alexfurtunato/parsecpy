@@ -18,11 +18,11 @@ class Particle:
     Class of a particle of swarm
 
         Atrributes
-            dim - size of swarm, is that, number of particles
+            dim - size of solution or particle
             lowervalues - minimum values of particle position (parameters of model)
             uppervalues - maximum values of particle position (parameters of model)
-            vxmin - Minimum values of particles velocity
-            vxmax - Maximum values of particles velocity
+            vxmin - Minimum value of particle velocity
+            vxmax - Maximum value of particle velocity
             pos - actual position of particle (parameters of model)
             fpos - output of model function, is that, objective
                    value to minimize
@@ -134,14 +134,14 @@ class Swarm:
             w - Inertial factor to calculate particle velocity
             c1 - Scaling factor for particle bestpos attribute.
             c2 - Scaling factor for best particle bestpos attribute.
-            vxmin - Minimum particles velocity
-            vxmax - Maximum particles velocity
+            vxmin - Minimum particle velocity
+            vxmax - Maximum particle velocity
             size - Size of swarm (number of particles)
             particles - List with swarm particles objects
             modelcodefilepath -
             modelcodesource -
             modelbest -
-            parsecpydatapath -
+            parsecpydatafilepath -
             verbosity -
             bestparticle - Swarm best particle object
 
@@ -155,7 +155,7 @@ class Swarm:
     """
 
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
-    def __init__(self, lowervalues, uppervalues, parsecpydatapath=None,
+    def __init__(self, lowervalues, uppervalues, parsecpydatafilepath=None,
                  modelcodefilepath=None, modelcodesource=None,
                  size=100, w=0.5, c1=2, c2=2, maxiter=100,
                  threads=1, verbosity=True,
@@ -212,7 +212,7 @@ class Swarm:
         self.modelcodefilepath = modelcodefilepath
         self.modelcodesource = modelcodesource
         self.modelbest = None
-        self.parsecpydatapath = parsecpydatapath
+        self.parsecpydatafilepath = parsecpydatafilepath
         self.verbosity = verbosity
         self.x_meas = x_meas
         self.y_meas = y_meas
@@ -360,6 +360,6 @@ class Swarm:
                            'c2': self.c2, 'maxiter': self.maxiter,
                            'overhead': self.kwargs['overhead'],
                            'modelcodefilepath': self.modelcodefilepath,
-                           'parsecpydatapath': self.parsecpydatapath,
+                           'parsecpydatafilepath': self.parsecpydatafilepath,
                            'verbosity': self.verbosity}
         return modelexecparams
