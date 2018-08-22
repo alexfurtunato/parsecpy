@@ -21,9 +21,6 @@
       -h, --help            show this help message and exit
       --config CONFIG       Filepath from Configuration file configurations
                             parameters
-      -a ALGORITHM, --algorithm ['csa' or 'pso']
-                            Optimization algorithm to use on modelling
-                            process.
       -p PARSECPYDATAFILEPATH, --parsecpydatafilepath PARSECPYDATAFILEPATH
                             Path from input data file from Parsec specificated
                             package.
@@ -81,10 +78,6 @@ def argsparsevalidation():
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')
-    parser.add_argument('-a', '--algorithm', required=True,
-                        choices=['csa', 'pso'],
-                        help='Optimization algorithm to use on modelling'
-                             'process.')
     parser.add_argument('-p', '--parsecpydatafilepath',
                         help='Path from input data file from Parsec '
                              'specificated package.')
@@ -174,8 +167,15 @@ def main():
                 measure = measure.sel(size=sorted(config['frequencies']))
 
     measure_detach = data_detach(measure)
-    x_sample = measure_detach['x']
-    y_sample = measure_detach['y']
+    if 'measuresfraction' in config.keys():
+        xy_train_test = train_test_split(measure_detach['x'],
+                                         measure_detach['y'],
+                                         train_size=config['measuresfraction'])
+        x_sample = xy_train_test[0]
+        y_sample = xy_train_test[2]
+    else:
+        x_sample = measure_detach['x']
+        y_sample = measure_detach['y']
 
     kwargsmodel = {'overhead': config['overhead']}
 
@@ -188,51 +188,53 @@ def main():
     for i in repetitions:
         print('\nAlgorithm Execution: ', i+1)
 
-        if config['crossvalidation']:
-            pass
+        if config['algorithm'] == 'pso':
+            optm = Swarm(lv, uv, parsecpydatafilepath=config['parsecpydatafilepath'],
+                         modelcodefilepath=config['modelcodefilepath'],
+                         size=config['size'], w=config['w'],
+                         c1=config['c1'], c2=config['c2'],
+                         maxiter=config['maxiter'],
+                         threads=config['threads'],
+                         verbosity=config['verbosity'],
+                         x_meas=x_sample, y_meas=y_sample,
+                         kwargs=kwargsmodel)
+        elif config['algorithm'] == 'csa':
+            initial_state = np.array([np.random.uniform(size=config['dimension'])
+                                      for _ in range(config['size'])])
+            optm = CoupledAnnealer(initial_state,
+                                   parsecpydatafilepath=config['parsecpydatafilepath'],
+                                   modelcodefilepath=config['modelcodefilepath'],
+                                   size=config['size'],
+                                   steps=config['steps'],
+                                   update_interval=config['update_interval'],
+                                   tgen_initial=config['tgen_initial'],
+                                   tgen_upd_factor=config['tgen_upd_factor'],
+                                   tacc_initial=config['tacc_initial'],
+                                   alpha=config['alpha'],
+                                   desired_variance=config['desired_variance'],
+                                   lowervalues=config['lowervalues'],
+                                   uppervalues=config['uppervalues'],
+                                   threads=config['threads'],
+                                   verbosity=config['verbosity'],
+                                   x_meas=x_sample,
+                                   y_meas=y_sample,
+                                   kwargs=kwargsmodel)
         else:
-            if config['algorithm'] == 'pso':
-                optm = Swarm(lv, uv, parsecpydatafilepath=config['parsecpydatafilepath'],
-                             modelcodefilepath=config['modelcodefilepath'],
-                             size=config['size'], w=config['w'],
-                             c1=config['c1'], c2=config['c2'],
-                             maxiter=config['maxiter'],
-                             threads=config['threads'],
-                             verbosity=config['verbosity'],
-                             x_meas=x_sample, y_meas=y_sample,
-                             kwargs=kwargsmodel)
-            elif config['algorithm'] == 'csa':
-                initial_state = np.array([np.random.uniform(size=config['dimension'])
-                                          for _ in range(config['size'])])
-                optm = CoupledAnnealer(initial_state,
-                                       parsecpydatafilepath=config['parsecpydatafilepath'],
-                                       modelcodefilepath=config['modelcodefilepath'],
-                                       size=config['size'],
-                                       steps=config['steps'],
-                                       update_interval=config['update_interval'],
-                                       tgen_initial=config['tgen_initial'],
-                                       tgen_upd_factor=config['tgen_upd_factor'],
-                                       tacc_initial=config['tacc_initial'],
-                                       alpha=config['alpha'],
-                                       desired_variance=config['desired_variance'],
-                                       lowervalues=config['lowervalues'],
-                                       uppervalues=config['uppervalues'],
-                                       threads=config['threads'],
-                                       verbosity=config['verbosity'],
-                                       x_meas=x_sample,
-                                       y_meas=y_sample,
-                                       kwargs=kwargsmodel)
-            else:
-                print('Error: You should inform the correct algorithm to use')
-                sys.exit()
+            print('Error: You should inform the correct algorithm to use')
+            sys.exit()
 
-            error, solution = optm.run()
-            model = ParsecModel(bsol=solution,
-                                berr=error,
-                                measure=measure,
-                                modelcodesource=optm.modelcodesource,
-                                modelexecparams=optm.get_parameters())
-            computed_models.append(model)
+        error, solution = optm.run()
+        model = ParsecModel(bsol=solution,
+                            berr=error,
+                            measure=measure,
+                            modelcodesource=optm.modelcodesource,
+                            modelexecparams=optm.get_parameters())
+        if 'measuresfraction' in config.keys():
+            pred = model.predict(measure_detach['x'])
+            model.error = mean_squared_error(measure_detach['y'], pred['y'])
+            model.errorrel = 100 * (model.error / measure.values.mean())
+            model.measuresfraction = config['measuresfraction']
+        computed_models.append(model)
         if i == 0:
             err_min = model.error
             print('  Error: %.8f' % err_min)

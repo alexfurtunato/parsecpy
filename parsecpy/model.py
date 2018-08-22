@@ -167,12 +167,13 @@ class ParsecModel:
                 }
             }
         measure_detach = data_detach(self.measure)
-        scores = cross_validate(ModelEstimator(self,
+        scores = cross_validate(ModelEstimator(self.modelexecparams,
                                 verbosity=self.modelexecparams['verbosity']),
                                 measure_detach['x'],
                                 measure_detach['y'],
                                 cv=kf, scoring=scoring['type'],
                                 return_train_score=False,
+                                fit_params={'dims': measure_detach['dims']},
                                 verbose=self.modelexecparams['verbosity'])
         self.validation = {
             'times': {
@@ -389,7 +390,11 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
 
     def __init__(self, parameters, verbosity=0):
         self.parameters = parameters
-        self.model = None
+        self.model = {
+            'solution': None,
+            'error': None,
+            'modelcodesource': None
+        }
         self.verbosity = verbosity
 
     def fit(self, x, y, dims, **kwargs):
@@ -444,13 +449,8 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
             print('Error: You should inform the correct algorithm to use')
             return
 
-        error, solution = optm.run()
-        measure = data_attach({'x': x, 'y': y}, dims)
-        self.model = ParsecModel(bsol=solution,
-                                 berr=error,
-                                 measure=measure,
-                                 modelcodesource=optm.modelcodesource,
-                                 modelexecparams=optm.get_parameters())
+        self.model['error'], self.model['solution'] = optm.run()
+        self.model['modelcodesource'] = optm.modelcodesource
         self.x_ = x
         self.y_ = y
         return self
@@ -463,20 +463,37 @@ class ModelEstimator(BaseEstimator, RegressorMixin):
         :return: return model outputs array.
         """
 
-        if self.model is not None:
-            check_is_fitted(self, ['x_', 'y_'])
-            x = check_array(x)
-            y = self.model.predict(x)['y']
-            if self.verbosity > 2:
-                print('\nPredict: x lenght = ', x.shape)
-                print('x :')
-                print(x)
-                print('y :')
-                print(y)
-            return y
-        else:
-            print('Error: Model should be fittted before')
+        if self.model['solution'] is None:
+            print('Error: Model should be fitted before make predictions!')
             return
+        check_is_fitted(self, ['x_', 'y_'])
+        x = check_array(x)
+        if len(x.shape) == 1:
+            x = x.reshape((1, x.shape[0]))
+
+        import types
+        module = types.ModuleType('physicalmodel')
+        exec(self.model['modelcodesource'], module.__dict__)
+        ypred = module.model(self.model['solution'], x,
+                             self.parameters['overhead'])['y']
+        if self.verbosity > 2:
+            print('y :')
+            print(ypred)
+        return ypred
+
+    @staticmethod
+    def mse_score(y, y_pred, **kwargs):
+        """
+        method to caclculate the "Mean Squared Error" score to use
+        on cross validation process.
+
+        :param y: measured outputs array
+        :param y_pred: model outputs array
+        :return: return caclulated score.
+        """
+
+        mse = mean_squared_error(y, y_pred)
+        return mse
 
     @staticmethod
     def see_score(y, y_pred, **kwargs):
