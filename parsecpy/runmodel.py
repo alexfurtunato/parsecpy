@@ -55,11 +55,12 @@ from copy import deepcopy
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, make_scorer
+from sklearn.model_selection import cross_validate, KFold
 
 from parsecpy import ParsecData
 from parsecpy import Swarm, CoupledAnnealer
-from parsecpy import ParsecModel
+from parsecpy import ParsecModel, ModelEstimator
 from parsecpy import argsparselist, argsparseintlist, argsparsefraction
 from parsecpy import data_detach
 

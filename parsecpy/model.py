@@ -334,7 +334,7 @@ class ParsecModel:
             Z = data.values
             zmin = Z.min()
             zmax = Z.max()
-            appname = self.pkg
+            appname = self.measure.attrs['pkg']
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
             if greycolor:
                 colormap = cm.Greys
