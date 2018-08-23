@@ -136,8 +136,8 @@ class ParsecModel:
             return None
         if len(x.shape) == 1:
             x = x.reshape((1, x.shape[0]))
-        psomodel = self.loadcode(self.modelcodesource, 'psomodel')
-        pred = psomodel.model(self.sol, x, self.modelexecparams['overhead'])
+        phy_model = self.loadcode(self.modelcodesource, 'phymodel')
+        pred = phy_model.model(self.sol, x, self.modelexecparams['overhead'])
         return pred
 
     def validate(self, kfolds=3, scoring=None):
