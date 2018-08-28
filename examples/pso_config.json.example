@@ -11,7 +11,6 @@
   "uppervalues": [10,10,10,10,10],
   "overhead": false,
   "threads": 1,
-  "repetitions": 1,
   "crossvalidation": false,
   "verbosity": 1
 }

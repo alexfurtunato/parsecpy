@@ -254,7 +254,7 @@ def data_detach(data):
     ynp = np.array(y)
     return {'x': xnp, 'y': ynp, 'dims': data.dims}
 
-
+# TODO: Refactoring the attach metrhod to input unsorted data
 def data_attach(data, dims):
     """
     Build a xarray DataArray from tuple with independent
@@ -273,7 +273,16 @@ def data_attach(data, dims):
         x = sorted(np.unique(xnp[:, i]), key=int)
         coords.append((d, x))
         shape.append(len(x))
-    data_da = xr.DataArray(ynp.reshape(tuple(shape)), coords=coords)
+
+    sorted_base = []
+    for i in range(len(coords) - 1):
+        for j in coords[i][1]:
+            for w in coords[i + 1][1]:
+                sorted_base.append([j, w])
+    idx_base = [np.where((xnp == (f, c)).all(axis=1))[0][0] for f, c in
+                sorted_base]
+
+    data_da = xr.DataArray(ynp[idx_base].reshape(tuple(shape)), coords=coords)
     return data_da
 
 

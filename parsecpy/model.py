@@ -48,7 +48,9 @@ class ParsecModel:
                  modeldatapath=None,
                  bsol=None,
                  berr=None,
+                 berr_rel=None,
                  measure=None,
+                 y_model=None,
                  modelcodefilepath=None,
                  modelcodesource=None,
                  modelexecparams=None):
@@ -80,13 +82,21 @@ class ParsecModel:
             if bsol is None:
                 self.sol = None
                 self.error = None
+                self.errorrel = None
+            if berr is not None:
+                self.error = berr
+            if berr_rel is not None:
+                self.errorrel = berr_rel
             else:
                 self.sol = bsol
                 self.error = berr
                 self.errorrel = 100*(self.error/self.measure.values.mean())
-            measure_detach = data_detach(self.measure)
-            self.y_model = data_attach(self.predict(measure_detach['x']),
-                                       measure_detach['dims'])
+            if y_model is None:
+                measure_detach = data_detach(self.measure)
+                self.y_model = data_attach(self.predict(measure_detach['x']),
+                                           measure_detach['dims'])
+            else:
+                self.y_model = y_model
 
     @staticmethod
     def loadcode(codetext, modulename):
@@ -217,31 +227,44 @@ class ParsecModel:
             if 'hostname' in parsecconfig:
                 datatosave['config']['hostname'] = parsecconfig['hostname']
             datatosave['config']['savedate'] = filedate
-            datatosave['config']['modelcodesource'] = self.modelcodesource
-            mep = deepcopy(self.modelexecparams)
-            mep['lowervalues'] = str(mep['lowervalues'])
-            mep['uppervalues'] = str(mep['uppervalues'])
-            datatosave['config']['modelexecparams'] = mep
-            datatosave['data']['params'] = str(list(self.sol))
-            datatosave['data']['error'] = self.error
-            datatosave['data']['errorrel'] = self.errorrel
-            datatosave['data']['parsecdata'] = self.measure.to_dict()
-            datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-            if hasattr(self, 'measuresfraction'):
-                datatosave['config']['measuresfraction'] = self.measuresfraction
-            if hasattr(self, 'validation'):
-                if self.validation:
-                    val = deepcopy(self.validation)
-                    for key, value in val['scores'].items():
-                        val['scores'][key]['type'] = str(value['value'].dtype)
-                        val['scores'][key]['value'] = json.dumps(
-                            value['value'].tolist())
-                    for key, value in val['times'].items():
-                        valtemp = {'type': '', 'value': ''}
-                        valtemp['type'] = str(value.dtype)
-                        valtemp['value'] = json.dumps(value.tolist())
-                        val['times'][key] = valtemp.copy()
-                    datatosave['data']['validation'] = val
+            if self.modelexecparams['algorithm'] in ['pso', 'csa']:
+                datatosave['config']['modelcodesource'] = self.modelcodesource
+                mep = deepcopy(self.modelexecparams)
+                mep['lowervalues'] = str(mep['lowervalues'])
+                mep['uppervalues'] = str(mep['uppervalues'])
+                datatosave['config']['modelexecparams'] = mep
+                datatosave['data']['params'] = str(list(self.sol))
+                datatosave['data']['error'] = self.error
+                datatosave['data']['errorrel'] = self.errorrel
+                datatosave['data']['parsecdata'] = self.measure.to_dict()
+                datatosave['data']['speedupmodel'] = self.y_model.to_dict()
+                if hasattr(self, 'measuresfraction'):
+                    datatosave['config']['measuresfraction'] = self.measuresfraction
+                if hasattr(self, 'validation'):
+                    if self.validation:
+                        val = deepcopy(self.validation)
+                        for key, value in val['scores'].items():
+                            val['scores'][key]['type'] = str(value['value'].dtype)
+                            val['scores'][key]['value'] = json.dumps(
+                                value['value'].tolist())
+                        for key, value in val['times'].items():
+                            valtemp = {'type': '', 'value': ''}
+                            valtemp['type'] = str(value.dtype)
+                            valtemp['value'] = json.dumps(value.tolist())
+                            val['times'][key] = valtemp.copy()
+                        datatosave['data']['validation'] = val
+            else:
+                mep = deepcopy(self.modelexecparams)
+                mep['c_grid'] = str(mep['c_grid'])
+                mep['gamma_grid'] = str(mep['gamma_grid'])
+                datatosave['config']['modelexecparams'] = mep
+                datatosave['data']['error'] = self.error
+                datatosave['data']['errorrel'] = self.errorrel
+                datatosave['data']['parsecdata'] = self.measure.to_dict()
+                datatosave['data']['speedupmodel'] = self.y_model.to_dict()
+                if hasattr(self, 'measuresfraction'):
+                    datatosave['config'][
+                        'measuresfraction'] = self.measuresfraction
             json.dump(datatosave, f, ensure_ascii=False)
         return filename
 
@@ -266,29 +289,38 @@ class ParsecModel:
                 self.modelcommand = configdict['modelcommand']
             if 'hostname' in configdict.keys():
                 self.hostname = configdict['hostname']
-            if 'modelcodesource' in configdict.keys():
-                self.modelcodesource = configdict['modelcodesource']
-            if 'modelexecparams' in configdict.keys():
-                mep = deepcopy(configdict['modelexecparams'])
-                self.modelexecparams = deepcopy(mep)
-                self.modelexecparams['lowervalues'] = json.loads(mep['lowervalues'])
-                self.modelexecparams['uppervalues'] = json.loads(mep['uppervalues'])
-            if 'measuresfraction' in configdict.keys():
-                self.measuresfraction = configdict['measuresfraction']
-            if 'validation' in datadict.keys():
-                val = deepcopy(datadict['validation'])
-                for key, value in val['scores'].items():
-                    val['scores'][key]['value'] = \
-                        np.array(json.loads(value['value']),
-                                 dtype=value['type'])
-                    val['scores'][key].pop('type')
-                for key, value in val['times'].items():
-                    val['times'][key] = \
-                        np.array(json.loads(value['value']),
-                                 dtype=value['type'])
-                self.validation = val
-            if 'params' in datadict.keys():
-                self.sol = json.loads(datadict['params'])
+            if configdict['modelexecparams']['algorithm'] in ['pso','csa']:
+                if 'modelcodesource' in configdict.keys():
+                    self.modelcodesource = configdict['modelcodesource']
+                if 'modelexecparams' in configdict.keys():
+                    mep = deepcopy(configdict['modelexecparams'])
+                    self.modelexecparams = deepcopy(mep)
+                    self.modelexecparams['lowervalues'] = json.loads(mep['lowervalues'])
+                    self.modelexecparams['uppervalues'] = json.loads(mep['uppervalues'])
+                if 'measuresfraction' in configdict.keys():
+                    self.measuresfraction = configdict['measuresfraction']
+                if 'validation' in datadict.keys():
+                    val = deepcopy(datadict['validation'])
+                    for key, value in val['scores'].items():
+                        val['scores'][key]['value'] = \
+                            np.array(json.loads(value['value']),
+                                     dtype=value['type'])
+                        val['scores'][key].pop('type')
+                    for key, value in val['times'].items():
+                        val['times'][key] = \
+                            np.array(json.loads(value['value']),
+                                     dtype=value['type'])
+                    self.validation = val
+                if 'params' in datadict.keys():
+                    self.sol = json.loads(datadict['params'])
+            else:
+                if 'modelexecparams' in configdict.keys():
+                    mep = deepcopy(configdict['modelexecparams'])
+                    self.modelexecparams = deepcopy(mep)
+                    self.modelexecparams['c_grid'] = json.loads(mep['c_grid'])
+                    self.modelexecparams['gamma_grid'] = json.loads(mep['gamma_grid'])
+                if 'measuresfraction' in configdict.keys():
+                    self.measuresfraction = configdict['measuresfraction']
             if 'error' in datadict.keys():
                 self.error = datadict['error']
             if 'errorrel' in datadict.keys():

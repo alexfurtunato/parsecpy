@@ -33,8 +33,6 @@
                             If it consider the overhead
       -t THREADS, --threads THREADS
                             Number of Threads
-      -r REPETITIONS, --repetitions REPETITIONS
-                            Number of repetitions to algorithm execution
       -m FRACTION, --measuresfraction FRACTION
                             Fraction of measures data to calculate the model
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
@@ -56,12 +54,16 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.svm import SVR
+from sklearn.model_selection import ShuffleSplit, KFold
+from sklearn.model_selection import cross_validate
+from sklearn.model_selection import GridSearchCV
 
 from parsecpy import ParsecData
 from parsecpy import Swarm, CoupledAnnealer
 from parsecpy import ParsecModel
 from parsecpy import argsparselist, argsparseintlist, argsparsefraction
-from parsecpy import data_detach
+from parsecpy import data_detach, data_attach
 
 
 def argsparsevalidation():
@@ -90,8 +92,6 @@ def argsparsevalidation():
                         help='If it consider the overhead')
     parser.add_argument('-t', '--threads', type=int,
                         help='Number of Threads')
-    parser.add_argument('-r', '--repetitions', type=int,
-                        help='Number of repetitions to algorithm execution')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-c', '--crossvalidation', type=bool,
                        help='If run the cross validation of modelling')
@@ -130,17 +130,16 @@ def main():
     else:
         config = vars(args)
 
-    if not os.path.isfile(config['modelcodefilepath']):
-        print('Error: You should inform the correct module of '
-              'objective function to model')
-        sys.exit()
+    if config['algorithm'] in ['pso', 'csa']:
+        kwargsmodel = {'overhead': config['overhead']}
+        if not os.path.isfile(config['modelcodefilepath']):
+            print('Error: You should inform the correct module of '
+                  'objective function to model')
+            sys.exit()
 
     if not os.path.isfile(config['parsecpydatafilepath']):
         print('Error: You should inform the correct parsecpy measures file')
         sys.exit()
-
-    lv = config['lowervalues']
-    uv = config['uppervalues']
 
     parsec_exec = ParsecData(config['parsecpydatafilepath'])
     measure = parsec_exec.speedups()
@@ -171,32 +170,75 @@ def main():
         xy_train_test = train_test_split(measure_detach['x'],
                                          measure_detach['y'],
                                          train_size=config['measuresfraction'])
-        x_sample = xy_train_test[0]
-        y_sample = xy_train_test[2]
+        x_sample_train = xy_train_test[0]
+        y_sample_train = xy_train_test[2]
+        x_sample_test = xy_train_test[1]
+        y_sample_test = xy_train_test[3]
     else:
-        x_sample = measure_detach['x']
-        y_sample = measure_detach['y']
-
-    kwargsmodel = {'overhead': config['overhead']}
-
-    repetitions = range(config['repetitions'])
-    err_min = 0
-    computed_models = []
-    best_model_idx = 0
+        x_sample_train = measure_detach['x']
+        y_sample_train = measure_detach['y']
+        x_sample_test = measure_detach['x']
+        y_sample_test = measure_detach['y']
 
     starttime = time.time()
-    for i in repetitions:
-        print('\nAlgorithm Execution: ', i+1)
+    print('\nAlgorithm Execution...')
 
+    if config['algorithm'] == 'svr':
+        measure_svr = measure.copy()
+        measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
+        measure_svr_detach = data_detach(measure_svr)
+        if 'measuresfraction' in config.keys():
+            xy_train_test = train_test_split(measure_svr_detach['x'],
+                                             measure_svr_detach['y'],
+                                             train_size=config[
+                                                 'measuresfraction'])
+            x_sample_train = xy_train_test[0]
+            y_sample_train = xy_train_test[2]
+            x_sample_test = xy_train_test[1]
+            y_sample_test = xy_train_test[3]
+        else:
+            x_sample_train = measure_svr_detach['x']
+            y_sample_train = measure_svr_detach['y']
+            x_sample_test = measure_svr_detach['x']
+            y_sample_test = measure_svr_detach['y']
+        gs_svr = GridSearchCV(SVR(),
+                              cv=config['crossvalidation-folds'],
+                              param_grid={"C": config['c_grid'],
+                                          "gamma": config['gamma_grid']})
+        gs_svr.fit(x_sample_train, y_sample_train)
+        y_predict = gs_svr.predict(x_sample_test)
+        error = mean_squared_error(y_sample_test, y_predict)
+        errorrel = 100*error/np.mean(y_sample_test)
+        print('\n\n***** Modelling Results! *****\n')
+        print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
+              (error, errorrel))
+        y_model = data_attach({'x': measure_svr_detach['x'],
+                               'y': gs_svr.predict(measure_svr_detach['x'])}
+                              , measure_svr_detach['dims'])
+        best_params = gs_svr.best_params_
+        kf = KFold(n_splits=10, shuffle=True)
+        scores = cross_validate(gs_svr, x_sample_train, y_sample_train,
+                                scoring='neg_mean_squared_error',
+                                cv=kf, return_train_score=False)
+        if config['verbosity'] > 1:
+            print(" ** Cross Validate Scores: ")
+            print(scores)
+        for i,v in best_params.items():
+            config[i] = v
+        model = ParsecModel(measure=measure_svr, y_model=y_model,
+                            berr=error, berr_rel=errorrel,
+                            modelexecparams=config)
+    else:
         if config['algorithm'] == 'pso':
-            optm = Swarm(lv, uv, parsecpydatafilepath=config['parsecpydatafilepath'],
+            optm = Swarm(config['lowervalues'], config['uppervalues'],
+                         parsecpydatafilepath=config['parsecpydatafilepath'],
                          modelcodefilepath=config['modelcodefilepath'],
                          size=config['size'], w=config['w'],
                          c1=config['c1'], c2=config['c2'],
                          maxiter=config['maxiter'],
                          threads=config['threads'],
                          verbosity=config['verbosity'],
-                         x_meas=x_sample, y_meas=y_sample,
+                         x_meas=x_sample_train, y_meas=y_sample_train,
                          kwargs=kwargsmodel)
         elif config['algorithm'] == 'csa':
             initial_state = np.array([np.random.uniform(size=config['dimension'])
@@ -216,8 +258,8 @@ def main():
                                    uppervalues=config['uppervalues'],
                                    threads=config['threads'],
                                    verbosity=config['verbosity'],
-                                   x_meas=x_sample,
-                                   y_meas=y_sample,
+                                   x_meas=x_sample_train,
+                                   y_meas=y_sample_train,
                                    kwargs=kwargsmodel)
         else:
             print('Error: You should inform the correct algorithm to use')
@@ -229,62 +271,54 @@ def main():
                             measure=measure,
                             modelcodesource=optm.modelcodesource,
                             modelexecparams=optm.get_parameters())
+        pred = model.predict(x_sample_test)
+        model.error = mean_squared_error(y_sample_test, pred['y'])
+        model.errorrel = 100 * (model.error / np.mean(y_sample_test))
         if 'measuresfraction' in config.keys():
-            pred = model.predict(measure_detach['x'])
-            model.error = mean_squared_error(measure_detach['y'], pred['y'])
-            model.errorrel = 100 * (model.error / measure.values.mean())
             model.measuresfraction = config['measuresfraction']
-        computed_models.append(model)
-        if i == 0:
-            err_min = model.error
-            print('  Error: %.8f' % err_min)
-        else:
-            if model.error < err_min:
-                best_model_idx = i
-                print('  Error: %.8f -> %.8f ' % (err_min, model.error))
-                err_min = model.error
+
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
-    print('\n\n***** Modelling Results! *****\n')
-    print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
-          (computed_models[best_model_idx].error,
-           computed_models[best_model_idx].errorrel))
-    if config['verbosity'] > 0:
-        print('Best Parameters: \n', computed_models[best_model_idx].sol)
-    if config['verbosity'] > 1:
-        print('\nMeasured Speedup: \n', measure)
-        print('\nModeled Speedup: \n', computed_models[best_model_idx].y_model)
+        print('\n\n***** Modelling Results! *****\n')
+        print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
+              (model.error,
+               model.errorrel))
+        if config['verbosity'] > 0:
+            print('Best Parameters: \n', model.sol)
+        if config['verbosity'] > 1:
+            print('\nMeasured Speedup: \n', measure)
+            print('\nModeled Speedup: \n', model.y_model)
 
-    print('\n***** Modelling Done! *****\n')
+        print('\n***** Modelling Done! *****\n')
 
-    if config['crossvalidation']:
-        print('\n\n***** Starting cross validation! *****\n')
-        starttime = time.time()
-        validation_model = deepcopy(computed_models[best_model_idx])
-        scores = validation_model.validate(kfolds=10)
-        print('\n  Cross Validation (K-fold, K=10) Metrics: ')
-        if config['verbosity'] > 2:
-            print('\n   Times: ')
-            for key, value in scores['times'].items():
-                print('     %s: %.8f' % (key, value.mean()))
-                print('     ', value)
-        print('\n   Scores: ')
-        for key, value in scores['scores'].items():
-            if config['verbosity'] > 1:
-                print('     %s: %.8f' % (value['description'],
-                                         value['value'].mean()))
-                print('     ', value['value'])
-            else:
-                print('     %s: %.8f' % (value['description'],
-                                         value['value'].mean()))
-        endtime = time.time()
-        print('  Execution time = %.2f seconds' % (endtime - starttime))
-        computed_models[best_model_idx].validation = scores
-        print('\n***** Cross Validation Done! *****\n')
+        if config['crossvalidation']:
+            print('\n\n***** Starting cross validation! *****\n')
+            starttime = time.time()
+            validation_model = deepcopy(model)
+            scores = validation_model.validate(kfolds=10)
+            print('\n  Cross Validation (K-fold, K=10) Metrics: ')
+            if config['verbosity'] > 2:
+                print('\n   Times: ')
+                for key, value in scores['times'].items():
+                    print('     %s: %.8f' % (key, value.mean()))
+                    print('     ', value)
+            print('\n   Scores: ')
+            for key, value in scores['scores'].items():
+                if config['verbosity'] > 1:
+                    print('     %s: %.8f' % (value['description'],
+                                             value['value'].mean()))
+                    print('     ', value['value'])
+                else:
+                    print('     %s: %.8f' % (value['description'],
+                                             value['value'].mean()))
+            endtime = time.time()
+            print('  Execution time = %.2f seconds' % (endtime - starttime))
+            model.validation = scores
+            print('\n***** Cross Validation Done! *****\n')
     print('\n\n***** ALL DONE! *****\n')
-    fn = computed_models[best_model_idx].savedata(parsec_exec.config,
+    fn = model.savedata(parsec_exec.config,
                                                   ' '.join(sys.argv))
     print('Model data saved on filename: %s' % fn)
 
