@@ -130,7 +130,7 @@ def argsparsevalidation():
     parser.add_argument('-f', '--folds', type=int, default=10,
                         help='Number of folds to use on split train and test '
                              'group of values')
-    parser.add_argument('-i', '--initnumber', type=int, default=16,
+    parser.add_argument('-i', '--initnumber', type=int, default=4,
                         help='Number initial of measures number')
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
