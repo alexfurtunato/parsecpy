@@ -79,18 +79,15 @@ class ParsecModel:
                 self.modelcodesource = f.read()
             if modelcodesource is not None:
                 self.modelcodesource = modelcodesource
-            if bsol is None:
-                self.sol = None
+            self.sol = bsol
+            self.error = berr
+            if self.sol is None:
                 self.error = None
                 self.errorrel = None
-            if berr is not None:
-                self.error = berr
+            if self.error is not None:
+                self.errorrel = 100*(self.error/self.measure.values.mean())
             if berr_rel is not None:
                 self.errorrel = berr_rel
-            else:
-                self.sol = bsol
-                self.error = berr
-                self.errorrel = 100*(self.error/self.measure.values.mean())
             if y_model is None:
                 measure_detach = data_detach(self.measure)
                 self.y_model = data_attach(self.predict(measure_detach['x']),
