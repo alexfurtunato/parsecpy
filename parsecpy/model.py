@@ -235,8 +235,6 @@ class ParsecModel:
                 datatosave['data']['errorrel'] = self.errorrel
                 datatosave['data']['parsecdata'] = self.measure.to_dict()
                 datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-                if hasattr(self, 'measuresfraction'):
-                    datatosave['config']['measuresfraction'] = self.measuresfraction
                 if hasattr(self, 'validation'):
                     if self.validation:
                         val = deepcopy(self.validation)
@@ -259,9 +257,11 @@ class ParsecModel:
                 datatosave['data']['errorrel'] = self.errorrel
                 datatosave['data']['parsecdata'] = self.measure.to_dict()
                 datatosave['data']['speedupmodel'] = self.y_model.to_dict()
-                if hasattr(self, 'measuresfraction'):
-                    datatosave['config'][
-                        'measuresfraction'] = self.measuresfraction
+            if hasattr(self, 'measuresfraction'):
+                datatosave['config']['measuresfraction'] = \
+                    self.measuresfraction
+                datatosave['config']['measuresfraction_points'] = \
+                    self.measuresfraction_points.tolist()
             json.dump(datatosave, f, ensure_ascii=False)
         return filename
 
@@ -294,8 +294,6 @@ class ParsecModel:
                     self.modelexecparams = deepcopy(mep)
                     self.modelexecparams['lowervalues'] = json.loads(mep['lowervalues'])
                     self.modelexecparams['uppervalues'] = json.loads(mep['uppervalues'])
-                if 'measuresfraction' in configdict.keys():
-                    self.measuresfraction = configdict['measuresfraction']
                 if 'validation' in datadict.keys():
                     val = deepcopy(datadict['validation'])
                     for key, value in val['scores'].items():
@@ -316,8 +314,10 @@ class ParsecModel:
                     self.modelexecparams = deepcopy(mep)
                     self.modelexecparams['c_grid'] = json.loads(mep['c_grid'])
                     self.modelexecparams['gamma_grid'] = json.loads(mep['gamma_grid'])
-                if 'measuresfraction' in configdict.keys():
-                    self.measuresfraction = configdict['measuresfraction']
+            if 'measuresfraction' in configdict.keys():
+                self.measuresfraction = configdict['measuresfraction']
+                self.measuresfraction_points = \
+                    np.array(configdict['measuresfraction_points'])
             if 'error' in datadict.keys():
                 self.error = datadict['error']
             if 'errorrel' in datadict.keys():
@@ -333,7 +333,8 @@ class ParsecModel:
             return
         return
 
-    def plot3D(self, title='Speedup Model', greycolor=False,
+    def plot3D(self, train_points=None,
+               title='Speedup Model', greycolor=False,
                showmeasures=False, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
@@ -386,15 +387,32 @@ class ParsecModel:
                     xc = data_m.coords['size'].values
                 elif 'frequency' in data_m.dims:
                     xc = 1000*data_m.coords['frequency'].values
+                    if train_points is not None:
+                        x_train_points = train_points.copy()
+                        x_train_points[:, 0] = 1000 * x_train_points[:,0]
                 yc = data_m.coords['cores'].values
                 X, Y = np.meshgrid(yc, xc)
                 Z = data_m.values
                 surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,
-                                          edgecolor='k', label='Measures')
+                                          edgecolor='k')
                 x = np.repeat(xc, len(yc))
                 y = np.resize(yc, len(xc)*len(yc))
                 z = Z.flatten()
-                ax.scatter(x, y, z, c='k', s=6)
+                c = ['k' for _ in range(len(z))]
+                if train_points is not None:
+                    colors_index = []
+                    for i in x_train_points:
+                        coord_row = xc.tolist().index(i[0])
+                        coord_col = yc.tolist().index(i[1])
+                        colors_index.append(coord_row*len(yc)+coord_col)
+                    for i in colors_index:
+                        c[i] = 'lime'
+                ax.scatter(x, y, z, c=c, s=6, label='Measures')
+                # if train_points is not None:
+                #     ax.scatter(xc_train_points,
+                #                train_points['x'][:,1],
+                #                train_points['y'],
+                #                c='y', s=6)
                 ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
             ax.legend()
             if filename:

@@ -213,8 +213,8 @@ def main():
         print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
               (error, errorrel))
         y_model = data_attach({'x': measure_svr_detach['x'],
-                               'y': gs_svr.predict(measure_svr_detach['x'])}
-                              , measure_svr_detach['dims'])
+                               'y': gs_svr.predict(measure_svr_detach['x'])},
+                              measure_svr_detach['dims'])
         best_params = gs_svr.best_params_
         kf = KFold(n_splits=10, shuffle=True)
         scores = cross_validate(gs_svr, x_sample_train, y_sample_train,
@@ -274,8 +274,6 @@ def main():
         pred = model.predict(x_sample_test)
         model.error = mean_squared_error(y_sample_test, pred['y'])
         model.errorrel = 100 * (model.error / np.mean(y_sample_test))
-        if 'measuresfraction' in config.keys():
-            model.measuresfraction = config['measuresfraction']
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -317,6 +315,9 @@ def main():
             print('  Execution time = %.2f seconds' % (endtime - starttime))
             model.validation = scores
             print('\n***** Cross Validation Done! *****\n')
+    if 'measuresfraction' in config.keys():
+        model.measuresfraction = config['measuresfraction']
+        model.measuresfraction_points = x_sample_train
     print('\n\n***** ALL DONE! *****\n')
     fn = model.savedata(parsec_exec.config,
                                                   ' '.join(sys.argv))
