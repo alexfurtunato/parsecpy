@@ -14,12 +14,13 @@
 
     optional arguments:
       -h, --help            show this help message and exit
-      -m MODELFILENAME, --modelfilename MODELFILENAME
-                            Absolute path from model filename with Model
-                            parameters executed previously.
-      -f FOLDS, --folds FOLDS
-                            Number of folds to use on split train and test
-                            group of values
+      --config CONFIG       Filepath from Configuration file configurations
+                            parameters
+      -p PARSECPYDATAFILEPATH, --parsecpydatafilepath PARSECPYDATAFILEPATH
+                            Path from input data file from Parsec specificated
+                            package.
+      -i INITNUMBER, --initnumber INITNUMBER
+                            Number initial of measures number
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
 
@@ -40,15 +41,20 @@ from sklearn.model_selection import GridSearchCV, cross_validate
 from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
-from parsecpy import Swarm, CoupledAnnealer, ParsecModel
+from parsecpy import Swarm, CoupledAnnealer, ParsecData, ParsecModel
 from parsecpy import data_attach, data_detach
 
 
 def workers(args):
     config = args[0]
     measure = args[1]
-    train = args[2]
-    test = args[3]
+    measure_detach = data_detach(measure)
+    train_idx = args[2]["train_idx"]
+    test_idx = args[2]["test_idx"]
+    x_train = measure_detach['x'][train_idx]
+    y_train = measure_detach['y'][train_idx]
+    x_test = measure_detach['x'][test_idx]
+    y_test = measure_detach['y'][test_idx]
 
     if config['algorithm'] == 'svr':
         measure_svr = measure.copy()
@@ -58,9 +64,9 @@ def workers(args):
                               cv=config['crossvalidation-folds'],
                               param_grid={"C": config['c_grid'],
                                           "gamma": config['gamma_grid']})
-        gs_svr.fit(train['x'], train['y'])
-        y_predict = gs_svr.predict(test['x'])
-        error = mean_squared_error(test['y'], y_predict)
+        gs_svr.fit(x_train, y_train)
+        y_predict = gs_svr.predict(x_test)
+        error = mean_squared_error(y_test, y_predict)
         solution = gs_svr.best_params_
     else:
         kwargsmodel = {'overhead': config['overhead']}
@@ -73,7 +79,7 @@ def workers(args):
                          maxiter=config['maxiter'],
                          threads=config['threads'],
                          verbosity=config['verbosity'],
-                         x_meas=train['x'], y_meas=train['y'],
+                         x_meas=x_train, y_meas=y_train,
                          kwargs=kwargsmodel)
         elif config['algorithm'] == 'csa':
             initial_state = np.array([np.random.uniform(size=config['dimension'])
@@ -93,8 +99,8 @@ def workers(args):
                                    uppervalues=config['uppervalues'],
                                    threads=config['threads'],
                                    verbosity=config['verbosity'],
-                                   x_meas=train['x'],
-                                   y_meas=train['y'],
+                                   x_meas=x_train,
+                                   y_meas=y_train,
                                    kwargs=kwargsmodel)
         else:
             print('Error: You should inform the correct algorithm to use')
@@ -106,11 +112,12 @@ def workers(args):
                             measure=measure,
                             modelcodesource=optm.modelcodesource,
                             modelexecparams=optm.get_parameters())
-        pred = model.predict(test['x'])
-        error = mean_squared_error(test['y'], pred['y'])
-    train_list = {'x': train['x'].tolist(), 'y': train['y'].tolist()}
-    test_list = {'x': test['x'].tolist(), 'y': test['y'].tolist()}
+        pred = model.predict(x_test)
+        error = mean_squared_error(y_test, pred['y'])
+    train_list = {'x': x_train.tolist(), 'y': y_train.tolist()}
+    test_list = {'x': x_test.tolist(), 'y': y_test.tolist()}
     return {'train': train_list, 'test': test_list,
+            'dims': measure_detach['dims'],
             'error': error, 'params': solution}
 
 
@@ -124,13 +131,13 @@ def argsparsevalidation():
     parser = argparse.ArgumentParser(description='Script to run pso '
                                                  'modelling to predict a'
                                                  'parsec application output')
-    parser.add_argument('-m', '--modelcodefilepath',
-                        help='Absolute path from model filename with '
-                             'PSO Model parameters executed previously.')
-    parser.add_argument('-f', '--folds', type=int, default=10,
-                        help='Number of folds to use on split train and test '
-                             'group of values')
-    parser.add_argument('-i', '--initnumber', type=int, default=4,
+    parser.add_argument('--config', required=True,
+                        help='Filepath from Configuration file '
+                             'configurations parameters')
+    parser.add_argument('-p', '--parsecpydatafilepath',
+                        help='Path from input data file from Parsec '
+                             'specificated package.')
+    parser.add_argument('-i', '--initnumber', type=int,
                         help='Number initial of measures number')
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
@@ -148,103 +155,127 @@ def main():
 
     args = argsparsevalidation()
 
-    if not os.path.isfile(args.modelcodefilepath):
-        print('Error: You should inform the correct parsec model data '
-              'file path')
+    if args.config:
+        if not os.path.isfile(args.config):
+            print('Error: You should inform the correct config file path.')
+            sys.exit()
+        with open(args.config, 'r') as fconfig:
+            config = json.load(fconfig)
+        for i, v in vars(args).items():
+            if v is not None:
+                config[i] = v
+    else:
+        config = vars(args)
+
+    if not os.path.isfile(config['parsecpydatafilepath']):
+        print('Error: You should inform the correct parsecpy measures file')
         sys.exit()
 
-    parsec_model = ParsecModel(args.modelcodefilepath)
-    config = parsec_model.modelexecparams
-    if 'svr' in config['algorithm']:
-        tipo_modelo = '5'
-    else:
-        tipo_modelo = re.search(r'config\d', parsec_model.modelcommand).group()
-        tipo_modelo = tipo_modelo[-1]
-    measure = parsec_model.measure
-    if args.verbosity:
-        config['verbosity'] = args.verbosity
-
-    if 'size' in measure.dims:
-        coord_2 = measure.coords['size']
-    elif 'frequency' in measure.dims:
-        coord_2 = measure.coords['frequency']
-
+    parsec_exec = ParsecData(config['parsecpydatafilepath'])
+    measure = parsec_exec.speedups()
     measure_detach = data_detach(measure)
 
-    computed_errors = []
+    # parsec_model = ParsecData(args.modelcodefilepath)
+    # config = parsec_model.modelexecparams
+    # if 'svr' in config['algorithm']:
+    #     tipo_modelo = '5'
+    # else:
+    #     tipo_modelo = re.search(r'config\d', parsec_model.modelcommand).group()
+    #     tipo_modelo = tipo_modelo[-1]
+    # measure = parsec_model.measure
+    # if args.verbosity:
+    #     config['verbosity'] = args.verbosity
+    #
+    #
+    # computed_errors = []
+
     samples_n = 1
     for i in [len(measure.coords[i]) for i in measure.coords]:
         samples_n *= i
-    train_size = args.initnumber
+    train_size = config['initnumber']
+
+    model_results = {}
+    for m in config['models']:
+        model_results[m["name"]] = {
+            "algorithm": None,
+            "configfilepath": None,
+            "data": []
+        }
 
     while True:
 
         print('\nSample size: ', train_size)
 
-        samples_args = []
-        sf = ShuffleSplit(n_splits=args.folds, train_size=train_size,
+        sf = ShuffleSplit(n_splits=10, train_size=train_size,
                           test_size=(samples_n - train_size))
+        splits = []
         for train_idx, test_idx in sf.split(measure_detach['x']):
-            x_train = measure_detach['x'][train_idx]
-            y_train = measure_detach['y'][train_idx]
-            x_test = measure_detach['x'][test_idx]
-            y_test = measure_detach['y'][test_idx]
-            samples_args.append((config, measure,
-                                 {'x': x_train,
-                                  'y': y_train},
-                                 {'x': x_test,
-                                  'y': y_test}))
+            splits.append({'train_idx': train_idx, 'test_idx': test_idx})
 
-        print(' ** Args len = ', len(samples_args))
-        starttime = time.time()
+        print(' ** Args len = ', len(splits))
 
-        with futures.ThreadPoolExecutor(max_workers=len(samples_args)) \
-                as executor:
-            results = executor.map(workers, samples_args)
-            train = []
-            test = []
-            errors = []
-            params = []
-            for i in results:
-                train.append(i['train'])
-                test.append(i['test'])
-                errors.append(i['error'])
-                params.append(i['params'])
-            computed_errors.append({'train_size': train_size,
-                                    'train': train,
-                                    'test': test,
-                                    'errors': errors,
-                                    'params': params})
+        for m in config['models']:
 
-        endtime = time.time()
-        print('  Execution time = %.2f seconds' % (endtime - starttime))
+            print("Running model {}".format(m["name"]))
+            with open(m["conf_file"]) as f:
+                model_config = json.load(f)
+            model_config["verbosity"] = config["verbosity"]
+            model_results[m["name"]]["config"] = model_config
+            samples_args = [(model_config, measure, s) for s in splits]
+
+            starttime = time.time()
+
+            with futures.ThreadPoolExecutor(max_workers=len(samples_args)) \
+                    as executor:
+                results = executor.map(workers, samples_args)
+                train = []
+                test = []
+                errors = []
+                params = []
+                for i in results:
+                    train.append(i['train'])
+                    test.append(i['test'])
+                    errors.append(i['error'])
+                    params.append(i['params'])
+                model_results[m["name"]]["data"].append(
+                    {'train_size': train_size,
+                     'train': train,
+                     'test': test,
+                     'errors': errors,
+                     'params': params}
+                )
+
+            endtime = time.time()
+            print('  Execution time = %.2f seconds' % (endtime - starttime))
+
         if train_size >= int(samples_n/2):
             break
         train_size *= 2
 
-    head = {'algorithm': config['algorithm'],
-            'modeldatapath': args.modelcodefilepath,
-            }
     print('\n\n***** Final Results *****\n')
 
-    print(head)
-    for i in computed_errors:
-        print('Samples {0:2d}'.format(i['train_size']))
-        print('  * Train: {}'.format(i['train']))
-        print('  * Test: {}'.format(i['test']))
-        print('  * Errors: {}'.format(i['errors']))
-        print('  * Params: {}'.format(i['params']))
+    for name, m in model_results.items():
+        print("Model Name: {}".format(name))
+        for i in m["data"]:
+            print(' Samples {0:2d}'.format(i['train_size']))
+            print('  * Train: {}'.format(i['train']))
+            print('  * Test: {}'.format(i['test']))
+            print('  * Errors: {}'.format(i['errors']))
+            print('  * Params: {}'.format(i['params']))
 
-    filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    pkgname = args.modelcodefilepath.split('_')[0]
-    filename = '%s_%serrors_%s_%s.errordat' % (pkgname,
-                                               config['algorithm'],
-                                               tipo_modelo,
-                                               filedate)
-    with open(filename, 'w') as f:
-        json.dump({'head': head, 'errors': computed_errors}, f,
-                  ensure_ascii=False)
-    print('Errors data saved on filename: %s' % filename)
+        filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        pkgname = os.path.basename(config['parsecpydatafilepath']).split('_')[0]
+        filename = '%s_%s_errors_%s.errordat' % (pkgname,
+                                                name,
+                                                filedate)
+        with open(filename, 'w') as f:
+            json.dump({"parsecpydatafilepath": config['parsecpydatafilepath'],
+                       "measure_dims": measure_detach['dims'],
+                       "model_config": m["config"],
+                       'data': m["data"]},
+                      f,
+                      ensure_ascii=False)
+        print('Errors data saved on filename: %s' % filename)
 
     print('\n\n***** ALL DONE! *****\n')
 
