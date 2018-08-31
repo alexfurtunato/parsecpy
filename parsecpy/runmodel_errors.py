@@ -9,8 +9,8 @@
     usage: parsecpy_runmodel_errors [-h] -p PARSECPYDATAFILEPATH
                              [-v VERBOSITY]
 
-    Script to run pso modelling errors to find out a minimal number of measures
-    to use on modelling
+    Script to run multiples runs with differents number of train points
+    to modelling the application
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -25,24 +25,24 @@
                             verbosity level. 0 = No verbose
 
     Example
-        parsecpy_runmodel_errors -m /var/myparseccsamodel.dat -v 3
+        parsecpy_runmodel_errors --config meuconfig.json
+                                 -p /var/myparsecdata.dat -v 3
 """
 
 import os
 import sys
 import time
-import re
 from datetime import datetime
 import numpy as np
 import json
 import argparse
-from sklearn.model_selection import train_test_split, KFold, ShuffleSplit
-from sklearn.model_selection import GridSearchCV, cross_validate
+from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecData, ParsecModel
-from parsecpy import data_attach, data_detach
+from parsecpy import data_detach
 
 
 def workers(args):
@@ -60,6 +60,10 @@ def workers(args):
         measure_svr = measure.copy()
         measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
         measure_svr_detach = data_detach(measure_svr)
+        x_train = measure_svr_detach['x'][train_idx]
+        y_train = measure_svr_detach['y'][train_idx]
+        x_test = measure_svr_detach['x'][test_idx]
+        y_test = measure_svr_detach['y'][test_idx]
         gs_svr = GridSearchCV(SVR(),
                               cv=config['crossvalidation-folds'],
                               param_grid={"C": config['c_grid'],
@@ -128,9 +132,10 @@ def argsparsevalidation():
     :return: argparse object with validated arguments.
     """
 
-    parser = argparse.ArgumentParser(description='Script to run pso '
-                                                 'modelling to predict a'
-                                                 'parsec application output')
+    parser = argparse.ArgumentParser(description='Script to run multiples '
+                                                 'runs with differents number '
+                                                 'of train points to modelling '
+                                                 'the application')
     parser.add_argument('--config', required=True,
                         help='Filepath from Configuration file '
                              'configurations parameters')

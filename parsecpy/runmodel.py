@@ -33,15 +33,15 @@
                             If it consider the overhead
       -t THREADS, --threads THREADS
                             Number of Threads
-      -m FRACTION, --measuresfraction FRACTION
-                            Fraction of measures data to calculate the model
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
                             If run the cross validation of modelling
+      -m MEASURESFRACTION, --measuresfraction MEASURESFRACTION
+                            Fraction of measures data to calculate the model
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
     Example
-        parsecpy_runmodel --config my_config.json -a pso
-              -p /var/myparsecsim.dat -r 4 -v 3
+        parsecpy_runmodel --config my_config.json
+                          -p /var/myparsecsim.dat -c True -v 3
 """
 
 import os
