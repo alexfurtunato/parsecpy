@@ -211,7 +211,8 @@ def main():
 
         print('\nSample size: ', train_size)
 
-        sf = ShuffleSplit(n_splits=10, train_size=train_size,
+        sf = ShuffleSplit(n_splits=config["numberofsplits"],
+                          train_size=train_size,
                           test_size=(samples_n - train_size))
         splits = []
         for train_idx, test_idx in sf.split(measure_detach['x']):
