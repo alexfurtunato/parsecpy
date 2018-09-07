@@ -46,11 +46,12 @@ from parsecpy import data_detach
 
 
 def workers(args):
-    config = args[0]
-    measure = args[1]
+    name = args[0]
+    config = args[1]
+    measure = args[2]
     measure_detach = data_detach(measure)
-    train_idx = args[2]["train_idx"]
-    test_idx = args[2]["test_idx"]
+    train_idx = args[3]
+    test_idx = args[4]
     x_train = measure_detach['x'][train_idx]
     y_train = measure_detach['y'][train_idx]
     x_test = measure_detach['x'][test_idx]
@@ -120,7 +121,8 @@ def workers(args):
         error = mean_squared_error(y_test, pred['y'])
     train_list = {'x': x_train.tolist(), 'y': y_train.tolist()}
     test_list = {'x': x_test.tolist(), 'y': y_test.tolist()}
-    return {'train': train_list, 'test': test_list,
+    return {'name': name,
+            'train': train_list, 'test': test_list,
             'dims': measure_detach['dims'],
             'error': error, 'params': solution}
 
@@ -201,9 +203,14 @@ def main():
 
     model_results = {}
     for m in config['models']:
+        with open(m["conf_file"]) as f:
+            model_config = json.load(f)
+        model_config["verbosity"] = config["verbosity"]
+
         model_results[m["name"]] = {
-            "algorithm": None,
-            "configfilepath": None,
+            "algorithm": model_config['algorithm'],
+            "configfilepath": m["conf_file"],
+            "config": model_config,
             "data": []
         }
 
@@ -215,23 +222,17 @@ def main():
                           train_size=train_size,
                           test_size=(samples_n - train_size))
         splits = []
+        split_n = 1
         for train_idx, test_idx in sf.split(measure_detach['x']):
-            splits.append({'train_idx': train_idx, 'test_idx': test_idx})
 
-        print(' ** Args len = ', len(splits))
+            print(' ** # split = ', split_n)
 
-        for m in config['models']:
-
-            print("Running model {}".format(m["name"]))
-            with open(m["conf_file"]) as f:
-                model_config = json.load(f)
-            model_config["verbosity"] = config["verbosity"]
-            model_results[m["name"]]["config"] = model_config
-            samples_args = [(model_config, measure, s) for s in splits]
+            samples_args = [(m['name'], m['config'], measure,
+                             train_idx, test_idx) for m in model_results]
 
             starttime = time.time()
 
-            with futures.ThreadPoolExecutor(max_workers=len(samples_args)) \
+            with futures.ProcessPoolExecutor(max_workers=len(samples_args)) \
                     as executor:
                 results = executor.map(workers, samples_args)
                 train = []
@@ -239,17 +240,18 @@ def main():
                 errors = []
                 params = []
                 for i in results:
+                    model_name = i['name']
                     train.append(i['train'])
                     test.append(i['test'])
                     errors.append(i['error'])
                     params.append(i['params'])
-                model_results[m["name"]]["data"].append(
-                    {'train_size': train_size,
-                     'train': train,
-                     'test': test,
-                     'errors': errors,
-                     'params': params}
-                )
+                    model_results[model_name]["data"].append(
+                        {'train_size': train_size,
+                         'train': train,
+                         'test': test,
+                         'errors': errors,
+                         'params': params}
+                    )
 
             endtime = time.time()
             print('  Execution time = %.2f seconds' % (endtime - starttime))

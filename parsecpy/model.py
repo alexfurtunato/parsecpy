@@ -378,7 +378,7 @@ class ParsecModel:
             if xc_label is 'Frequency':
                 ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
-            ax.set_zlabel('Model Speedup')
+            ax.set_zlabel('Speedup')
             ax.set_zlim(zmin, 1.10 * zmax)
             if showmeasures:
                 data_m = self.measure
