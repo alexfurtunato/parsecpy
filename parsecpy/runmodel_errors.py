@@ -227,8 +227,9 @@ def main():
 
             print(' ** # split = ', split_n)
 
-            samples_args = [(m['name'], m['config'], measure,
-                             train_idx, test_idx) for m in model_results]
+            samples_args = [(m[0], m[1]['config'], measure,
+                             train_idx, test_idx)
+                            for m in model_results.items()]
 
             starttime = time.time()
 
