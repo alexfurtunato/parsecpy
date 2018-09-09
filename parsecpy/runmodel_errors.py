@@ -261,9 +261,8 @@ def main():
     for name, m in model_results.items():
         print("Model Name: {}".format(name))
         for ts, d in m["data"].items():
-            print(' Train Size {0:2d}'.format(ts))
-            print('  * Errors: {}'.format(d['errors']))
-            print('  * Params: {}'.format(d['params']))
+            print(' Train Size {0:2d}: Median of Error {}'.format(ts))
+            print('  * Errors: {}'.format(np.median(d['error'])))
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         pkgname = os.path.basename(config['parsecpydatafilepath']).split('_')[0]
