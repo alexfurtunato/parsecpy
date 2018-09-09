@@ -211,7 +211,7 @@ def main():
             "algorithm": model_config['algorithm'],
             "configfilepath": m["conf_file"],
             "config": model_config,
-            "data": []
+            "data": {}
         }
 
     while True:
@@ -236,23 +236,18 @@ def main():
             with futures.ProcessPoolExecutor(max_workers=len(samples_args)) \
                     as executor:
                 results = executor.map(workers, samples_args)
-                train = []
-                test = []
-                errors = []
-                params = []
                 for i in results:
-                    model_name = i['name']
-                    train.append(i['train'])
-                    test.append(i['test'])
-                    errors.append(i['error'])
-                    params.append(i['params'])
-                    model_results[model_name]["data"].append(
-                        {'train_size': train_size,
-                         'train': train,
-                         'test': test,
-                         'errors': errors,
-                         'params': params}
-                    )
+                    if train_size not in model_results[i["name"]]["data"].keys():
+                        model_results[i["name"]]["data"][train_size] = {
+                            'train': [],
+                            'test': [],
+                            'error': [],
+                            'params': []
+                        }
+                    model_results[i["name"]]["data"][train_size]["train"].append(i['train'])
+                    model_results[i["name"]]["data"][train_size]["test"].append(i['test'])
+                    model_results[i["name"]]["data"][train_size]["error"].append(i['error'])
+                    model_results[i["name"]]["data"][train_size]["params"].append(i['params'])
 
             endtime = time.time()
             print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -265,12 +260,10 @@ def main():
 
     for name, m in model_results.items():
         print("Model Name: {}".format(name))
-        for i in m["data"]:
-            print(' Samples {0:2d}'.format(i['train_size']))
-            print('  * Train: {}'.format(i['train']))
-            print('  * Test: {}'.format(i['test']))
-            print('  * Errors: {}'.format(i['errors']))
-            print('  * Params: {}'.format(i['params']))
+        for ts, d in m["data"].items():
+            print(' Train Size {0:2d}'.format(ts))
+            print('  * Errors: {}'.format(d['errors']))
+            print('  * Params: {}'.format(d['params']))
 
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         pkgname = os.path.basename(config['parsecpydatafilepath']).split('_')[0]
