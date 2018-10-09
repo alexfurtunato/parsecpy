@@ -379,6 +379,8 @@ class ParsecModel:
                 ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
             ax.set_zlabel('Speedup')
+            ax.tick_params(axis='both', which='major', labelsize=8)
+            ax.tick_params(axis='both', which='minor', labelsize=8)
             ax.set_zlim(zmin, 1.10 * zmax)
             if showmeasures:
                 data_m = self.measure
@@ -415,6 +417,7 @@ class ParsecModel:
                 #                c='y', s=6)
                 ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
             ax.legend()
+            ax.view_init(azim=-35, elev=28)
             if filename:
                 plt.savefig(filename, format='eps', dpi=1000)
             plt.show()
