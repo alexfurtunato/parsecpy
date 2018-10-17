@@ -101,10 +101,8 @@ class Particle:
 
         rp = np.random.rand(self.dim)
         rg = np.random.rand(self.dim)
-        phi = c1+c2
-        constricao = 2*w/(abs(2-phi - np.sqrt(pow(phi, 2)-4*phi)))
-        self.vel = constricao * (self.vel + c1*rp*(self.bestpos-self.pos)
-                                 + c2*rg*(bestparticle.bestpos-self.pos))
+        self.vel = w*self.vel + c1*rp*(self.bestpos-self.pos) \
+                   + c2*rg*(bestparticle.bestpos-self.pos)
         maskvl = self.vel < self.vxmin
         maskvh = self.vel > self.vxmax
         self.vel = self.vel * (~np.logical_or(maskvl, maskvh)) \
@@ -157,7 +155,7 @@ class Swarm:
     # TODO: simplify the list of arguments and/or eliminate the parsecpydatpath
     def __init__(self, lowervalues, uppervalues, parsecpydatafilepath=None,
                  modelcodefilepath=None, modelcodesource=None,
-                 size=100, w=0.5, c1=2, c2=2, maxiter=100,
+                 size=100, w=0.8, c1=2.05, c2=2.05, maxiter=100,
                  threads=1, verbosity=True,
                  x_meas=None, y_meas=None,
                  kwargs={}):
@@ -171,9 +169,9 @@ class Swarm:
         :param modelcodefilepath - path of python module with model functions
         :param modelcodesource - string with python code of model functions
         :param size - Size of swarm (number of particles)
-        :param w - Inertial factor to calculate particle velocity
-        :param c1 - Scaling factor for particle bestpos attribute.
-        :param c2- Scaling factor for best particle bestpos attribute.
+        :param k - Constriction coefficient
+        :param phi1 - Constriction coefficient.
+        :param phi2 - Constriction coefficient.
         :param maxiter - Maximum number of algorithm iterations
         :param threads - Number of threads to calculate the objective and
                       constratint function
@@ -200,10 +198,15 @@ class Swarm:
         self.pdim = len(lowervalues)
         self.lowervalues = lowervalues.copy()
         self.uppervalues = uppervalues.copy()
-        self.w = w
-        self.c1 = c1
-        self.c2 = c2
-        self.vxmax = 0.1*np.abs(self.uppervalues - self.lowervalues)
+        self.k = w
+        self.phi1 = c1
+        self.phi2 = c2
+        self.phi = self.phi1 + self.phi2
+        self.chi = 2*self.k/(abs(2-self.phi-np.sqrt(pow(self.phi, 2)-4*self.phi)))
+        self.w = self.chi
+        self.c1 = self.chi*self.phi1
+        self.c2 = self.chi*self.phi2
+        self.vxmax = 0.2*np.abs(self.uppervalues - self.lowervalues)
         self.vxmin = -self.vxmax
         self.size = size
         self.particles = np.array([Particle(self.lowervalues, self.uppervalues,
