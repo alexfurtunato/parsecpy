@@ -220,7 +220,7 @@ class CoupledAnnealer(object):
         cool = True if k % self.update_interval == 0 else False
 
         max_energy = self.current_energies.max()
-        exp_terms = np.exp((self.current_energies - max_energy) / self.tacc)
+        exp_terms = np.exp((self.current_energies - max_energy)/self.tacc)
         prob_accept = exp_terms / exp_terms.sum()
 
         # Determine whether to accept or reject probe.
