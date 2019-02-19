@@ -350,7 +350,7 @@ def freq_hz(value):
 #         ax.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
 #         plt.title(title)
 #         if filename:
-#             plt.savefig(filename, format='eps', dpi=1000)
+#             plt.savefig(filename, dpi=1000)
 #         plt.show()
 #     else:
 #         print('Error: Do not possible plot data without '

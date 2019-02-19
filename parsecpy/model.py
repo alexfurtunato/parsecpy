@@ -334,13 +334,16 @@ class ParsecModel:
         return
 
     def plot3D(self, train_points=None,
-               title='Speedup Model', greycolor=False,
-               showmeasures=False, alpha=1.0, filename=''):
+               title='Speedup Model', greycolor=False, color=False,
+               showmeasures=False, linewidth=0.3, alpha=1.0, filename=''):
         """
         Plot the 3D (Speedup x cores x input size) surface.
 
         :param title: Plot Title.
         :param greycolor: If set color of graph to grey colormap.
+        :param color: Color charactere or False
+        :param linewidth: width of surface line
+        :param alpha: alpha channel
         :param filename: File name to save figure (eps format).
         :return:
         """
@@ -366,12 +369,22 @@ class ParsecModel:
             zmax = Z.max()
             appname = self.measure.attrs['pkg']
             plt.title('%s\n%s' % (appname.capitalize() or None, title))
-            if greycolor:
-                colormap = cm.Greys
+            if color:
+                surf1 = ax.plot_surface(Y, X, Z, label='Model', color=color,
+                                        linewidth=linewidth,
+                                        edgecolor=color, linestyle='-',
+                                        alpha=alpha)
             else:
-                colormap = cm.coolwarm
-            surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap, linewidth=0.5,
-                            edgecolor='k', linestyle='-', alpha=alpha)
+                if greycolor:
+                    colormap = cm.Greys
+                    surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap,
+                                            linewidth=linewidth, edgecolor='k',
+                                            linestyle='-', alpha=alpha)
+                else:
+                    colormap = cm.coolwarm
+                    surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap,
+                                            linewidth=linewidth, edgecolor='r',
+                                            linestyle='-', alpha=alpha)
             surf1._edgecolors2d = surf1._edgecolors3d
             surf1._facecolors2d = surf1._facecolors3d
             ax.set_xlabel(xc_label)
@@ -409,7 +422,8 @@ class ParsecModel:
                         colors_index.append(coord_row*len(yc)+coord_col)
                     for i in colors_index:
                         c[i] = 'lime'
-                ax.scatter(x, y, z, c=c, s=6, label='Measures')
+                ax.scatter(x, y, z, c=c, s=3, label='Measures')
+                # ax.scatter(x, y, z, c=c, s=6, label='Measures')
                 # if train_points is not None:
                 #     ax.scatter(xc_train_points,
                 #                train_points['x'][:,1],
@@ -419,7 +433,7 @@ class ParsecModel:
             ax.legend()
             ax.view_init(azim=-35, elev=28)
             if filename:
-                plt.savefig(filename, format='eps', dpi=1000)
+                plt.savefig(filename, dpi=1000)
             plt.show()
 
 
