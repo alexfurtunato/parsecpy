@@ -125,7 +125,7 @@ Class CoupledAnnealer
     >>> error, solution = csa.run()
     >>> model = ParsecModel(bsol=solution,
                             berr=error,
-                            ymeas=out_measure,
+                            measure=out_measure,
                             modelcodesource=csa.modelcodesource,
                             modelexecparams=csa.get_parameters())
     >>> scores = model.validate(kfolds=10)
@@ -221,26 +221,23 @@ use on execution of this script
 
 ::
 
-    usage: parsecpy_runmodel [-h] --config CONFIG -a {csa,pso}
-                         [-p PARSECPYFILEPATH] [-f FREQUENCY]
-                         [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
-                         [-r REPETITIONS]
-                         [-c CROSSVALIDATION | -m MEASURESFRACTION]
-                         [-v VERBOSITY]
+    usage: parsecpy_runmodel [-h] --config CONFIG -f PARSECPYFILEPATH
+                             [-p PARTICLES] [-x MAXITERATIONS]
+                             [-l LOWERVALUES] [-u UPPERVALUES]
+                             [-n PROBLEMSIZES] [-o OVERHEAD] [-t THREADS]
+                             [-r REPETITIONS] [-c CROSSVALIDATION]
+                             [-v VERBOSITY]
 
-    Script to run optimizer modelling algorithm to predict a parsec application
-    output
+    Script to run modelling algorithm to predict a parsec application output
 
     optional arguments:
       -h, --help            show this help message and exit
       --config CONFIG       Filepath from Configuration file configurations
                             parameters
-      -a {csa,pso}, --algorithm {csa,pso}
-                            Optimization algorithm to use on modellingprocess.
       -p PARSECPYDATAFILEPATH, --parsecpydatafilepath PARSECPYDATAFILEPATH
                             Path from input data file from Parsec specificated
                             package.
-      -f FREQUENCY, --frequency FREQUENCY
+      -f FREQUENCIES, --frequency FREQUENCIES
                             List of frequencies (KHz). Ex: 2000000, 2100000
       -n PROBLEMSIZES, --problemsizes PROBLEMSIZES
                             List of problem sizes to model used. Ex:
@@ -249,18 +246,15 @@ use on execution of this script
                             If it consider the overhead
       -t THREADS, --threads THREADS
                             Number of Threads
-      -r REPETITIONS, --repetitions REPETITIONS
-                            Number of repetitions to algorithm execution
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
                             If run the cross validation of modelling
       -m MEASURESFRACTION, --measuresfraction MEASURESFRACTION
                             Fraction of measures data to calculate the model
       -v VERBOSITY, --verbosity VERBOSITY
                             verbosity level. 0 = No verbose
-
     Example
-        parsecpy_runmodel --config /var/myconfig.json -a pso
-            -p /var/myparsecsim.dat -r 10 -v 3
+        parsecpy_runmodel --config my_config.json
+                          -p /var/myparsecsim.dat -c True -v 3
 
 Logs process
 ~~~~~~~~~~~~
