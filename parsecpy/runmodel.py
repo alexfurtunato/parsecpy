@@ -136,6 +136,7 @@ def main():
 
     if 'repetitions' not in config.keys():
         config['repetitions'] = 1
+    best_repetition = 1
 
     if config['algorithm'] in ['pso', 'csa']:
         kwargsmodel = {'overhead': config['overhead']}
@@ -242,6 +243,7 @@ def main():
             else:
                 if model.error < model_best.error:
                     model_best = deepcopy(model)
+                    best_repetition = j+1
     else:
         for j in range(config['repetitions']):
             print('Calculating model: Repetition=%d' % (j+1))
@@ -296,10 +298,11 @@ def main():
             else:
                 if model.error < model_best.error:
                     model_best = deepcopy(model)
+                    best_repetition = j+1
 
         endtime = time.time()
-        print('  Best Model found on iteration = %d' % (j+1))
-        print('  Execution time = %.2f seconds' % (endtime - starttime))
+        print('Best Model found on iteration = %d' % (best_repetition))
+        print('Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
         print('\n\n***** Modelling Results! *****\n')
