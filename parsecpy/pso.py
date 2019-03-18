@@ -307,8 +307,8 @@ class Swarm:
             import multiprocessing
             mpool = multiprocessing.Pool(self.threads)
 
-        #gbestfpos_ant = self.bestparticle.fpos
-        #gbestmax = 0
+        gbestfpos_ant = self.bestparticle.fpos
+        gbestmax = 0
         iteration = 0
 
         #sm = self._swarm_med()
@@ -316,8 +316,8 @@ class Swarm:
             print('\nInitial Swarm - Initial Error: ',
                   self.bestparticle.bestfpos)
 
-        #while sm > 1e-8 and gbestmax < 10 and iteration < self.maxiter:
-        while iteration < self.maxiter:
+        while sm > 1e-8 and gbestmax < 10 and iteration < self.maxiter:
+        #while iteration < self.maxiter:
             if self.verbosity > 1:
                 print('Iteration: ', iteration+1, ' - Error: ',
                       self.bestparticle.bestfpos)
@@ -337,13 +337,13 @@ class Swarm:
                 if constraint[i]:
                     bestfpos[i] = p.setfpos(newfpos[i])
             self.bestparticle = deepcopy(self.particles[np.argmin(bestfpos)])
-            #if gbestfpos_ant == self.bestparticle.fpos:
-            #    gbestmax += 1
-            #else:
-            #    gbestmax = 0
-            #    gbestfpos_ant = self.bestparticle.fpos
+            if gbestfpos_ant == self.bestparticle.fpos:
+                gbestmax += 1
+            else:
+                gbestmax = 0
+                gbestfpos_ant = self.bestparticle.fpos
             iteration += 1
-            #sm = self._swarm_med()
+            sm = self._swarm_med()
         if self.threads > 1:
             mpool.terminate()
 
