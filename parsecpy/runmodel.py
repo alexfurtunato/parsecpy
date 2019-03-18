@@ -33,6 +33,8 @@
                             If it consider the overhead
       -t THREADS, --threads THREADS
                             Number of Threads
+      -r REPETITIONS, --repetitions REPETITIONS
+                            Run with repetitions to find the best model
       -c CROSSVALIDATION, --crossvalidation CROSSVALIDATION
                             If run the cross validation of modelling
       -m MEASURESFRACTION, --measuresfraction MEASURESFRACTION
@@ -93,6 +95,8 @@ def argsparsevalidation():
     parser.add_argument('-t', '--threads', type=int,
                         help='Number of Threads')
     group = parser.add_mutually_exclusive_group()
+    parser.add_argument('-r', '--repetitions', type=int,
+                        help='Number of Repetitions')
     group.add_argument('-c', '--crossvalidation', type=bool,
                        help='If run the cross validation of modelling')
     group.add_argument('-m', '--measuresfraction', type=argsparsefraction,
@@ -129,6 +133,9 @@ def main():
                 config[i] = v
     else:
         config = vars(args)
+
+    if 'repetitions' not in config.keys():
+        config['repetitions'] = 1
 
     if config['algorithm'] in ['pso', 'csa']:
         kwargsmodel = {'overhead': config['overhead']}
@@ -187,93 +194,106 @@ def main():
         measure_svr = measure.copy()
         measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
         measure_svr_detach = data_detach(measure_svr)
-        if 'measuresfraction' in config.keys():
-            xy_train_test = train_test_split(measure_svr_detach['x'],
-                                             measure_svr_detach['y'],
-                                             train_size=config[
-                                                 'measuresfraction'])
-            x_sample_train = xy_train_test[0]
-            y_sample_train = xy_train_test[2]
-            x_sample_test = xy_train_test[1]
-            y_sample_test = xy_train_test[3]
-        else:
-            x_sample_train = measure_svr_detach['x']
-            y_sample_train = measure_svr_detach['y']
-            x_sample_test = measure_svr_detach['x']
-            y_sample_test = measure_svr_detach['y']
-        gs_svr = GridSearchCV(SVR(),
-                              cv=config['crossvalidation-folds'],
-                              param_grid={"C": config['c_grid'],
-                                          "gamma": config['gamma_grid']})
-        gs_svr.fit(x_sample_train, y_sample_train)
-        y_predict = gs_svr.predict(x_sample_test)
-        error = mean_squared_error(y_sample_test, y_predict)
-        errorrel = 100*error/np.mean(y_sample_test)
-        print('\n\n***** Modelling Results! *****\n')
-        print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
-              (error, errorrel))
-        y_model = data_attach({'x': measure_svr_detach['x'],
-                               'y': gs_svr.predict(measure_svr_detach['x'])},
-                              measure_svr_detach['dims'])
-        best_params = gs_svr.best_params_
-        kf = KFold(n_splits=10, shuffle=True)
-        scores = cross_validate(gs_svr, x_sample_train, y_sample_train,
-                                scoring='neg_mean_squared_error',
-                                cv=kf, return_train_score=False)
-        if config['verbosity'] > 1:
-            print(" ** Cross Validate Scores: ")
-            print(scores)
-        for i,v in best_params.items():
-            config[i] = v
-        model = ParsecModel(measure=measure_svr, y_model=y_model,
-                            berr=error, berr_rel=errorrel,
-                            modelexecparams=config)
+        for j in config['repetitions']:
+            if 'measuresfraction' in config.keys():
+                xy_train_test = train_test_split(measure_svr_detach['x'],
+                                                 measure_svr_detach['y'],
+                                                 train_size=config[
+                                                     'measuresfraction'])
+                x_sample_train = xy_train_test[0]
+                y_sample_train = xy_train_test[2]
+                x_sample_test = xy_train_test[1]
+                y_sample_test = xy_train_test[3]
+            else:
+                x_sample_train = measure_svr_detach['x']
+                y_sample_train = measure_svr_detach['y']
+                x_sample_test = measure_svr_detach['x']
+                y_sample_test = measure_svr_detach['y']
+            gs_svr = GridSearchCV(SVR(),
+                                  cv=config['crossvalidation-folds'],
+                                  param_grid={"C": config['c_grid'],
+                                              "gamma": config['gamma_grid']})
+            gs_svr.fit(x_sample_train, y_sample_train)
+            y_predict = gs_svr.predict(x_sample_test)
+            error = mean_squared_error(y_sample_test, y_predict)
+            errorrel = 100*error/np.mean(y_sample_test)
+            print('\n\n***** Modelling Results! *****\n')
+            print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
+                  (error, errorrel))
+            y_model = data_attach({'x': measure_svr_detach['x'],
+                                   'y': gs_svr.predict(measure_svr_detach['x'])},
+                                  measure_svr_detach['dims'])
+            best_params = gs_svr.best_params_
+            kf = KFold(n_splits=10, shuffle=True)
+            scores = cross_validate(gs_svr, x_sample_train, y_sample_train,
+                                    scoring='neg_mean_squared_error',
+                                    cv=kf, return_train_score=False)
+            if config['verbosity'] > 1:
+                print(" ** Cross Validate Scores: ")
+                print(scores)
+            for i,v in best_params.items():
+                config[i] = v
+            model = ParsecModel(measure=measure_svr, y_model=y_model,
+                                berr=error, berr_rel=errorrel,
+                                modelexecparams=config)
+            if j == 0:
+                model_best = deepcopy(model)
+            else:
+                if model.error < model_best.error:
+                    model_best = deepcopy(model)
     else:
-        if config['algorithm'] == 'pso':
-            optm = Swarm(config['lowervalues'], config['uppervalues'],
-                         parsecpydatafilepath=config['parsecpydatafilepath'],
-                         modelcodefilepath=config['modelcodefilepath'],
-                         size=config['size'], w=config['w'],
-                         c1=config['c1'], c2=config['c2'],
-                         maxiter=config['maxiter'],
-                         threads=config['threads'],
-                         verbosity=config['verbosity'],
-                         x_meas=x_sample_train, y_meas=y_sample_train,
-                         kwargs=kwargsmodel)
-        elif config['algorithm'] == 'csa':
-            initial_state = np.array([np.random.uniform(size=config['dimension'])
-                                      for _ in range(config['size'])])
-            optm = CoupledAnnealer(initial_state,
-                                   parsecpydatafilepath=config['parsecpydatafilepath'],
-                                   modelcodefilepath=config['modelcodefilepath'],
-                                   size=config['size'],
-                                   steps=config['steps'],
-                                   update_interval=config['update_interval'],
-                                   tgen_initial=config['tgen_initial'],
-                                   tgen_upd_factor=config['tgen_upd_factor'],
-                                   tacc_initial=config['tacc_initial'],
-                                   alpha=config['alpha'],
-                                   desired_variance=config['desired_variance'],
-                                   lowervalues=config['lowervalues'],
-                                   uppervalues=config['uppervalues'],
-                                   threads=config['threads'],
-                                   verbosity=config['verbosity'],
-                                   x_meas=x_sample_train,
-                                   y_meas=y_sample_train,
-                                   kwargs=kwargsmodel)
-        else:
-            print('Error: You should inform the correct algorithm to use')
-            sys.exit()
+        for j in config['repetitions']:
+            if config['algorithm'] == 'pso':
+                optm = Swarm(config['lowervalues'], config['uppervalues'],
+                             parsecpydatafilepath=config['parsecpydatafilepath'],
+                             modelcodefilepath=config['modelcodefilepath'],
+                             size=config['size'], w=config['w'],
+                             c1=config['c1'], c2=config['c2'],
+                             maxiter=config['maxiter'],
+                             threads=config['threads'],
+                             verbosity=config['verbosity'],
+                             x_meas=x_sample_train, y_meas=y_sample_train,
+                             kwargs=kwargsmodel)
+            elif config['algorithm'] == 'csa':
+                initial_state = np.array([np.random.uniform(size=config['dimension'])
+                                          for _ in range(config['size'])])
+                optm = CoupledAnnealer(initial_state,
+                                       parsecpydatafilepath=config['parsecpydatafilepath'],
+                                       modelcodefilepath=config['modelcodefilepath'],
+                                       size=config['size'],
+                                       steps=config['steps'],
+                                       update_interval=config['update_interval'],
+                                       tgen_initial=config['tgen_initial'],
+                                       tgen_upd_factor=config['tgen_upd_factor'],
+                                       tacc_initial=config['tacc_initial'],
+                                       alpha=config['alpha'],
+                                       desired_variance=config['desired_variance'],
+                                       lowervalues=config['lowervalues'],
+                                       uppervalues=config['uppervalues'],
+                                       threads=config['threads'],
+                                       verbosity=config['verbosity'],
+                                       x_meas=x_sample_train,
+                                       y_meas=y_sample_train,
+                                       kwargs=kwargsmodel)
+            else:
+                print('Error: You should inform the correct algorithm to use')
+                sys.exit()
 
-        error, solution = optm.run()
-        model = ParsecModel(bsol=solution,
-                            berr=error,
-                            measure=measure,
-                            modelcodesource=optm.modelcodesource,
-                            modelexecparams=optm.get_parameters())
-        pred = model.predict(x_sample_test)
-        model.error = mean_squared_error(y_sample_test, pred['y'])
-        model.errorrel = 100 * (model.error / np.mean(y_sample_test))
+            error, solution = optm.run()
+            model = ParsecModel(bsol=solution,
+                                berr=error,
+                                measure=measure,
+                                modelcodesource=optm.modelcodesource,
+                                modelexecparams=optm.get_parameters())
+            pred = model.predict(x_sample_test)
+            model.error = mean_squared_error(y_sample_test, pred['y'])
+            model.errorrel = 100 * (model.error / np.mean(y_sample_test))
+
+            if j == 0:
+                model_best = deepcopy(model)
+            else:
+                if model.error < model_best.error:
+                    model_best = deepcopy(model)
 
         endtime = time.time()
         print('  Execution time = %.2f seconds' % (endtime - starttime))
@@ -281,20 +301,20 @@ def main():
 
         print('\n\n***** Modelling Results! *****\n')
         print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
-              (model.error,
-               model.errorrel))
+              (model_best.error,
+               model_best.errorrel))
         if config['verbosity'] > 0:
-            print('Best Parameters: \n', model.sol)
+            print('Best Parameters: \n', model_best.sol)
         if config['verbosity'] > 1:
             print('\nMeasured Speedup: \n', measure)
-            print('\nModeled Speedup: \n', model.y_model)
+            print('\nModeled Speedup: \n', model_best.y_model)
 
         print('\n***** Modelling Done! *****\n')
 
         if config['crossvalidation']:
             print('\n\n***** Starting cross validation! *****\n')
             starttime = time.time()
-            validation_model = deepcopy(model)
+            validation_model = deepcopy(model_best)
             scores = validation_model.validate(kfolds=10)
             print('\n  Cross Validation (K-fold, K=10) Metrics: ')
             if config['verbosity'] > 2:
@@ -313,13 +333,13 @@ def main():
                                              value['value'].mean()))
             endtime = time.time()
             print('  Execution time = %.2f seconds' % (endtime - starttime))
-            model.validation = scores
+            model_best.validation = scores
             print('\n***** Cross Validation Done! *****\n')
     if 'measuresfraction' in config.keys():
-        model.measuresfraction = config['measuresfraction']
-        model.measuresfraction_points = x_sample_train
+        model_best.measuresfraction = config['measuresfraction']
+        model_best.measuresfraction_points = x_sample_train
     print('\n\n***** ALL DONE! *****\n')
-    fn = model.savedata(parsec_exec.config,
+    fn = model_best.savedata(parsec_exec.config,
                                                   ' '.join(sys.argv))
     print('Model data saved on filename: %s' % fn)
 
