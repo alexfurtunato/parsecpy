@@ -195,6 +195,7 @@ def main():
         measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
         measure_svr_detach = data_detach(measure_svr)
         for j in range(config['repetitions']):
+            print('Calculating model: Repetition=%d' % (j+1))
             if 'measuresfraction' in config.keys():
                 xy_train_test = train_test_split(measure_svr_detach['x'],
                                                  measure_svr_detach['y'],
@@ -243,6 +244,7 @@ def main():
                     model_best = deepcopy(model)
     else:
         for j in range(config['repetitions']):
+            print('Calculating model: Repetition=%d' % (j+1))
             if config['algorithm'] == 'pso':
                 optm = Swarm(config['lowervalues'], config['uppervalues'],
                              parsecpydatafilepath=config['parsecpydatafilepath'],
