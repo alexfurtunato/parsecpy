@@ -296,6 +296,7 @@ def main():
                     model_best = deepcopy(model)
 
         endtime = time.time()
+        print('  Best Model found on iteration = %d' % (j+1))
         print('  Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
