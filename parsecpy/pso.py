@@ -311,7 +311,7 @@ class Swarm:
         gbestmax = 0
         iteration = 0
 
-        #sm = self._swarm_med()
+        sm = self._swarm_med()
         if self.verbosity > 1:
             print('\nInitial Swarm - Initial Error: ',
                   self.bestparticle.bestfpos)
