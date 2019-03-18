@@ -194,7 +194,7 @@ def main():
         measure_svr = measure.copy()
         measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
         measure_svr_detach = data_detach(measure_svr)
-        for j in config['repetitions']:
+        for j in range(config['repetitions']):
             if 'measuresfraction' in config.keys():
                 xy_train_test = train_test_split(measure_svr_detach['x'],
                                                  measure_svr_detach['y'],
@@ -242,7 +242,7 @@ def main():
                 if model.error < model_best.error:
                     model_best = deepcopy(model)
     else:
-        for j in config['repetitions']:
+        for j in range(config['repetitions']):
             if config['algorithm'] == 'pso':
                 optm = Swarm(config['lowervalues'], config['uppervalues'],
                              parsecpydatafilepath=config['parsecpydatafilepath'],
