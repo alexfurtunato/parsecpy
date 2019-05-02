@@ -358,6 +358,11 @@ class ParsecData:
         """
 
         times = self.times()
+        try:
+            times.sel(cores=1)
+        except:
+            print('Error: Time measurement for 1 core not found')
+            return None
         lcores = len(times.coords['cores'])
         ldims = []
         for c in times.dims:
