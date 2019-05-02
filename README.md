@@ -37,6 +37,10 @@ The objective function can be build with a module python passed as argument to l
 
 ### Class ParsecData
 
+   Class used to generate the measured times structure, to save such data in a "json" file, to load a previously saved
+   json data file, to calculate the speedup or efficiency of application and to plot 2D or 3D graph of time, speedup or
+   efficiency versus the number of cores and frequency or input size.
+
     >>> from parsecpy import ParsecData
     >>> d = ParsecData('path_to_datafile')
     >>> print(d)        # Print summary informations
@@ -44,6 +48,21 @@ The objective function can be build with a module python passed as argument to l
     >>> d.speedups()    # Show a Dataframe with speedups
     >>> d.plot3D(d.speedups(), title='Speedup', zlabel='speedup')   # plot a 3D Plot : speedups x number of cores x input sizes
     >>> d.plot3D(d.efficiency(), title='Efficiency', zlabel='efficiency')   # plot a 3D Plot : speedups x number of cores x input sizes
+
+### Class ParsecModel
+
+    Class used to generate the result of modeling of the application, using any of supported algorithms (PSO, CSA or
+    SVR). The class allows to save the modeling results, load previously saved model data, and plot the model data
+    together with the real measurements.
+
+    >>> from parsecpy import ParsecModel
+    >>> m = ParsecModel('path_to_model_datafile')
+    >>> print(m)        # Print summary informations
+    >>> print(m.measure)       # Show a Dataframe with mesures speedups
+    >>> print(m.y_model)       # Show a Dataframe with modeled speedups
+    >>> print(m.error)         # Show the Mean Squared Error between measured and modeled speedup
+    >>> m.plot3D(title='Speedup', showmeasures=True)   # plot a 3D Plot with measurements and model data
+
 
 ### Class ParsecLogsData
 
