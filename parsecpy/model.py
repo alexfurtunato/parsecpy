@@ -53,7 +53,8 @@ class ParsecModel:
                  y_model=None,
                  modelcodefilepath=None,
                  modelcodesource=None,
-                 modelexecparams=None):
+                 modelexecparams=None,
+                 modelresultsfolder=None):
         """
         Create a empty object or initialized of data from a file saved
         with savedata method.
@@ -72,6 +73,7 @@ class ParsecModel:
         else:
             self.measure = measure
             self.modelexecparams = modelexecparams
+            self.modelresultsfolder = modelresultsfolder
             self.modelcodesource = None
             self.validation = None
             if modelcodefilepath is not None:
@@ -211,9 +213,12 @@ class ParsecModel:
         filedate = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         pkgname = os.path.basename(self.modelexecparams['parsecpydatafilepath'])
         pkgname = pkgname.split('_')[0]
-        filename = '%s_%smodel_datafile_%s.dat' % (pkgname,
-                                                   self.modelexecparams['algorithm'],
-                                                   filedate)
+        if not os.path.isdir(self.modelresultsfolder):
+            os.mkdir(self.modelresultsfolder)
+        filename = os.path.join(self.modelresultsfolder,
+                                '%s_%smodel_datafile_%s.dat' % (pkgname,
+                                    self.modelexecparams['algorithm'],
+                                    filedate))
         with open(filename, 'w') as f:
             datatosave = {'config': {}, 'data': {}}
             if 'pkg' in parsecconfig:

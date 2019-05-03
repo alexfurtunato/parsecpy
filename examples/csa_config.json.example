@@ -1,6 +1,7 @@
 {
   "algorithm": "csa",
   "parsecpydatafilepath": "/home/userexample/blackscholes_datafile_2018-02-20_16:50:30.dat",
+  "resultsfolder": "./",
   "modelcodefilepath": "/home/userexample/csa_modelfunc.py",
   "size": 5,
   "dimension": 7,

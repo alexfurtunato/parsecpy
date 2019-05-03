@@ -288,7 +288,8 @@ def main():
                                 berr=error,
                                 measure=measure,
                                 modelcodesource=optm.modelcodesource,
-                                modelexecparams=optm.get_parameters())
+                                modelexecparams=optm.get_parameters(),
+                                modelresultsfolder=config['resultsfolder'])
             pred = model.predict(x_sample_test)
             model.error = mean_squared_error(y_sample_test, pred['y'])
             model.errorrel = 100 * (model.error / np.mean(y_sample_test))
