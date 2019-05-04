@@ -50,7 +50,7 @@ import subprocess
 import sys
 import os
 from datetime import datetime
-from cpufreq import CPUFreq, CPUFreqErrorInit
+from cpufreq import cpuFreq
 
 from parsecpy.dataprocess import ParsecData
 from parsecpy import argsparseintlist, argsparseinputlist, procs_list
@@ -117,7 +117,7 @@ def main():
                       'hostname': hostname}
     if args.frequency:
         try:
-            cf = CPUFreq()
+            cf = cpuFreq()
             freq_avail = [int(f) for f in cf.get_frequencies()[0]['data']]
             if not set(args.frequency).issubset(set(freq_avail)):
                 print("ERROR: Available CPUs frequencies aren't compatibles "
@@ -125,13 +125,10 @@ def main():
                       "argument (--frequency)")
                 exit(1)
             else:
-                cf.change_governo("userspace")
+                cf.set_governors("userspace")
                 freqs = args.frequency
                 print("Running with governor 'userspace' and frequencies %s.\n"
                       % str(freqs))
-        except CPUFreqErrorInit as err:
-            print(err.message)
-            sys.exit(1)
         except:
             print("ERROR: Unknown error on frequencies list.")
             print(sys.exc_info())
@@ -139,11 +136,9 @@ def main():
     else:
         freqs = [0]
         try:
-            cf = CPUFreq()
-            cf.change_governo("ondemand")
+            cf = cpuFreq()
+            cf.set_governors("ondemand")
             print("Running with governor 'ondemand'.\n")
-        except CPUFreqErrorInit as err:
-            print(err.message)
         except:
             print("ERROR: Unknown error on governor.")
             print(sys.exc_info())
@@ -158,7 +153,7 @@ def main():
         ftxt = None
         if not (len(freqs) == 1 and f == 0):
             try:
-                cf.change_frequency(str(f))
+                cf.set_frequencies(str(f))
                 ftxt = "Frequency: %s," % f
             except:
                 print("ERROR: Unknown error on frequencies list.")
@@ -216,7 +211,7 @@ def main():
     print("\n\n***** Done! *****\n")
     if args.frequency:
         try:
-            cf.change_governo("ondemand")
+            cf.set_governors("ondemand")
             print("Returning the governor to 'ondemand'.")
         except:
             print("ERROR: Unknown error on governor.")
