@@ -1,0 +1,19 @@
+{
+  "initnumber": 4,
+  "verbosity": 1,
+  "numberofsplits": 100,
+  "models": [
+    {
+      "name": "svr_X",
+      "conf_file": "svr_configX.json" },
+    {
+      "name": "pso_A",
+      "conf_file": "pso_configA.json" },
+    {
+      "name": "pso_B",
+      "conf_file": "pso_configB.json" },
+    {
+      "name": "pso_C",
+      "conf_file": "pso_configC.json" }
+  ]
+}

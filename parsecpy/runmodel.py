@@ -65,7 +65,7 @@ from parsecpy import ParsecData
 from parsecpy import Swarm, CoupledAnnealer
 from parsecpy import ParsecModel
 from parsecpy import argsparselist, argsparseintlist, argsparsefraction
-from parsecpy import data_detach, data_attach
+from parsecpy import data_detach, data_attach, measures_split_train_test
 
 
 def argsparsevalidation():
@@ -99,8 +99,8 @@ def argsparsevalidation():
                         help='Number of Repetitions')
     group.add_argument('-c', '--crossvalidation', type=bool,
                        help='If run the cross validation of modelling')
-    group.add_argument('-m', '--measuresfraction', type=argsparsefraction,
-                       help='Fraction of measures data to calculate the model')
+    group.add_argument('-m', '--measuresfraction', type=int,
+                       help='Number of points to use on model train')
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose')
     args = parser.parse_args()
@@ -175,9 +175,12 @@ def main():
 
     measure_detach = data_detach(measure)
     if 'measuresfraction' in config.keys():
-        xy_train_test = train_test_split(measure_detach['x'],
-                                         measure_detach['y'],
-                                         train_size=config['measuresfraction'])
+        # xy_train_test = train_test_split(measure_detach['x'],
+        #                                  measure_detach['y'],
+        #                                  train_size=config['measuresfraction'])
+        xy_train_test = measures_split_train_test(measure,
+                                                  train_size=config[
+                                                      'measuresfraction'])
         x_sample_train = xy_train_test[0]
         y_sample_train = xy_train_test[2]
         x_sample_test = xy_train_test[1]
@@ -198,10 +201,13 @@ def main():
         for j in range(config['repetitions']):
             print('Calculating model: Repetition=%d' % (j+1))
             if 'measuresfraction' in config.keys():
-                xy_train_test = train_test_split(measure_svr_detach['x'],
-                                                 measure_svr_detach['y'],
-                                                 train_size=config[
-                                                     'measuresfraction'])
+                # xy_train_test = train_test_split(measure_svr_detach['x'],
+                #                                  measure_svr_detach['y'],
+                #                                  train_size=config[
+                #                                      'measuresfraction'])
+                xy_train_test = measures_split_train_test(measure,
+                                                          train_size=config[
+                                                              'measuresfraction'])
                 x_sample_train = xy_train_test[0]
                 y_sample_train = xy_train_test[2]
                 x_sample_test = xy_train_test[1]

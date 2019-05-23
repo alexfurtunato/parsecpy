@@ -22,7 +22,8 @@ setup(name='parsecpy',
           'matplotlib',
           'scikit-learn',
           'bitstring',
-          'scipy'
+          'scipy',
+          'ghalton==0.6.1'
       ],
       long_description=read('README.rst'),
       classifiers=[

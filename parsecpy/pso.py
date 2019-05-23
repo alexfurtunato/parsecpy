@@ -319,8 +319,8 @@ class Swarm:
         while sm > 1e-8 and gbestmax < 10 and iteration < self.maxiter:
         #while iteration < self.maxiter:
             if self.verbosity > 1:
-                print('Iteration: ', iteration+1, ' - Error: ',
-                      self.bestparticle.bestfpos)
+                print('Iteration: ', iteration+1,
+                      ' - Error: ', self.bestparticle.bestfpos)
             for p in self.particles:
                 p.update(self.bestparticle, self.w, self.c1, self.c2)
             if self.threads > 1:

@@ -11,6 +11,7 @@ from copy import deepcopy
 import psutil
 import errno
 import argparse
+import ghalton as gh
 
 # import matplotlib.pyplot as plt
 # from matplotlib import cm
@@ -298,6 +299,60 @@ def freq_hz(value):
         label = "%.2f Hz" % label
     return label
 
+def maptosequence(fseq,iseq):
+    """
+    Map a sequence of floats, each element in range 0.0-1.0,
+    to an another sequence of values, find the elements whose indexes are
+    equivalent to a relative position in a range 0-1.0.
+
+    :param fseq: A list of float values
+    :param iseq: A list of target values
+    :return: A list of integer values equivalent to range of floats.
+    """
+    equiv_seq = []
+    folds = len(iseq)-1
+    for i in fseq:
+        if i<0 or i>1.0:
+            print("Error: Sequence of floats should be only values "
+                  "between 0.0 and 1.0")
+            return None
+        equiv_seq.append(iseq[round(float(i)*folds)])
+    return(equiv_seq)
+
+def measures_split_train_test(measure, train_size):
+    """
+    Split the train and test arrays from a xarray of measures using the
+    Halton sequence to make discrepancy less. The return object is a
+    list of arrays: [train_x, teste_x, train_y, test_y]
+
+    :param measure: A xarray os measures values
+    :param train_size: A integer with sie of elements splited  to train
+    :return: A list of arrays.
+    """
+
+    m_detach = data_detach(measure)
+    if len(m_detach['x'])<train_size:
+        print("Error: the train size shoud be lower than the size of arrays")
+        return None
+    dim = len(measure.dims)
+    sequencer = gh.Halton(dim)
+    points = np.array(sequencer.get(train_size))
+    x_rand = []
+    for i,v in enumerate(measure.dims):
+        x = measure.coords[v].values
+        x_rand.append(maptosequence(points[:,i],x))
+    x_rand = np.column_stack([i.reshape(len(i), 1) for i in np.array(x_rand)])
+    bool_idx = None
+    for i in x_rand:
+        if bool_idx is None:
+            bool_idx = (m_detach['x'] == i).all(axis=1)
+        else:
+            bool_idx = bool_idx | (m_detach['x'] == i).all(axis=1)
+    x_train = m_detach['x'][bool_idx]
+    x_test = m_detach['x'][~bool_idx]
+    y_train = m_detach['y'][bool_idx]
+    y_test = m_detach['y'][~bool_idx]
+    return [x_train,x_test,y_train,y_test]
 
 # def plot2D(data, title='', greycolor=False, filename=''):
 #     """
