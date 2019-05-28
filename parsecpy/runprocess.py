@@ -132,7 +132,7 @@ def main():
         except CPUFreqErrorInit as err:
             print(err)
         except:
-            print("ERROR: Unknown error on frequencies list.")
+            print("ERROR: Unknown error on frequencies list.", sys.exc_info()[0])
             print(sys.exc_info())
             sys.exit(1)
     else:
