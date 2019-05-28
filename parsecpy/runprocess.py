@@ -50,7 +50,7 @@ import subprocess
 import sys
 import os
 from datetime import datetime
-from cpufreq import cpuFreq
+from cpufreq import cpuFreq,CPUFreqErrorInit
 
 from parsecpy.dataprocess import ParsecData
 from parsecpy import argsparseintlist, argsparseinputlist, procs_list
@@ -81,7 +81,7 @@ def argsparsevalidation():
                              '(Default: %(default)s).',
                         choices=compilerchoicebuilds, default='gcc-hooks')
     parser.add_argument('-f', '--frequency', type=argsparseintlist,
-                        help='List of frequencies (KHz). Ex: 2000000, 2100000')
+                        help='List of frequencies (KHz). Ex: 2000000,2100000')
     parser.add_argument('-i', '--input', type=argsparseinputlist,
                         help=helpinputtxt, default='native')
     parser.add_argument('-r', '--repetitions', type=int,
@@ -129,6 +129,8 @@ def main():
                 freqs = args.frequency
                 print("Running with governor 'userspace' and frequencies %s.\n"
                       % str(freqs))
+        except CPUFreqErrorInit as err:
+            print(err)
         except:
             print("ERROR: Unknown error on frequencies list.")
             print(sys.exc_info())
@@ -156,7 +158,7 @@ def main():
                 cf.set_frequencies(str(f))
                 ftxt = "Frequency: %s," % f
             except:
-                print("ERROR: Unknown error on frequencies list.")
+                print("ERROR: Unknown error on frequencies setting.")
                 print(sys.exc_info())
                 sys.exit(1)
         for i,inputsize in enumerate(args.input):
