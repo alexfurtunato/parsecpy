@@ -51,7 +51,7 @@ def argsparselist(txt):
     """
     Validate the list of txt argument.
 
-    :param txt: argument of comma separated int strings.
+    :param txt: argument with comma separated int strings.
     :return: list of strings.
     """
 
@@ -64,7 +64,7 @@ def argsparseintlist(txt):
     """
     Validate the list of int arguments.
 
-    :param txt: argument of comma separated numbers.
+    :param txt: argument with comma separated numbers.
     :return: list of integer converted numbers.
     """
 

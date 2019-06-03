@@ -118,7 +118,7 @@ def main():
     if args.frequency:
         try:
             cf = cpuFreq()
-            freq_avail = [int(f) for f in cf.get_available_frequencies()]
+            freq_avail = cf.available_frequencies
             if not set(args.frequency).issubset(set(freq_avail)):
                 print("ERROR: Available CPUs frequencies aren't compatibles "
                       "with frequency list passed on execution frequeny "
@@ -155,7 +155,7 @@ def main():
         ftxt = None
         if not (len(freqs) == 1 and f == 0):
             try:
-                cf.set_frequencies(str(f))
+                cf.set_frequencies(f)
                 ftxt = "Frequency: %s," % f
             except:
                 print("ERROR: Unknown error on frequencies setting.")
@@ -213,10 +213,10 @@ def main():
     print("\n\n***** Done! *****\n")
     if args.frequency:
         try:
-            cf.set_governors("ondemand")
-            print("Returning the governor to 'ondemand'.")
+            cf.reset()
+            print("Resetting governors to 'ondemand'.")
         except:
-            print("ERROR: Unknown error on governor.")
+            print("ERROR: resetting governors.")
             print(sys.exc_info())
             sys.exit(1)
     fn = datarun.savedata()
