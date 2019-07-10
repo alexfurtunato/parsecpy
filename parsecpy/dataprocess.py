@@ -478,7 +478,7 @@ class ParsecData:
                     xc_label = 'Frequency'
             else:
                 if slidername is 'size':
-                    dataplot = data.sel(size=idx)
+                    dataplot = data.sel(size=int(idx))
                     xc = [i*1000 for i in dataplot.coords['frequency'].values]
                     xc_label = 'Frequency'
                 elif slidername is 'frequency':
