@@ -83,7 +83,7 @@ class ParsecModel:
                 self.modelcodesource = modelcodesource
             self.sol = bsol
             self.error = berr
-            if self.sol is None:
+            if self.sol is None and modelexecparams['algorithm'] is not 'svr':
                 self.error = None
                 self.errorrel = None
             if self.error is not None:
@@ -94,6 +94,8 @@ class ParsecModel:
                 measure_detach = data_detach(self.measure)
                 self.y_model = data_attach(self.predict(measure_detach['x']),
                                            measure_detach['dims'])
+                self.error = mean_squared_error(self.measure, self.y_model)
+                self.errorrel = 100 * (self.error / self.measure.values.mean())
             else:
                 self.y_model = y_model
 
