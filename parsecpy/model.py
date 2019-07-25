@@ -83,9 +83,6 @@ class ParsecModel:
                 self.modelcodesource = modelcodesource
             self.sol = bsol
             self.error = berr
-            if self.sol is None and modelexecparams['algorithm'] is not 'svr':
-                self.error = None
-                self.errorrel = None
             if self.error is not None:
                 self.errorrel = 100*(self.error/self.measure.values.mean())
             if berr_rel is not None:
