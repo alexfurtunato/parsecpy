@@ -12,6 +12,7 @@ import json
 import numpy as np
 import xarray as xr
 from copy import deepcopy
+from typing import Dict, Any, List
 
 from ._common import freq_hz
 
@@ -58,6 +59,7 @@ class ParsecData:
 
         self.config = {}
         self.measures = {}
+        self.power = {}
         if filename:
             self.loaddata(filename)
         return
@@ -107,6 +109,8 @@ class ParsecData:
                 self.measures = datadict['data']
             else:
                 print('Warning: No data loaded')
+            if 'power' in datadict.keys():
+                self.power = datadict['power']
         else:
             print('Error: File not found')
         return
@@ -125,7 +129,9 @@ class ParsecData:
         with open(filename, 'w') as f:
             conftxt = self.config.copy()
             conftxt['execdate'] = conftxt['execdate']
-            dictsave = {'config': conftxt, 'data': self.measures}
+            dictsave = {'config': conftxt,
+                        'data': self.measures,
+                        'power': self.power}
             json.dump(dictsave, f, ensure_ascii=False)
         return filename
 
@@ -255,6 +261,22 @@ class ParsecData:
             threadcpu[frequency] = \
                 {inputsize: {numberofcores: [source]}}
         return
+
+    def powerbuild(self, attrs: Dict[Any, Any], keys: List[Any]):
+        """
+        Resume all energy sensors measurements, grouped by frequency, input
+        sizes and number of cores on a dictionary.
+
+        Dictionary format
+            {"inputsize":{"numberofcores1":["timevalue1", ... ], ... }, ...}
+
+        :param attrs: Attributes to insert into dictionary.
+        :param keys: Custom CPU frequency (Mhz) at execution moment.
+        :return:
+        """
+        keys = filter(lambda x: x is not None, keys)
+        keys = map(str, keys)
+        self.power[";".join(keys)].append(attrs)
 
     def threads(self):
         """

@@ -49,6 +49,7 @@ import shlex
 import subprocess
 import sys
 import os
+import time
 from datetime import datetime
 from cpufreq import cpuFreq,CPUFreqErrorInit
 
@@ -91,6 +92,10 @@ def argsparsevalidation():
                         help='If run with thread affinity(limiting the '
                              'running cores to defined number of cores), '
                              'define the cpu base number.')
+    parser.add_argument("--threadmon", type=bool,
+                        help="Enable thread monitoring", default=False)
+    parser.add_argument("--ipmi", help="Enable ipmi measuments",
+                        nargs=3, metavar=("server", "user", "password"))
     parser.add_argument('-v', '--verbosity', type=int,
                         help='verbosity level. 0 = No verbose', default=0)
     args = parser.parse_args()
@@ -150,6 +155,13 @@ def main():
         env = os.environ
         env['PARSEC_CPU_BASE'] = str(args.cpubase)
 
+    sensor = []
+    if args.ipmi:
+        from ipmi import IPMI
+        ipmi_sensor = IPMI(
+            server=args.ipmi[0], user=args.ipmi[1], password=args.ipmi[2])
+        sensor.append(ipmi_sensor)
+
     print("Processing %s Repetitions: " % args.repetitions)
     for f in freqs:
         ftxt = None
@@ -176,12 +188,33 @@ def main():
                         res = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                                stderr=subprocess.STDOUT)
                         procs = None
+                        ti = time.perf_counter()
                         while res.poll() is None:
-                            try:
-                                procs = procs_list(args.package, procs)
-                            except:
-                                continue
-                        if args.verbosity > 1:
+                            if args.threadmon:
+                                try:
+                                    procs = procs_list(args.package, procs)
+                                except:
+                                    print("ERROR: get thread processors list")
+                                    continue
+                            if sensor:
+                                for sen in sensor:
+                                    try:
+                                        sensor_data = sen.get_data()
+                                        datarun.powerbuild(
+                                            attrs={
+                                                sen.sensor_name: sensor_data,
+                                                "time": time.perf_counter() - ti
+                                            },
+                                            keys=[f, i, c, r]
+                                        )
+                                        if args.verbose > 2:
+                                            print("Sensor data", sensor_data)
+                                        time.sleep(0.1)
+                                    except Exception as e:
+                                        print(e)
+                                        print("ERROR: get sensor data")
+                                        continue
+                        if args.verbosity > 1 and args.threadmon:
                             print('\nCPUs Id per Thread:')
                             print(procs)
                             print('\n')
@@ -190,7 +223,8 @@ def main():
                             print('Error Code: ', res.returncode)
                             print('Error Message: ', error.decode())
                         else:
-                            datarun.threadcpubuild(procs, f, inputsize, c)
+                            if args.threadmon:
+                                datarun.threadcpubuild(procs, f, inputsize, c)
                             output = res.stdout.read()
                             if output:
                                 if args.verbosity > 2:
