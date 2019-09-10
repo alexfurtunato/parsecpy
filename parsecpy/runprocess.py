@@ -202,7 +202,7 @@ def main():
                                         sensor_data = sen.get_data()
                                         datarun.powerbuild(
                                             attrs={
-                                                sen.sensor_name: sensor_data,
+                                                "ipmi": sensor_data,
                                                 "time": time.perf_counter() - ti
                                             },
                                             keys=[f, i, c, r]
