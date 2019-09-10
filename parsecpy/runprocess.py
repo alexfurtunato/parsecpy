@@ -205,7 +205,7 @@ def main():
                                                 "ipmi": sensor_data,
                                                 "time": time.perf_counter() - ti
                                             },
-                                            keys=[f, i, c, r]
+                                            keys=[f, i+1, c, r+1]
                                         )
                                         if args.verbose > 2:
                                             print("Sensor data", sensor_data)
