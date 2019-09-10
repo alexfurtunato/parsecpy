@@ -12,6 +12,7 @@ import json
 import numpy as np
 import xarray as xr
 from copy import deepcopy
+from collections import defaultdict
 from typing import Dict, Any, List
 
 from ._common import freq_hz
@@ -59,7 +60,7 @@ class ParsecData:
 
         self.config = {}
         self.measures = {}
-        self.power = {}
+        self.power = defaultdict(list)
         if filename:
             self.loaddata(filename)
         return
