@@ -147,9 +147,7 @@ def main():
             cf.set_governors("ondemand")
             print("Running with governor 'ondemand'.\n")
         except:
-            print("ERROR: Unknown error on governor.")
-            print(sys.exc_info())
-            sys.exit(1)
+            print("WARNING: Governor set is not possible.")
 
     if args.cpubase:
         env = os.environ
