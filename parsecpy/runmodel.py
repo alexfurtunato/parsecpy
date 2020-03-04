@@ -206,7 +206,7 @@ def main():
                 #                                  measure_ml_detach['y'],
                 #                                  train_size=config[
                 #                                      'measuresfraction'])
-                xy_train_test = measures_split_train_test(measure,
+                xy_train_test = measures_split_train_test(measure_ml,
                                                           train_size=config[
                                                               'measuresfraction'])
                 x_sample_train = xy_train_test[0]
@@ -247,6 +247,11 @@ def main():
             if config['verbosity'] > 1:
                 print(" ** Cross Validate Scores: ")
                 print(scores)
+
+            y_model.coords['frequency'] = y_model.coords[
+                                                 'frequency'] * 1e6
+            measure_ml.coords['frequency'] = measure_ml.coords[
+                                                 'frequency'] * 1e6
             model = ParsecModel(measure=measure_ml, y_model=y_model,
                                 berr=error, berr_rel=errorrel,
                                 modelexecparams=config,
