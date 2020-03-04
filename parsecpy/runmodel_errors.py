@@ -39,6 +39,7 @@ import argparse
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecData, ParsecModel
@@ -57,22 +58,27 @@ def workers(args):
     x_test = measure_detach['x'][test_idx]
     y_test = measure_detach['y'][test_idx]
 
-    if config['algorithm'] == 'svr':
-        measure_svr = measure.copy()
-        measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
-        measure_svr_detach = data_detach(measure_svr)
-        x_train = measure_svr_detach['x'][train_idx]
-        y_train = measure_svr_detach['y'][train_idx]
-        x_test = measure_svr_detach['x'][test_idx]
-        y_test = measure_svr_detach['y'][test_idx]
-        gs_svr = GridSearchCV(SVR(),
+    if config['algorithm'] in ['svr', 'tree', 'neural']:
+        measure_ml = measure.copy()
+        measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
+        measure_ml_detach = data_detach(measure_ml)
+        x_train = measure_ml_detach['x'][train_idx]
+        y_train = measure_ml_detach['y'][train_idx]
+        x_test = measure_ml_detach['x'][test_idx]
+        y_test = measure_ml_detach['y'][test_idx]
+        if config['algorithm'] == 'svr':
+            gs_ml = GridSearchCV(SVR(),
                               cv=config['crossvalidation-folds'],
                               param_grid={"C": config['c_grid'],
                                           "gamma": config['gamma_grid']})
-        gs_svr.fit(x_train, y_train)
-        y_predict = gs_svr.predict(x_test)
+            gs_ml.fit(x_train, y_train)
+            solution = gs_ml.best_params_
+        elif config['algorithm'] == 'tree':
+            gs_ml = DecisionTreeRegressor()
+            gs_ml.fit(x_train, y_train)
+            solution = ['']
+        y_predict = gs_ml.predict(x_test)
         error = mean_squared_error(y_test, y_predict)
-        solution = gs_svr.best_params_
     else:
         kwargsmodel = {'overhead': config['overhead']}
         if config['algorithm'] == 'pso':

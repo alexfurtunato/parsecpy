@@ -57,6 +57,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import ShuffleSplit, KFold
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import GridSearchCV
@@ -194,15 +195,15 @@ def main():
     starttime = time.time()
     print('\nAlgorithm Execution...')
 
-    if config['algorithm'] == 'svr':
-        measure_svr = measure.copy()
-        measure_svr.coords['frequency'] = measure_svr.coords['frequency']/1e6
-        measure_svr_detach = data_detach(measure_svr)
+    if config['algorithm'] in ['svr', 'tree', 'neural']:
+        measure_ml = measure.copy()
+        measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
+        measure_ml_detach = data_detach(measure_ml)
         for j in range(config['repetitions']):
             print('Calculating model: Repetition=%d' % (j+1))
             if 'measuresfraction' in config.keys():
-                # xy_train_test = train_test_split(measure_svr_detach['x'],
-                #                                  measure_svr_detach['y'],
+                # xy_train_test = train_test_split(measure_ml_detach['x'],
+                #                                  measure_ml_detach['y'],
                 #                                  train_size=config[
                 #                                      'measuresfraction'])
                 xy_train_test = measures_split_train_test(measure,
@@ -213,37 +214,43 @@ def main():
                 x_sample_test = xy_train_test[1]
                 y_sample_test = xy_train_test[3]
             else:
-                x_sample_train = measure_svr_detach['x']
-                y_sample_train = measure_svr_detach['y']
-                x_sample_test = measure_svr_detach['x']
-                y_sample_test = measure_svr_detach['y']
-            gs_svr = GridSearchCV(SVR(),
-                                  cv=config['crossvalidation-folds'],
-                                  param_grid={"C": config['c_grid'],
-                                              "gamma": config['gamma_grid']})
-            gs_svr.fit(x_sample_train, y_sample_train)
-            y_predict = gs_svr.predict(x_sample_test)
+                x_sample_train = measure_ml_detach['x']
+                y_sample_train = measure_ml_detach['y']
+                x_sample_test = measure_ml_detach['x']
+                y_sample_test = measure_ml_detach['y']
+            if config['algorithm'] == 'svr':
+                gs_ml = GridSearchCV(SVR(),
+                                      cv=config['crossvalidation-folds'],
+                                      param_grid={"C": config['c_grid'],
+                                                  "gamma": config['gamma_grid']})
+                gs_ml.fit(x_sample_train, y_sample_train)
+                best_params = gs_ml.best_params_
+                for i, v in best_params.items():
+                    config[i] = v
+            elif config['algorithm'] == 'tree':
+                gs_ml = DecisionTreeRegressor()
+                gs_ml.fit(x_sample_train, y_sample_train)
+            y_predict = gs_ml.predict(x_sample_test)
             error = mean_squared_error(y_sample_test, y_predict)
             errorrel = 100*error/np.mean(y_sample_test)
-            print('\n\n***** Modelling Results! *****\n')
+            print('\n\n***** %s - Modelling Results! *****\n' % config['algorithm'].upper())
             print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
                   (error, errorrel))
-            y_model = data_attach({'x': measure_svr_detach['x'],
-                                   'y': gs_svr.predict(measure_svr_detach['x'])},
-                                  measure_svr_detach['dims'])
-            best_params = gs_svr.best_params_
+            y_model = data_attach({'x': measure_ml_detach['x'],
+                                   'y': gs_ml.predict(measure_ml_detach['x'])},
+                                  measure_ml_detach['dims'])
+
             kf = KFold(n_splits=10, shuffle=True)
-            scores = cross_validate(gs_svr, x_sample_train, y_sample_train,
+            scores = cross_validate(gs_ml, x_sample_train, y_sample_train,
                                     scoring='neg_mean_squared_error',
                                     cv=kf, return_train_score=False)
             if config['verbosity'] > 1:
                 print(" ** Cross Validate Scores: ")
                 print(scores)
-            for i,v in best_params.items():
-                config[i] = v
-            model = ParsecModel(measure=measure_svr, y_model=y_model,
+            model = ParsecModel(measure=measure_ml, y_model=y_model,
                                 berr=error, berr_rel=errorrel,
-                                modelexecparams=config)
+                                modelexecparams=config,
+                                modelresultsfolder=config['resultsfolder'])
             if j == 0:
                 model_best = deepcopy(model)
             else:
@@ -312,7 +319,7 @@ def main():
         print('Execution time = %.2f seconds' % (endtime - starttime))
         starttime = endtime
 
-        print('\n\n***** Modelling Results! *****\n')
+        print('\n\n***** %s - Modelling Results! *****\n' % config['algorithm'].upper())
         print('Error: %.8f \nPercentual Error (Measured Mean): %.2f %%' %
               (model_best.error,
                model_best.errorrel))
@@ -352,8 +359,7 @@ def main():
         model_best.measuresfraction = config['measuresfraction']
         model_best.measuresfraction_points = x_sample_train
     print('\n\n***** ALL DONE! *****\n')
-    fn = model_best.savedata(parsec_exec.config,
-                                                  ' '.join(sys.argv))
+    fn = model_best.savedata(parsec_exec.config, ' '.join(sys.argv))
     print('Model data saved on filename: %s' % fn)
 
 
