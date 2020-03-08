@@ -242,7 +242,7 @@ def main():
                                                  "gamma": gamma})
                 gs_ml.fit(x_sample_train, y_sample_train)
             elif config['algorithm'] == 'tree':
-                gs_ml = DecisionTreeRegressor(random_state=0)
+                gs_ml = DecisionTreeRegressor(random_state=0, max_depth=4)
                 gs_ml.fit(x_sample_train, y_sample_train)
             elif config['algorithm'] == 'neural':
                 gs_ml = MLPRegressor(random_state=0)

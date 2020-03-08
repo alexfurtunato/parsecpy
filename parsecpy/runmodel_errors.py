@@ -85,7 +85,7 @@ def workers(args):
             gs_ml.fit(x_train, y_train)
             solution = ['']
         elif config['algorithm'] == 'tree':
-            gs_ml = DecisionTreeRegressor()
+            gs_ml = DecisionTreeRegressor(random_state=0, max_depth=4)
             gs_ml.fit(x_train, y_train)
             solution = ['']
         elif config['algorithm'] == 'neural':
