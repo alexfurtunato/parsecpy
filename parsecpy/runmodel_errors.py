@@ -61,7 +61,7 @@ def workers(args):
     x_test = measure_detach['x'][test_idx]
     y_test = measure_detach['y'][test_idx]
 
-    if config['algorithm'] in ['svr', 'tree', 'neural']:
+    if config['algorithm'] in ['svr', 'krr', 'tree', 'neural']:
         measure_ml = measure.copy()
         # measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
         measure_ml_detach = data_detach(measure_ml)
