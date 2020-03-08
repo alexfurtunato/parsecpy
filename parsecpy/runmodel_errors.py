@@ -37,9 +37,12 @@ import numpy as np
 import json
 import argparse
 from sklearn.model_selection import ShuffleSplit
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
+from sklearn.kernel_ridge import KernelRidge
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecData, ParsecModel
@@ -60,11 +63,13 @@ def workers(args):
 
     if config['algorithm'] in ['svr', 'tree', 'neural']:
         measure_ml = measure.copy()
-        measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
+        # measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
         measure_ml_detach = data_detach(measure_ml)
-        x_train = measure_ml_detach['x'][train_idx]
+        scaler = StandardScaler()
+        scaler.fit(measure_ml_detach['x'])
+        x_train = scaler.transform(measure_ml_detach['x'][train_idx])
         y_train = measure_ml_detach['y'][train_idx]
-        x_test = measure_ml_detach['x'][test_idx]
+        x_test = scaler.transform(measure_ml_detach['x'][test_idx])
         y_test = measure_ml_detach['y'][test_idx]
         if config['algorithm'] == 'svr':
             gs_ml = GridSearchCV(SVR(),
@@ -73,12 +78,24 @@ def workers(args):
                                           "gamma": config['gamma_grid']})
             gs_ml.fit(x_train, y_train)
             solution = gs_ml.best_params_
+        elif config['algorithm'] == 'krr':
+            gs_ml = GridSearchCV(KernelRidge(kernel='rbf', gamma=0.1),
+                                 param_grid={"alpha": config['alpha_grid'],
+                                             "gamma": config['gamma_grid']})
+            gs_ml.fit(x_train, y_train)
+            solution = ['']
         elif config['algorithm'] == 'tree':
             gs_ml = DecisionTreeRegressor()
             gs_ml.fit(x_train, y_train)
             solution = ['']
+        elif config['algorithm'] == 'neural':
+            gs_ml = MLPRegressor(random_state=0)
+            gs_ml.fit(x_train, y_train)
+            solution = ['']
         y_predict = gs_ml.predict(x_test)
         error = mean_squared_error(y_test, y_predict)
+        x_train = scaler.inverse_transform(x_train)
+        x_test = scaler.inverse_transform(x_test)
     else:
         kwargsmodel = {'overhead': config['overhead']}
         if config['algorithm'] == 'pso':

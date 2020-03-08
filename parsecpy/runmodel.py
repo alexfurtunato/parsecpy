@@ -56,8 +56,11 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
+from sklearn.kernel_ridge import KernelRidge
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import ShuffleSplit, KFold
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import GridSearchCV
@@ -199,6 +202,12 @@ def main():
         measure_ml = measure.copy()
         measure_ml.coords['frequency'] = measure_ml.coords['frequency']/1e6
         measure_ml_detach = data_detach(measure_ml)
+        scaler = StandardScaler()
+        scaler.fit(measure_ml_detach['x'])
+        feature_standardized = scaler.transform(measure_ml_detach['x'])
+        measure_ml_standardized = data_attach({'x': feature_standardized,
+                                               'y': measure_ml_detach['y']},
+                                              measure_ml_detach['dims'])
         for j in range(config['repetitions']):
             print('Calculating model: Repetition=%d' % (j+1))
             if 'measuresfraction' in config.keys():
@@ -227,8 +236,16 @@ def main():
                 best_params = gs_ml.best_params_
                 for i, v in best_params.items():
                     config[i] = v
+            elif config['algorithm'] == 'krr':
+                gs_ml = GridSearchCV(KernelRidge(kernel='rbf', gamma=0.1),
+                                     param_grid={"alpha": alpha,
+                                                 "gamma": gamma})
+                gs_ml.fit(x_sample_train, y_sample_train)
             elif config['algorithm'] == 'tree':
-                gs_ml = DecisionTreeRegressor()
+                gs_ml = DecisionTreeRegressor(random_state=0)
+                gs_ml.fit(x_sample_train, y_sample_train)
+            elif config['algorithm'] == 'neural':
+                gs_ml = MLPRegressor(random_state=0)
                 gs_ml.fit(x_sample_train, y_sample_train)
             y_predict = gs_ml.predict(x_sample_test)
             error = mean_squared_error(y_sample_test, y_predict)
@@ -240,13 +257,13 @@ def main():
                                    'y': gs_ml.predict(measure_ml_detach['x'])},
                                   measure_ml_detach['dims'])
 
-            kf = KFold(n_splits=10, shuffle=True)
-            scores = cross_validate(gs_ml, x_sample_train, y_sample_train,
-                                    scoring='neg_mean_squared_error',
-                                    cv=kf, return_train_score=False)
-            if config['verbosity'] > 1:
-                print(" ** Cross Validate Scores: ")
-                print(scores)
+            # kf = KFold(n_splits=10, shuffle=True)
+            # scores = cross_validate(gs_ml, x_sample_train, y_sample_train,
+            #                         scoring='neg_mean_squared_error',
+            #                         cv=kf, return_train_score=False)
+            # if config['verbosity'] > 1:
+            #     print(" ** Cross Validate Scores: ")
+            #     print(scores)
 
             y_model.coords['frequency'] = y_model.coords[
                                                  'frequency'] * 1e6
