@@ -57,6 +57,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 from sklearn.svm import SVR
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.tree import DecisionTreeRegressor
@@ -245,7 +246,12 @@ def main():
                 gs_ml = DecisionTreeRegressor(random_state=0, max_depth=4)
                 gs_ml.fit(x_sample_train, y_sample_train)
             elif config['algorithm'] == 'neural':
-                gs_ml = MLPRegressor(random_state=0)
+                alpha = 10.0 ** -np.arange(1, 7)
+                gs_ml = make_pipeline(StandardScaler(),
+                                      GridSearchCV(MLPRegressor(solver='lbfgs',
+                                                                max_iter=2000,
+                                                                random_state=0),
+                                                   cv=3, param_grid={"alpha": alpha}))
                 gs_ml.fit(x_sample_train, y_sample_train)
             y_predict = gs_ml.predict(x_sample_test)
             error = mean_squared_error(y_sample_test, y_predict)

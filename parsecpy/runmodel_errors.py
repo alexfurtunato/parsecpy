@@ -38,6 +38,7 @@ import json
 import argparse
 from sklearn.model_selection import ShuffleSplit
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
 from sklearn.kernel_ridge import KernelRidge
@@ -89,7 +90,13 @@ def workers(args):
             gs_ml.fit(x_train, y_train)
             solution = ['']
         elif config['algorithm'] == 'neural':
-            gs_ml = MLPRegressor(random_state=0)
+            alpha = 10.0 ** -np.arange(1, 7)
+            gs_ml = make_pipeline(StandardScaler(),
+                                  GridSearchCV(MLPRegressor(solver='lbfgs',
+                                                            max_iter=2000,
+                                                            random_state=0),
+                                               cv=3,
+                                               param_grid={"alpha": alpha}))
             gs_ml.fit(x_train, y_train)
             solution = ['']
         y_predict = gs_ml.predict(x_test)
