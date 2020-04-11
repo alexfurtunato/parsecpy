@@ -268,22 +268,26 @@ def data_attach(data, dims):
 
     xnp = np.array(data['x'])
     ynp = np.array(data['y'])
-    coords = []
+    coords = {}
     shape = []
     for i, d in enumerate(dims):
         x = sorted(np.unique(xnp[:, i]), key=int)
-        coords.append((d, x))
+        coords[d] = x
         shape.append(len(x))
 
-    sorted_base = []
-    for i in range(len(coords) - 1):
-        for j in coords[i][1]:
-            for w in coords[i + 1][1]:
-                sorted_base.append([j, w])
-    idx_base = [np.where((xnp == (f, c)).all(axis=1))[0][0] for f, c in
-                sorted_base]
+    data_da = xr.DataArray(np.reshape(ynp, newshape=shape),
+                           dims=dims, coords=coords)
 
-    data_da = xr.DataArray(ynp[idx_base].reshape(tuple(shape)), coords=coords)
+    # sorted_base = []
+    # for i in range(len(coords) - 1):
+    #     for j in coords[i][1]:
+    #         for w in coords[i + 1][1]:
+    #             sorted_base.append([j, w])
+    # idx_base = [np.where((xnp == (f, c)).all(axis=1))[0][0] for f, c in
+    #             sorted_base]
+
+    # data_da = xr.DataArray(ynp[idx_base].reshape(tuple(shape)), coords=coords)
+
     return data_da
 
 
