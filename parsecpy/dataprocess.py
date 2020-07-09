@@ -557,11 +557,11 @@ class ParsecData:
                         circle.set_radius(0.03)
                     radio.on_clicked(update_plot3D)
                 else:
-                    print('Error: Do not possible plot data with wrong '
+                    print('Error: Not is possible to plot data with wrong '
                           'axis names')
                     return
             else:
-                print('Error: Do not possible plot data with wrong '
+                print('Error: Not is possible to plot data with wrong '
                       'number of axis')
                 return
             update_plot3D(idx)
@@ -569,7 +569,7 @@ class ParsecData:
                 plt.savefig(filename, dpi=1000)
             plt.show()
         else:
-            print('Error: Do not possible plot data without '
+            print('Error: Not is possible to plot data without '
                   'speedups information')
 
 

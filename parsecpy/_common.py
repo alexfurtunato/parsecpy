@@ -272,6 +272,8 @@ def data_attach(data, dims):
     shape = []
     for i, d in enumerate(dims):
         x = sorted(np.unique(xnp[:, i]), key=int)
+        if not d is 'frequency':
+            x = [int(v) for v in x]
         coords[d] = x
         shape.append(len(x))
 
