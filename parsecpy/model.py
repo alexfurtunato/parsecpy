@@ -341,109 +341,6 @@ class ParsecModel:
 
     def plot3D(self, train_points=None,
                title='Speedup Model', greycolor=False, color=False,
-               showmeasures=False, linewidth=0.3, alpha=1.0, filename=''):
-        """
-        Plot the 3D (Speedup x cores x input size) surface.
-
-        :param title: Plot Title.
-        :param greycolor: If set color of graph to grey colormap.
-        :param color: Color charactere or False
-        :param linewidth: width of surface line
-        :param alpha: alpha channel
-        :param filename: File name to save figure (eps format).
-        :return:
-        """
-
-        if not support3d:
-            print('Warning: No 3D plot support. Please install '
-                  'matplotlib with Axes3D toolkit')
-            return
-        data = self.y_model
-        if not data.size == 0:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            if 'size' in data.dims:
-                xc = data.coords['size'].values
-                xc_label = 'Input Size'
-            elif 'frequency' in data.dims:
-                xc = 1000*data.coords['frequency'].values
-                xc_label = 'Frequency'
-            yc = data.coords['cores'].values
-            X, Y = np.meshgrid(yc, xc)
-            Z = data.values
-            zmin = Z.min()
-            zmax = Z.max()
-            appname = self.measure.attrs['pkg']
-            plt.title('%s\n%s' % (appname.capitalize() or None, title))
-            if color:
-                surf1 = ax.plot_surface(Y, X, Z, label='Model', color=color,
-                                        linewidth=linewidth,
-                                        edgecolor=color, linestyle='-',
-                                        alpha=alpha)
-            else:
-                if greycolor:
-                    colormap = cm.Greys
-                    surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap,
-                                            linewidth=linewidth, edgecolor='k',
-                                            linestyle='-', alpha=alpha)
-                else:
-                    colormap = cm.coolwarm
-                    surf1 = ax.plot_surface(Y, X, Z, label='Model', cmap=colormap,
-                                            linewidth=linewidth, edgecolor='r',
-                                            linestyle='-', alpha=alpha)
-            surf1._edgecolors2d = surf1._edgecolors3d
-            surf1._facecolors2d = surf1._facecolors3d
-            ax.set_xlabel(xc_label)
-            if xc_label is 'Frequency':
-                ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
-            ax.set_ylabel('Number of Cores')
-            ax.set_zlabel('Speedup')
-            ax.tick_params(axis='both', which='major', labelsize=8)
-            ax.tick_params(axis='both', which='minor', labelsize=8)
-            ax.set_zlim(zmin, 1.10 * zmax)
-            if showmeasures:
-                data_m = self.measure
-                ax = fig.gca(projection='3d')
-                if 'size' in data_m.dims:
-                    xc = data_m.coords['size'].values
-                elif 'frequency' in data_m.dims:
-                    xc = 1000*data_m.coords['frequency'].values
-                    if train_points is not None:
-                        x_train_points = train_points.copy()
-                        x_train_points[:, 0] = 1000 * x_train_points[:,0]
-                yc = data_m.coords['cores'].values
-                X, Y = np.meshgrid(yc, xc)
-                Z = data_m.values
-                surf2 = ax.plot_wireframe(Y, X, Z, linewidth=0.5,
-                                          edgecolor='k')
-                x = np.repeat(xc, len(yc))
-                y = np.resize(yc, len(xc)*len(yc))
-                z = Z.flatten()
-                c = ['k' for _ in range(len(z))]
-                if train_points is not None:
-                    colors_index = []
-                    for i in x_train_points:
-                        coord_row = xc.tolist().index(i[0])
-                        coord_col = yc.tolist().index(i[1])
-                        colors_index.append(coord_row*len(yc)+coord_col)
-                    for i in colors_index:
-                        c[i] = 'lime'
-                ax.scatter(x, y, z, c=c, s=3, label='Measures')
-                # ax.scatter(x, y, z, c=c, s=6, label='Measures')
-                # if train_points is not None:
-                #     ax.scatter(xc_train_points,
-                #                train_points['x'][:,1],
-                #                train_points['y'],
-                #                c='y', s=6)
-                ax.set_zlim(min(zmin, Z.min()), 1.10 * max(zmax, Z.max()))
-            ax.legend()
-            ax.view_init(azim=-35, elev=28)
-            if filename:
-                plt.savefig(filename, dpi=1000)
-            plt.show()
-
-    def plot4D(self, train_points=None,
-               title='Speedup Model', greycolor=False, color=False,
                slidername=None, zlabel='speedup',
                showmeasures=False, linewidth=0.3, alpha=1.0, filename=''):
         """
@@ -458,7 +355,7 @@ class ParsecModel:
         :return:
         """
 
-        def update_plot4D(idx):
+        def update_plot3D(idx):
             ax.clear()
             data = self.y_model
             if idx is None:
@@ -475,7 +372,8 @@ class ParsecModel:
                     xc = [i*1000 for i in dataplot.coords['frequency'].values]
                     xc_label = 'Frequency'
                 elif slidername is 'frequency':
-                    dataplot = data.sel(frequency=float(idx))
+                    idx = float(idx[:-3])*1e6
+                    dataplot = data.sel(frequency=idx)
                     xc = dataplot.coords['size'].values
                     xc_label = 'Input Size'
             yc = dataplot.coords['cores'].values
@@ -508,7 +406,7 @@ class ParsecModel:
             if xc_label is 'Frequency':
                 ax.xaxis.set_major_formatter(ticker.EngFormatter(unit='Hz'))
             ax.set_ylabel('Number of Cores')
-            ax.set_zlabel('Speedup')
+            ax.set_zlabel(zlabel)
             ax.tick_params(axis='both', which='major', labelsize=8)
             ax.tick_params(axis='both', which='minor', labelsize=8)
             ax.set_zlim(zmin, 1.10 * zmax)
@@ -580,13 +478,18 @@ class ParsecModel:
                                     len(data.coords[
                                             slidername].values) * 0.04],
                                    facecolor='lightgoldenrodyellow')
-                    raxtxt = [str(i) for i in
-                              data.coords[slidername].values]
-                    idx = str(data.coords[slidername].values[0])
+                    if slidername == 'frequency':
+                        raxtxt = ['{}GHz'.format(i) for i in
+                                  data.coords[slidername].values/1e6]
+                        idx = '{}GHz'.format(data.coords[slidername].values[0]/1e6)
+                    else:
+                        raxtxt = [str(i) for i in
+                                  data.coords[slidername].values]
+                        idx = str(data.coords[slidername].values[0])
                     radio = RadioButtons(rax, tuple(raxtxt))
                     for circle in radio.circles:
                         circle.set_radius(0.03)
-                    radio.on_clicked(update_plot4D)
+                    radio.on_clicked(update_plot3D)
                 else:
                     print('Error: Not is possible to plot data with wrong '
                           'axis names')
@@ -595,7 +498,7 @@ class ParsecModel:
                 print('Error: Not is possible to plot data with wrong '
                       'number of axis')
                 return
-            update_plot4D(idx)
+            update_plot3D(idx)
             if filename:
                 plt.savefig(filename, dpi=1000)
             plt.show()

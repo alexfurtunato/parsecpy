@@ -505,7 +505,8 @@ class ParsecData:
                     xc = [i*1000 for i in dataplot.coords['frequency'].values]
                     xc_label = 'Frequency'
                 elif slidername is 'frequency':
-                    dataplot = data.sel(frequency=float(idx))
+                    idx = float(idx[:-3])*1e6
+                    dataplot = data.sel(frequency=idx)
                     xc = dataplot.coords['size'].values
                     xc_label = 'Input Size'
             yc = dataplot.coords['cores'].values
@@ -549,9 +550,14 @@ class ParsecData:
                     rax = plt.axes([0.01, 0.01, 0.17,
                                     len(data.coords[slidername].values)*0.04],
                                    facecolor='lightgoldenrodyellow')
-                    raxtxt = [str(i) for i in
-                              data.coords[slidername].values]
-                    idx = str(data.coords[slidername].values[0])
+                    if slidername == 'frequency':
+                        raxtxt = ['{}GHz'.format(i) for i in
+                                  data.coords[slidername].values/1e6]
+                        idx = '{}GHz'.format(data.coords[slidername].values[0]/1e6)
+                    else:
+                        raxtxt = [str(i) for i in
+                                  data.coords[slidername].values]
+                        idx = str(data.coords[slidername].values[0])
                     radio = RadioButtons(rax, tuple(raxtxt))
                     for circle in radio.circles:
                         circle.set_radius(0.03)
