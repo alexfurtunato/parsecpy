@@ -120,6 +120,7 @@ def main():
                       'input_sizes': args.input,
                       'thread_cpu': {},
                       'hostname': hostname}
+    freqs = []
     if args.frequency:
         try:
             cf = cpuFreq()
