@@ -121,6 +121,7 @@ def main():
                       'thread_cpu': {},
                       'hostname': hostname}
     freqs = []
+    cf = None
     if args.frequency:
         try:
             cf = cpuFreq()
