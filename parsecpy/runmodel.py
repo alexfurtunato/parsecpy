@@ -334,6 +334,8 @@ def main():
             pred = model.predict(x_sample_test)
             model.error = mean_squared_error(y_sample_test, pred['y'])
             model.errorrel = 100 * (model.error / np.mean(y_sample_test))
+            # MSPE - Mean Square Percentage Error
+            # mspe = 100*np.sum(((pred['y']-y_sample_test)/y_sample_test)**2)/np.size(y_sample_test)
 
             if j == 0:
                 model_best = deepcopy(model)
