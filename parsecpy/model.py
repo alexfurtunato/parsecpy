@@ -256,8 +256,10 @@ class ParsecModel:
                         datatosave['data']['validation'] = val
             else:
                 mep = deepcopy(self.modelexecparams)
-                mep['c_grid'] = str(mep['c_grid'])
-                mep['gamma_grid'] = str(mep['gamma_grid'])
+                if 'c_grid' in mep:
+                    mep['c_grid'] = str(mep['c_grid'])
+                if 'gamma_grid' in mep:
+                    mep['gamma_grid'] = str(mep['gamma_grid'])
                 datatosave['config']['modelexecparams'] = mep
                 datatosave['data']['error'] = self.error
                 datatosave['data']['errorrel'] = self.errorrel
@@ -318,8 +320,10 @@ class ParsecModel:
                 if 'modelexecparams' in configdict.keys():
                     mep = deepcopy(configdict['modelexecparams'])
                     self.modelexecparams = deepcopy(mep)
-                    self.modelexecparams['c_grid'] = json.loads(mep['c_grid'])
-                    self.modelexecparams['gamma_grid'] = json.loads(mep['gamma_grid'])
+                    if 'c_grid' in mep:
+                        self.modelexecparams['c_grid'] = json.loads(mep['c_grid'])
+                    if 'gamma_grid' in mep:
+                        self.modelexecparams['gamma_grid'] = json.loads(mep['gamma_grid'])
             if 'measuresfraction' in configdict.keys():
                 self.measuresfraction = configdict['measuresfraction']
                 self.measuresfraction_points = \
