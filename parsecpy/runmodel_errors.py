@@ -47,7 +47,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error
 from concurrent import futures
 from parsecpy import Swarm, CoupledAnnealer, ParsecData, ParsecModel
-from parsecpy import data_detach
+from parsecpy import data_detach, measures_idx_split_train_test
 
 
 def workers(args):
@@ -248,39 +248,64 @@ def main():
 
         print('\nSample size: ', train_size)
 
-        sf = ShuffleSplit(n_splits=config["numberofsplits"],
-                          train_size=train_size,
-                          test_size=(samples_n - train_size))
-        splits = []
-        split_n = 1
-        for train_idx, test_idx in sf.split(measure_detach['x']):
+        (train_idx, test_idx) = measures_idx_split_train_test(measure, train_size=train_size)
+        samples_args = [(m[0], m[1]['config'], measure,
+                         train_idx, test_idx)
+                        for m in model_results.items()]
 
-            print(' ** # split = ', split_n)
+        starttime = time.time()
 
-            samples_args = [(m[0], m[1]['config'], measure,
-                             train_idx, test_idx)
-                            for m in model_results.items()]
+        with futures.ProcessPoolExecutor(max_workers=len(samples_args)) as executor:
+            results = executor.map(workers, samples_args)
+            for i in results:
+                if train_size not in model_results[i["name"]]["data"].keys():
+                    model_results[i["name"]]["data"][train_size] = {
+                        'train': [],
+                        'test': [],
+                        'error': [],
+                        'params': []
+                    }
+                model_results[i["name"]]["data"][train_size]["train"].append(i['train'])
+                model_results[i["name"]]["data"][train_size]["test"].append(i['test'])
+                model_results[i["name"]]["data"][train_size]["error"].append(i['error'])
+                model_results[i["name"]]["data"][train_size]["params"].append(i['params'])
 
-            starttime = time.time()
+        endtime = time.time()
+        print('  Execution time = %.2f seconds' % (endtime - starttime))
 
-            with futures.ProcessPoolExecutor(max_workers=len(samples_args)) \
-                    as executor:
-                results = executor.map(workers, samples_args)
-                for i in results:
-                    if train_size not in model_results[i["name"]]["data"].keys():
-                        model_results[i["name"]]["data"][train_size] = {
-                            'train': [],
-                            'test': [],
-                            'error': [],
-                            'params': []
-                        }
-                    model_results[i["name"]]["data"][train_size]["train"].append(i['train'])
-                    model_results[i["name"]]["data"][train_size]["test"].append(i['test'])
-                    model_results[i["name"]]["data"][train_size]["error"].append(i['error'])
-                    model_results[i["name"]]["data"][train_size]["params"].append(i['params'])
-
-            endtime = time.time()
-            print('  Execution time = %.2f seconds' % (endtime - starttime))
+        # sf = ShuffleSplit(n_splits=config["numberofsplits"],
+        #                   train_size=train_size,
+        #                   test_size=(samples_n - train_size))
+        # splits = []
+        # split_n = 1
+        # for train_idx, test_idx in sf.split(measure_detach['x']):
+        #
+        #     print(' ** # split = ', split_n)
+        #
+        #     samples_args = [(m[0], m[1]['config'], measure,
+        #                      train_idx, test_idx)
+        #                     for m in model_results.items()]
+        #
+        #     starttime = time.time()
+        #
+        #     with futures.ProcessPoolExecutor(max_workers=len(samples_args)) \
+        #             as executor:
+        #         results = executor.map(workers, samples_args)
+        #         for i in results:
+        #             if train_size not in model_results[i["name"]]["data"].keys():
+        #                 model_results[i["name"]]["data"][train_size] = {
+        #                     'train': [],
+        #                     'test': [],
+        #                     'error': [],
+        #                     'params': []
+        #                 }
+        #             model_results[i["name"]]["data"][train_size]["train"].append(i['train'])
+        #             model_results[i["name"]]["data"][train_size]["test"].append(i['test'])
+        #             model_results[i["name"]]["data"][train_size]["error"].append(i['error'])
+        #             model_results[i["name"]]["data"][train_size]["params"].append(i['params'])
+        #
+        #     endtime = time.time()
+        #     print('  Execution time = %.2f seconds' % (endtime - starttime))
 
         if train_size >= int(samples_n/2):
             break

@@ -360,6 +360,39 @@ def measures_split_train_test(measure, train_size):
     y_test = m_detach['y'][~bool_idx]
     return [x_train,x_test,y_train,y_test]
 
+def measures_idx_split_train_test(measure, train_size):
+    """
+    Split the train and test arrays from a xarray of measures using the
+    Halton sequence to make discrepancy less. The return object is a
+    list of arrays of indexes: [train_idx, teste_idx]
+
+    :param measure: A xarray os measures values
+    :param train_size: A integer with sie of elements splited  to train
+    :return: A list of arrays of indexes.
+    """
+
+    m_detach = data_detach(measure)
+    if len(m_detach['x'])<train_size:
+        print("Error: the train size shoud be lower than the size of arrays")
+        return None
+    dim = len(measure.dims)
+    sequencer = gh.Halton(dim)
+    points = np.array(sequencer.get(train_size))
+    x_rand = []
+    for i,v in enumerate(measure.dims):
+        x = measure.coords[v].values
+        x_rand.append(maptosequence(points[:,i],x))
+    x_rand = np.column_stack([i.reshape(len(i), 1) for i in np.array(x_rand)])
+    bool_idx = None
+    for i in x_rand:
+        if bool_idx is None:
+            bool_idx = (m_detach['x'] == i).all(axis=1)
+        else:
+            bool_idx = bool_idx | (m_detach['x'] == i).all(axis=1)
+    idx_train = np.where(bool_idx)[0]
+    idx_test = np.where(~bool_idx)[0]
+    return [idx_train,idx_test]
+
 # def plot2D(data, title='', greycolor=False, filename=''):
 #     """
 #     Plot the 2D (Speedupx Cores) lines graph.
